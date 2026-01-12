@@ -1,0 +1,200 @@
+# qsv sample
+
+```text
+Randomly samples CSV data.
+
+It supports eight sampling methods:
+- RESERVOIR: the default sampling method when NO INDEX is present and no sampling method
+  is specified. Visits every CSV record exactly once, using MEMORY PROPORTIONAL to the
+  sample size (k) - O(k).
+  https://en.wikipedia.org/wiki/Reservoir_sampling
+
+- INDEXED: the default sampling method when an INDEX is present and no sampling method
+  is specified. Uses random I/O to sample efficiently, as it only visits records selected
+  by random indexing, using MEMORY PROPORTIONAL to the sample size (k) - O(k).
+  https://en.wikipedia.org/wiki/Random_access
+
+- BERNOULLI: the sampling method when the --bernoulli option is specified.
+  Each record has an independent probability p of being selected, where p is
+  specified by the <sample-size> argument. For example, if p=0.1, then each record
+  has a 10% chance of being selected, regardless of the other records. The final
+  sample size is random and follows a binomial distribution. Uses CONSTANT MEMORY - O(1).
+  When sampling from a remote URL, processes the file in chunks without downloading it
+  entirely, making it especially efficient for sampling large remote files.
+  https://en.wikipedia.org/wiki/Bernoulli_sampling
+
+- SYSTEMATIC: the sampling method when the --systematic option is specified.
+  Selects every nth record from the input, where n is the integer part of <sample-size>
+  and the fraction part is the percentage of the population to sample.
+  For example, if <sample-size> is 10.5, it will select every 10th record and 50% of the
+  population. If <sample-size> is a whole number (no fractional part), it will select
+  every nth record for the whole population. Uses CONSTANT memory - O(1). The starting
+  point can be specified as "random" or "first". Useful for time series data or when you
+  want evenly spaced samples.
+  https://en.wikipedia.org/wiki/Systematic_sampling
+
+- STRATIFIED: the sampling method when the --stratified option is specified.
+  Stratifies the population by the specified column and then samples from each stratum.
+  Particularly useful when a population has distinct subgroups (strata) that are
+  heterogeneous within but homogeneous between in terms of the variable of interest. 
+  For example, if you want to sample 1,000 records from a population of 100,000 across the US,
+  you can stratify the population by US state and then sample 20 records from each stratum.
+  This will ensure that you have a representative sample from each of the 50 states.
+  The sample size must be a whole number. Uses MEMORY PROPORTIONAL to the
+  number of strata (s) and samples per stratum (k) as specified by <sample-size> - O(s*k).
+  https://en.wikipedia.org/wiki/Stratified_sampling
+
+- WEIGHTED: the sampling method when the --weighted option is specified.
+  Samples records with probabilities proportional to values in a specified weight column.
+  Records with higher weights are more likely to be selected. For example, if you have
+  sales data and want to sample transactions weighted by revenue, high-value transactions
+  will have a higher chance of being included. Non-numeric weights are treated as zero.
+  The weights are automatically normalized using the maximum weight in the dataset.
+  Specify the desired sample size with <sample-size>. Uses MEMORY PROPORTIONAL to the
+  sample size (k) - O(k).
+  "Weighted random sampling with a reservoir" https://doi.org/10.1016/j.ipl.2005.11.003
+
+- CLUSTER: the sampling method when the --cluster option is specified.
+  Samples entire groups of records together based on a cluster identifier column.
+  The number of clusters is specified by the <sample-size> argument.
+  Useful when records are naturally grouped (e.g., by household, neighborhood, etc.).
+  For example, if you have records grouped by neighborhood and specify a sample size of 10,
+  it will randomly select 10 neighborhoods and include ALL records from those neighborhoods
+  in the output. This ensures that natural groupings in the data are preserved.
+  Uses MEMORY PROPORTIONAL to the number of clusters (c) - O(c).
+  https://en.wikipedia.org/wiki/Cluster_sampling
+
+- TIMESERIES: the sampling method when the --timeseries option is specified.
+  Samples records based on time intervals from a time-series dataset. Groups records by
+  time windows (e.g., hourly, daily, weekly) and selects one record per interval.
+  Supports adaptive sampling (e.g., prefer business hours or weekends) and aggregation
+  (e.g., mean, sum, min, max) within each interval. The starting point can be "first"
+  (earliest), "last" (most recent), or "random". Particularly useful for time-series data
+  where simple row-based sampling would always return the same records due to sorting.
+  Uses MEMORY PROPORTIONAL to the number of records - O(n).
+
+Supports sampling from CSVs on remote URLs. Note that the entire file is downloaded first
+to a temporary file before sampling begins for all sampling methods except Bernoulli, which
+streams the file as it samples it, stopping when the desired sample size is reached or the
+end of the file is reached.
+
+Sampling from stdin is also supported for all sampling methods, copying stdin to a in-memory
+buffer first before sampling begins.
+
+If a stats cache is available, it will be used to do extra checks on systematic,
+weighted and cluster sampling, and to speed up sampling in general.
+
+This command is intended to provide a means to sample from a CSV data set that
+is too big to fit into memory (for example, for use with commands like
+'qsv stats' with the '--everything' option). 
+
+For examples, see https://github.com/dathere/qsv/blob/master/tests/test_sample.rs.
+
+Usage:
+    qsv sample [options] <sample-size> [<input>]
+    qsv sample --help
+
+sample arguments:
+    <input>                The CSV file to sample. This can be a local file,
+                           stdin, or a URL (http and https schemes supported).
+
+    <sample-size>          When using INDEXED, RESERVOIR or WEIGHTED sampling, the sample size.
+                             Can either be a whole number or a value between value between 0 and 1.
+                             If a fraction, specifies the sample size as a percentage of the population. 
+                             (e.g. 0.15 - 15 percent of the CSV)
+                           When using BERNOULLI sampling, the probability of selecting each record
+                             (between 0 and 1).
+                           When using SYSTEMATIC sampling, the integer part is the interval between
+                             records to sample & the fractional part is the percentage of the
+                             population to sample. When there is no fractional part, it will
+                             select every nth record for the entire population.
+                           When using STRATIFIED sampling, the stratum sample size.
+                           When using CLUSTER sampling, the number of clusters.
+                           When using TIMESERIES sampling, the interval number (treated as hours
+                             by default, e.g., 1 = 1 hour). Use --ts-interval for custom intervals
+                             like "1d" (daily), "1w" (weekly), "1m" (monthly), "1y" (yearly), etc.                       
+
+sample options:
+    --seed <number>        Random Number Generator (RNG) seed.
+    --rng <kind>           The Random Number Generator (RNG) algorithm to use.
+                           Three RNGs are supported:
+                            - standard: Use the standard RNG.
+                              1.5 GB/s throughput.
+                            - faster: Use faster RNG using the Xoshiro256Plus algorithm.
+                              8 GB/s throughput.
+                            - cryptosecure: Use cryptographically secure HC128 algorithm.
+                              Recommended by eSTREAM (https://www.ecrypt.eu.org/stream/).
+                              2.1 GB/s throughput though slow initialization.
+                           [default: standard]
+
+                           SAMPLING METHODS:
+    --bernoulli            Use Bernoulli sampling instead of indexed or reservoir sampling.
+                           When this flag is set, <sample-size> must be between
+                           0 and 1 and represents the probability of selecting each record.
+    --systematic <arg>     Use systematic sampling (every nth record as specified by <sample-size>).
+                           If <arg> is "random", the starting point is randomly chosen between 0 & n.
+                           If <arg> is "first", the starting point is the first record.
+                           The sample size must be a whole number. Uses CONSTANT memory - O(1).
+    --stratified <col>     Use stratified sampling. The strata column is specified by <col>.
+                           Can be either a column name or 0-based column index.
+                           The sample size must be a whole number. Uses MEMORY PROPORTIONAL to the
+                           number of strata (s) and samples per stratum (k) - O(s*k).
+    --weighted <col>       Use weighted sampling. The weight column is specified by <col>.
+                           Can be either a column name or 0-based column index.
+                           The column will be parsed as a number. Records with non-number weights
+                           will be skipped.
+                           Uses MEMORY PROPORTIONAL to the sample size (k) - O(k).
+    --cluster <col>        Use cluster sampling. The cluster column is specified by <col>.
+                           Can be either a column name or 0-based column index.
+                           Uses MEMORY PROPORTIONAL to the number of clusters (c) - O(c).
+    --timeseries <col>     Use time-series sampling. The time column is specified by <col>.
+                           Can be either a column name or 0-based column index.
+                           Sorts records by the specified time column and then groups by time intervals
+                           and selects one record per interval.
+                           Supports various date formats (19 formats recognized by qsv-dateparser).
+                           Uses MEMORY PROPORTIONAL to the number of records - O(n).
+
+                           TIME-SERIES SAMPLING OPTIONS:
+    --ts-interval <intvl>  Time interval for grouping records. Format: <number><unit>
+                           where unit is h (hour), d (day), w (week), m (month), y (year).
+                           Examples: "1h", "1d", "1w", "2d" (every 2 days).
+                           If not specified, <sample-size> is treated as hours.
+    --ts-start <mode>      Starting point for time-series sampling.
+                           Options: "first" (earliest timestamp, default), "last" (most recent timestamp),
+                           "random" (random starting point).
+                           [default: first]
+    --ts-adaptive <mode>   Adaptive sampling mode for time-series data.
+                           Options: "business-hours" (prefer 9am-5pm Mon-Fri),
+                           "weekends" (prefer weekends), "business-days" (prefer weekdays),
+                           "both" (combine business-hours and weekends).
+    --ts-aggregate <func>  Aggregation function to apply within each time interval.
+                           Options: "first", "last", "mean", "sum", "count", "min", "max", "median".
+                           When specified, aggregates all records in each interval instead of selecting a single record.
+    --ts-input-tz <tz>     Timezone for parsing input timestamps. Can be an IANA timezone name or "local" for the local timezone.
+                           [default: UTC]
+    --ts-prefer-dmy        Prefer to parse dates in dmy format. Otherwise, use mdy format.
+
+                           REMOTE FILE OPTIONS:
+    --user-agent <agent>   Specify custom user agent to use when the input is a URL.
+                           It supports the following variables -
+                           $QSV_VERSION, $QSV_TARGET, $QSV_BIN_NAME, $QSV_KIND and $QSV_COMMAND.
+                           Try to follow the syntax here -
+                           https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent
+    --timeout <secs>       Timeout for downloading URLs in seconds. If 0, no timeout is used.
+                           [default: 30]
+    --max-size <mb>        Maximum size of the file to download in MB before sampling.
+                           Will download the entire file if not specified.
+                           If the CSV is partially downloaded, the sample will be taken
+                           only from the downloaded portion.
+    --force                Do not use stats cache, even if its available.
+
+Common options:
+    -h, --help             Display this message
+    -o, --output <file>    Write output to <file> instead of stdout.
+    -n, --no-headers       When set, the first row will be considered as part of
+                           the population to sample from. (When not set, the
+                           first row is the header row and will always appear
+                           in the output.)
+    -d, --delimiter <arg>  The field delimiter for reading/writing CSV data.
+                           Must be a single character. (default: ,)
+```

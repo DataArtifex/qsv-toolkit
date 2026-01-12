@@ -1,0 +1,80 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dartfx-qsv"
+dynamic = ["version"]
+description = 'Package to facilitate integration with the datHere QSV Data Wrangling project'
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+keywords = []
+authors = [{ name = "kulnor", email = "pascal.heus@gmail.com" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = ["pydantic >= 2"]
+
+[project.urls]
+Documentation = "https://github.com/DataArtifex/qsv-toolkit#readme"
+Issues = "https://github.com/DataArtifex/qsv-toolkit/issues"
+Source = "https://github.com/DataArtifex/qsv-toolkit"
+
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/.github", "/docs"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dartfx"]
+
+[tool.hatch.version]
+path = "src/dartfx/qsv/__about__.py"
+
+[tool.hatch.envs.default]
+dependencies = ["coverage[toml]>=6.5", "pytest"]
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests}"
+test-cov = "coverage run -m pytest {args:tests}"
+cov-report = ["- coverage combine", "coverage report"]
+cov = ["test-cov", "cov-report"]
+
+[[tool.hatch.envs.all.matrix]]
+python = ["3.12"]
+
+[tool.hatch.envs.types]
+dependencies = ["mypy>=1.0.0"]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/dartfx/qsv tests}"
+
+[tool.coverage.run]
+source_pkgs = ["qsv", "tests"]
+branch = true
+parallel = true
+omit = ["src/dartfx/qsv/__about__.py"]
+
+[tool.coverage.paths]
+source = ["src/dartfx/qsv", "*/qsv-toolkit/src/dartfx/qsv"]
+tests = ["tests", "*/dartfx/qsv/tests"]
+
+[tool.coverage.report]
+exclude_lines = ["no cov", "if __name__ == .__main__.:", "if TYPE_CHECKING:"]
+
+[tool.pytest.ini_options]
+pythonpath = "src"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.1.0",
+    "jupyterlab>=4.5.2",
+    "myst-parser>=4.0.1",
+    "notebook>=7.5.2",
+    "pyzmq>=27.1.0",
+    "sphinx>=8.2.3",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx-rtd-theme>=3.1.0",
+]
