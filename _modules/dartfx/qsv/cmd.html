@@ -1,0 +1,1379 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dartfx.qsv.cmd &mdash; QSV Toolkit 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            QSV Toolkit
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">QSV Toolkit</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">dartfx.qsv.cmd</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for dartfx.qsv.cmd</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_run_qsv_command</span><span class="p">(</span><span class="n">command</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">args</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper function to run a qsv command.</span>
+<span class="sd">    Checks that the `qsv` executable is available in the PATH.</span>
+<span class="sd">    Raises a RuntimeError if not found.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+    <span class="k">if</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">&quot;qsv&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The &#39;qsv&#39; command-line tool is not installed or not found in PATH.&quot;</span><span class="p">)</span>
+    <span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;qsv&quot;</span><span class="p">,</span> <span class="n">command</span><span class="p">]</span> <span class="o">+</span> <span class="n">args</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span>
+
+<div class="viewcode-block" id="QSVCommand">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.QSVCommand">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">QSVCommand</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for all QSV commands.&quot;&quot;&quot;</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">command</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">command</span> <span class="o">=</span> <span class="n">command</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_args</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="k">continue</span>
+            
+            <span class="c1"># Special handling for common renaming or specific mappings</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;round_places&quot;</span><span class="p">:</span>
+                <span class="n">flag</span> <span class="o">=</span> <span class="s2">&quot;--round&quot;</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;all_&quot;</span><span class="p">:</span>
+                <span class="n">flag</span> <span class="o">=</span> <span class="s2">&quot;--all&quot;</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;selection&quot;</span><span class="p">:</span>
+                <span class="c1"># Positional argument, handled in run()</span>
+                <span class="k">continue</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;input_path&quot;</span><span class="p">:</span>
+                <span class="c1"># Positional argument, handled in run()</span>
+                <span class="k">continue</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">flag</span> <span class="o">=</span> <span class="s2">&quot;--&quot;</span> <span class="o">+</span> <span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">flag</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+                    <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">flag</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">)])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">flag</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="n">args</span>
+
+<div class="viewcode-block" id="QSVCommand.run">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.QSVCommand.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">inputs</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_args</span><span class="p">()</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_run_qsv_command</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">command</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="Apply">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Apply">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Apply</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Apply series of transformations to a column.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">operation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">replacement</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">formatstr</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">new_column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">rename</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">comparand</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">jobs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">batch</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50000</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">progressbar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;apply&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column</span> <span class="o">=</span> <span class="n">column</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operation</span> <span class="o">=</span> <span class="n">operation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;replacement&quot;</span><span class="p">:</span> <span class="n">replacement</span><span class="p">,</span>
+            <span class="s2">&quot;formatstr&quot;</span><span class="p">:</span> <span class="n">formatstr</span><span class="p">,</span>
+            <span class="s2">&quot;new_column&quot;</span><span class="p">:</span> <span class="n">new_column</span><span class="p">,</span>
+            <span class="s2">&quot;rename&quot;</span><span class="p">:</span> <span class="n">rename</span><span class="p">,</span>
+            <span class="s2">&quot;comparand&quot;</span><span class="p">:</span> <span class="n">comparand</span><span class="p">,</span>
+            <span class="s2">&quot;jobs&quot;</span><span class="p">:</span> <span class="n">jobs</span><span class="p">,</span>
+            <span class="s2">&quot;batch&quot;</span><span class="p">:</span> <span class="n">batch</span> <span class="k">if</span> <span class="n">batch</span> <span class="o">!=</span> <span class="mi">50000</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="s2">&quot;progressbar&quot;</span><span class="p">:</span> <span class="n">progressbar</span>
+        <span class="p">}</span>
+    
+<div class="viewcode-block" id="Apply.run">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Apply.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">operation</span><span class="p">:</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operation</span><span class="p">)</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">column</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">input_path</span><span class="p">:</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="Behead">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Behead">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Behead</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Drop a CSV file&#39;s header.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">flexible</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;behead&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;flexible&quot;</span><span class="p">:</span> <span class="n">flexible</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Cat">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Cat">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Cat</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Concatenate CSV files by row or by column.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">subcommand</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;rows&quot;</span><span class="p">,</span>
+        <span class="n">pad</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">flexible</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">group</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;none&quot;</span><span class="p">,</span>
+        <span class="n">group_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;file&quot;</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;cat&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subcommand</span> <span class="o">=</span> <span class="n">subcommand</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;pad&quot;</span><span class="p">:</span> <span class="n">pad</span><span class="p">,</span>
+            <span class="s2">&quot;flexible&quot;</span><span class="p">:</span> <span class="n">flexible</span><span class="p">,</span>
+            <span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="n">group</span> <span class="k">if</span> <span class="n">group</span> <span class="o">!=</span> <span class="s2">&quot;none&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;group_name&quot;</span><span class="p">:</span> <span class="n">group_name</span> <span class="k">if</span> <span class="n">group_name</span> <span class="o">!=</span> <span class="s2">&quot;file&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span>
+    
+<div class="viewcode-block" id="Cat.run">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Cat.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">input_paths</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subcommand</span><span class="p">,</span> <span class="o">*</span><span class="n">input_paths</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="Count">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Count">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Count</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns a count of the number of records in the CSV data.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">human_readable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">width</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">width_no_delims</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">json</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">no_polars</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">low_memory</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">flexible</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;count&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;human_readable&quot;</span><span class="p">:</span> <span class="n">human_readable</span><span class="p">,</span>
+            <span class="s2">&quot;width&quot;</span><span class="p">:</span> <span class="n">width</span><span class="p">,</span>
+            <span class="s2">&quot;width_no_delims&quot;</span><span class="p">:</span> <span class="n">width_no_delims</span><span class="p">,</span>
+            <span class="s2">&quot;json&quot;</span><span class="p">:</span> <span class="n">json</span><span class="p">,</span>
+            <span class="s2">&quot;no_polars&quot;</span><span class="p">:</span> <span class="n">no_polars</span><span class="p">,</span>
+            <span class="s2">&quot;low_memory&quot;</span><span class="p">:</span> <span class="n">low_memory</span><span class="p">,</span>
+            <span class="s2">&quot;flexible&quot;</span><span class="p">:</span> <span class="n">flexible</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Dedup">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Dedup">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Dedup</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove redundant rows.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">select</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">numeric</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">ignore_case</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">unique</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">dupes_output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">jobs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">memcheck</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;dedup&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="n">select</span><span class="p">,</span>
+            <span class="s2">&quot;numeric&quot;</span><span class="p">:</span> <span class="n">numeric</span><span class="p">,</span>
+            <span class="s2">&quot;ignore_case&quot;</span><span class="p">:</span> <span class="n">ignore_case</span><span class="p">,</span>
+            <span class="s2">&quot;unique&quot;</span><span class="p">:</span> <span class="n">unique</span><span class="p">,</span>
+            <span class="s2">&quot;dupes_output&quot;</span><span class="p">:</span> <span class="n">dupes_output</span><span class="p">,</span>
+            <span class="s2">&quot;jobs&quot;</span><span class="p">:</span> <span class="n">jobs</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="s2">&quot;memcheck&quot;</span><span class="p">:</span> <span class="n">memcheck</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="DescribeGPT">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.DescribeGPT">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DescribeGPT</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Inference metadata and provide a summary of the given CSV data using an LLM.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">all_</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">dictionary</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">tags</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">dictionary_output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ckan_api</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ckan_token</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">stats_options</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">num_tags</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">tag_vocab</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">cache_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;~/.qsv-cache&quot;</span><span class="p">,</span>
+        <span class="n">enum_threshold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">num_examples</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="n">truncate_str</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">25</span><span class="p">,</span>
+        <span class="n">addl_cols</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">addl_cols_list</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;sort_order, sortiness, mean, median, mad, stddev, variance, cv&quot;</span><span class="p">,</span>
+        <span class="n">prompt</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">sql_results</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">prompt_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">sample_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+        <span class="n">fewshot_examples</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">session</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">session_len</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">base_url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">language</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">addl_props</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">api_key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">max_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">300</span><span class="p">,</span>
+        <span class="n">user_agent</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">export_prompt</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_cache</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">disk_cache_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">redis_cache</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">fresh</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">forget</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">flush_cache</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;markdown&quot;</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">quiet</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;describegpt&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;all_&quot;</span><span class="p">:</span> <span class="n">all_</span><span class="p">,</span>
+            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+            <span class="s2">&quot;dictionary&quot;</span><span class="p">:</span> <span class="n">dictionary</span><span class="p">,</span>
+            <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="n">tags</span><span class="p">,</span>
+            <span class="s2">&quot;dictionary_output&quot;</span><span class="p">:</span> <span class="n">dictionary_output</span><span class="p">,</span>
+            <span class="s2">&quot;ckan_api&quot;</span><span class="p">:</span> <span class="n">ckan_api</span><span class="p">,</span>
+            <span class="s2">&quot;ckan_token&quot;</span><span class="p">:</span> <span class="n">ckan_token</span><span class="p">,</span>
+            <span class="s2">&quot;stats_options&quot;</span><span class="p">:</span> <span class="n">stats_options</span><span class="p">,</span>
+            <span class="s2">&quot;num_tags&quot;</span><span class="p">:</span> <span class="n">num_tags</span> <span class="k">if</span> <span class="n">num_tags</span> <span class="o">!=</span> <span class="mi">10</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;tag_vocab&quot;</span><span class="p">:</span> <span class="n">tag_vocab</span><span class="p">,</span>
+            <span class="s2">&quot;cache_dir&quot;</span><span class="p">:</span> <span class="n">cache_dir</span> <span class="k">if</span> <span class="n">cache_dir</span> <span class="o">!=</span> <span class="s2">&quot;~/.qsv-cache&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;enum_threshold&quot;</span><span class="p">:</span> <span class="n">enum_threshold</span> <span class="k">if</span> <span class="n">enum_threshold</span> <span class="o">!=</span> <span class="mi">10</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;num_examples&quot;</span><span class="p">:</span> <span class="n">num_examples</span> <span class="k">if</span> <span class="n">num_examples</span> <span class="o">!=</span> <span class="mi">5</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;truncate_str&quot;</span><span class="p">:</span> <span class="n">truncate_str</span> <span class="k">if</span> <span class="n">truncate_str</span> <span class="o">!=</span> <span class="mi">25</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;addl_cols&quot;</span><span class="p">:</span> <span class="n">addl_cols</span><span class="p">,</span>
+            <span class="s2">&quot;addl_cols_list&quot;</span><span class="p">:</span> <span class="n">addl_cols_list</span> <span class="k">if</span> <span class="n">addl_cols_list</span> <span class="o">!=</span> <span class="s2">&quot;sort_order, sortiness, mean, median, mad, stddev, variance, cv&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;prompt&quot;</span><span class="p">:</span> <span class="n">prompt</span><span class="p">,</span>
+            <span class="s2">&quot;sql_results&quot;</span><span class="p">:</span> <span class="n">sql_results</span><span class="p">,</span>
+            <span class="s2">&quot;prompt_file&quot;</span><span class="p">:</span> <span class="n">prompt_file</span><span class="p">,</span>
+            <span class="s2">&quot;sample_size&quot;</span><span class="p">:</span> <span class="n">sample_size</span> <span class="k">if</span> <span class="n">sample_size</span> <span class="o">!=</span> <span class="mi">100</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;fewshot_examples&quot;</span><span class="p">:</span> <span class="n">fewshot_examples</span><span class="p">,</span>
+            <span class="s2">&quot;session&quot;</span><span class="p">:</span> <span class="n">session</span><span class="p">,</span>
+            <span class="s2">&quot;session_len&quot;</span><span class="p">:</span> <span class="n">session_len</span> <span class="k">if</span> <span class="n">session_len</span> <span class="o">!=</span> <span class="mi">10</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;base_url&quot;</span><span class="p">:</span> <span class="n">base_url</span><span class="p">,</span>
+            <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">model</span><span class="p">,</span>
+            <span class="s2">&quot;language&quot;</span><span class="p">:</span> <span class="n">language</span><span class="p">,</span>
+            <span class="s2">&quot;addl_props&quot;</span><span class="p">:</span> <span class="n">addl_props</span><span class="p">,</span>
+            <span class="s2">&quot;api_key&quot;</span><span class="p">:</span> <span class="n">api_key</span><span class="p">,</span>
+            <span class="s2">&quot;max_tokens&quot;</span><span class="p">:</span> <span class="n">max_tokens</span> <span class="k">if</span> <span class="n">max_tokens</span> <span class="o">!=</span> <span class="mi">10000</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;timeout&quot;</span><span class="p">:</span> <span class="n">timeout</span> <span class="k">if</span> <span class="n">timeout</span> <span class="o">!=</span> <span class="mi">300</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;user_agent&quot;</span><span class="p">:</span> <span class="n">user_agent</span><span class="p">,</span>
+            <span class="s2">&quot;export_prompt&quot;</span><span class="p">:</span> <span class="n">export_prompt</span><span class="p">,</span>
+            <span class="s2">&quot;no_cache&quot;</span><span class="p">:</span> <span class="n">no_cache</span><span class="p">,</span>
+            <span class="s2">&quot;disk_cache_dir&quot;</span><span class="p">:</span> <span class="n">disk_cache_dir</span><span class="p">,</span>
+            <span class="s2">&quot;redis_cache&quot;</span><span class="p">:</span> <span class="n">redis_cache</span><span class="p">,</span>
+            <span class="s2">&quot;fresh&quot;</span><span class="p">:</span> <span class="n">fresh</span><span class="p">,</span>
+            <span class="s2">&quot;forget&quot;</span><span class="p">:</span> <span class="n">forget</span><span class="p">,</span>
+            <span class="s2">&quot;flush_cache&quot;</span><span class="p">:</span> <span class="n">flush_cache</span><span class="p">,</span>
+            <span class="s2">&quot;format&quot;</span><span class="p">:</span> <span class="nb">format</span> <span class="k">if</span> <span class="nb">format</span> <span class="o">!=</span> <span class="s2">&quot;markdown&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;quiet&quot;</span><span class="p">:</span> <span class="n">quiet</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Enum">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Enum">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Enum</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add a new column enumerating CSV lines.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">new_column</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;index&quot;</span><span class="p">,</span>
+        <span class="n">start</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">uuid</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">constant</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;enum&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;new_column&quot;</span><span class="p">:</span> <span class="n">new_column</span> <span class="k">if</span> <span class="n">new_column</span> <span class="o">!=</span> <span class="s2">&quot;index&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;start&quot;</span><span class="p">:</span> <span class="n">start</span> <span class="k">if</span> <span class="n">start</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;uuid&quot;</span><span class="p">:</span> <span class="n">uuid</span><span class="p">,</span>
+            <span class="s2">&quot;constant&quot;</span><span class="p">:</span> <span class="n">constant</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Explode">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Explode">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Explode</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Explode rows based on some column separator.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">separator</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span><span class="p">,</span>
+        <span class="n">rename</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;explode&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column</span> <span class="o">=</span> <span class="n">column</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;separator&quot;</span><span class="p">:</span> <span class="n">separator</span> <span class="k">if</span> <span class="n">separator</span> <span class="o">!=</span> <span class="s2">&quot;,&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;rename&quot;</span><span class="p">:</span> <span class="n">rename</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span>
+    
+<div class="viewcode-block" id="Explode.run">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Explode.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">column</span><span class="p">,</span> <span class="n">input_path</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="Fill">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Fill">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Fill</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fill empty values.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">value</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">backfill</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">groupby</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">select</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;fill&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">,</span>
+            <span class="s2">&quot;backfill&quot;</span><span class="p">:</span> <span class="n">backfill</span><span class="p">,</span>
+            <span class="s2">&quot;groupby&quot;</span><span class="p">:</span> <span class="n">groupby</span><span class="p">,</span>
+            <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="n">select</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="FixLengths">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.FixLengths">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FixLengths</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Makes all records have same length.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">length</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;fixlengths&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;length&quot;</span><span class="p">:</span> <span class="n">length</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Flatten">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Flatten">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Flatten</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Prints flattened records such that fields are labeled separated by a new line.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">condense</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">field_separator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">separator</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;#&quot;</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;flatten&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;condense&quot;</span><span class="p">:</span> <span class="n">condense</span><span class="p">,</span>
+            <span class="s2">&quot;field_separator&quot;</span><span class="p">:</span> <span class="n">field_separator</span><span class="p">,</span>
+            <span class="s2">&quot;separator&quot;</span><span class="p">:</span> <span class="n">separator</span> <span class="k">if</span> <span class="n">separator</span> <span class="o">!=</span> <span class="s2">&quot;#&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Fmt">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Fmt">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Fmt</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Formats CSV data with a custom delimiter or CRLF line endings.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">out_delimiter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span><span class="p">,</span>
+        <span class="n">crlf</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">ascii</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">quote</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">,</span>
+        <span class="n">quote_always</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">quote_never</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">escape</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_final_newline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;fmt&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;out_delimiter&quot;</span><span class="p">:</span> <span class="n">out_delimiter</span> <span class="k">if</span> <span class="n">out_delimiter</span> <span class="o">!=</span> <span class="s2">&quot;,&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;crlf&quot;</span><span class="p">:</span> <span class="n">crlf</span><span class="p">,</span>
+            <span class="s2">&quot;ascii&quot;</span><span class="p">:</span> <span class="n">ascii</span><span class="p">,</span>
+            <span class="s2">&quot;quote&quot;</span><span class="p">:</span> <span class="n">quote</span> <span class="k">if</span> <span class="n">quote</span> <span class="o">!=</span> <span class="s1">&#39;&quot;&#39;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;quote_always&quot;</span><span class="p">:</span> <span class="n">quote_always</span><span class="p">,</span>
+            <span class="s2">&quot;quote_never&quot;</span><span class="p">:</span> <span class="n">quote_never</span><span class="p">,</span>
+            <span class="s2">&quot;escape&quot;</span><span class="p">:</span> <span class="n">escape</span><span class="p">,</span>
+            <span class="s2">&quot;no_final_newline&quot;</span><span class="p">:</span> <span class="n">no_final_newline</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Frequency">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Frequency">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Frequency</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute a frequency table of the given CSV data.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">select</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">unq_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">lmt_threshold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">rank_strategy</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;dense&quot;</span><span class="p">,</span>
+        <span class="n">pct_dec_places</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">other_sorted</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">other_text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Other&quot;</span><span class="p">,</span>
+        <span class="n">asc</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">no_trim</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">null_text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;(NULL)&quot;</span><span class="p">,</span>
+        <span class="n">no_nulls</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">ignore_case</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">all_unique_text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&lt;ALL_UNIQUE&gt;&quot;</span><span class="p">,</span>
+        <span class="n">vis_whitespace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">jobs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">json</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">pretty_json</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">no_stats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">memcheck</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">toon</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">weight</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;frequency&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="n">select</span><span class="p">,</span>
+            <span class="s2">&quot;limit&quot;</span><span class="p">:</span> <span class="n">limit</span> <span class="k">if</span> <span class="n">limit</span> <span class="o">!=</span> <span class="mi">10</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;unq_limit&quot;</span><span class="p">:</span> <span class="n">unq_limit</span> <span class="k">if</span> <span class="n">unq_limit</span> <span class="o">!=</span> <span class="mi">10</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;lmt_threshold&quot;</span><span class="p">:</span> <span class="n">lmt_threshold</span> <span class="k">if</span> <span class="n">lmt_threshold</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;rank_strategy&quot;</span><span class="p">:</span> <span class="n">rank_strategy</span> <span class="k">if</span> <span class="n">rank_strategy</span> <span class="o">!=</span> <span class="s2">&quot;dense&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;pct_dec_places&quot;</span><span class="p">:</span> <span class="n">pct_dec_places</span> <span class="k">if</span> <span class="n">pct_dec_places</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">5</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;other_sorted&quot;</span><span class="p">:</span> <span class="n">other_sorted</span><span class="p">,</span>
+            <span class="s2">&quot;other_text&quot;</span><span class="p">:</span> <span class="n">other_text</span> <span class="k">if</span> <span class="n">other_text</span> <span class="o">!=</span> <span class="s2">&quot;Other&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;asc&quot;</span><span class="p">:</span> <span class="n">asc</span><span class="p">,</span>
+            <span class="s2">&quot;no_trim&quot;</span><span class="p">:</span> <span class="n">no_trim</span><span class="p">,</span>
+            <span class="s2">&quot;null_text&quot;</span><span class="p">:</span> <span class="n">null_text</span> <span class="k">if</span> <span class="n">null_text</span> <span class="o">!=</span> <span class="s2">&quot;(NULL)&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;no_nulls&quot;</span><span class="p">:</span> <span class="n">no_nulls</span><span class="p">,</span>
+            <span class="s2">&quot;ignore_case&quot;</span><span class="p">:</span> <span class="n">ignore_case</span><span class="p">,</span>
+            <span class="s2">&quot;all_unique_text&quot;</span><span class="p">:</span> <span class="n">all_unique_text</span> <span class="k">if</span> <span class="n">all_unique_text</span> <span class="o">!=</span> <span class="s2">&quot;&lt;ALL_UNIQUE&gt;&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;vis_whitespace&quot;</span><span class="p">:</span> <span class="n">vis_whitespace</span><span class="p">,</span>
+            <span class="s2">&quot;jobs&quot;</span><span class="p">:</span> <span class="n">jobs</span><span class="p">,</span>
+            <span class="s2">&quot;json&quot;</span><span class="p">:</span> <span class="n">json</span><span class="p">,</span>
+            <span class="s2">&quot;pretty_json&quot;</span><span class="p">:</span> <span class="n">pretty_json</span><span class="p">,</span>
+            <span class="s2">&quot;no_stats&quot;</span><span class="p">:</span> <span class="n">no_stats</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="s2">&quot;memcheck&quot;</span><span class="p">:</span> <span class="n">memcheck</span><span class="p">,</span>
+            <span class="s2">&quot;toon&quot;</span><span class="p">:</span> <span class="n">toon</span><span class="p">,</span>
+            <span class="s2">&quot;weight&quot;</span><span class="p">:</span> <span class="n">weight</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Headers">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Headers">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Headers</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Show header names.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">justify</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;headers&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;justify&quot;</span><span class="p">:</span> <span class="n">justify</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Index">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Index">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Index</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates an index of the given CSV data.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Join">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Join">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Join</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Joins two sets of CSV data on the specified columns.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">columns1</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">columns2</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">left</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">left_anti</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">left_semi</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">right</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">right_anti</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">right_semi</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">full</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">cross</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">nulls</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">keys_output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ignore_case</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">ignore_leading_zeros</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;join&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">columns1</span> <span class="o">=</span> <span class="n">columns1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">columns2</span> <span class="o">=</span> <span class="n">columns2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;left&quot;</span><span class="p">:</span> <span class="n">left</span><span class="p">,</span>
+            <span class="s2">&quot;left_anti&quot;</span><span class="p">:</span> <span class="n">left_anti</span><span class="p">,</span>
+            <span class="s2">&quot;left_semi&quot;</span><span class="p">:</span> <span class="n">left_semi</span><span class="p">,</span>
+            <span class="s2">&quot;right&quot;</span><span class="p">:</span> <span class="n">right</span><span class="p">,</span>
+            <span class="s2">&quot;right_anti&quot;</span><span class="p">:</span> <span class="n">right_anti</span><span class="p">,</span>
+            <span class="s2">&quot;right_semi&quot;</span><span class="p">:</span> <span class="n">right_semi</span><span class="p">,</span>
+            <span class="s2">&quot;full&quot;</span><span class="p">:</span> <span class="n">full</span><span class="p">,</span>
+            <span class="s2">&quot;cross&quot;</span><span class="p">:</span> <span class="n">cross</span><span class="p">,</span>
+            <span class="s2">&quot;nulls&quot;</span><span class="p">:</span> <span class="n">nulls</span><span class="p">,</span>
+            <span class="s2">&quot;keys_output&quot;</span><span class="p">:</span> <span class="n">keys_output</span><span class="p">,</span>
+            <span class="s2">&quot;ignore_case&quot;</span><span class="p">:</span> <span class="n">ignore_case</span><span class="p">,</span>
+            <span class="s2">&quot;ignore_leading_zeros&quot;</span><span class="p">:</span> <span class="n">ignore_leading_zeros</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span>
+
+<div class="viewcode-block" id="Join.run">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Join.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input1</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">input2</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">columns1</span><span class="p">,</span> <span class="n">input1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">columns2</span><span class="p">,</span> <span class="n">input2</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="MoarStats">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.MoarStats">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MoarStats</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes additional statistics and outlier metadata for CSV data.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">stats_options</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;--infer-dates --infer-boolean --mad --quartiles --percentiles --force --stats-jsonl&quot;</span><span class="p">,</span>
+        <span class="n">round_places</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">use_percentiles</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">pct_thresholds</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;5,95&quot;</span><span class="p">,</span>
+        <span class="n">advanced</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;moarstats&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;stats_options&quot;</span><span class="p">:</span> <span class="n">stats_options</span> <span class="k">if</span> <span class="n">stats_options</span> <span class="o">!=</span> <span class="s2">&quot;--infer-dates --infer-boolean --mad --quartiles --percentiles --force --stats-jsonl&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;round_places&quot;</span><span class="p">:</span> <span class="n">round_places</span><span class="p">,</span>
+            <span class="s2">&quot;use_percentiles&quot;</span><span class="p">:</span> <span class="n">use_percentiles</span><span class="p">,</span>
+            <span class="s2">&quot;pct_thresholds&quot;</span><span class="p">:</span> <span class="n">pct_thresholds</span> <span class="k">if</span> <span class="n">pct_thresholds</span> <span class="o">!=</span> <span class="s2">&quot;5,95&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;advanced&quot;</span><span class="p">:</span> <span class="n">advanced</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Py">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Py">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Py</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Evaluate a Python expression on CSV data.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">script</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">new_column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;py&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">script</span> <span class="o">=</span> <span class="n">script</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;new_column&quot;</span><span class="p">:</span> <span class="n">new_column</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span>
+    
+<div class="viewcode-block" id="Py.run">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Py.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">script</span><span class="p">,</span> <span class="n">input_path</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="Rename">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Rename">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Rename</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Rename the columns of CSV data efficiently.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">names</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;rename&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">names</span> <span class="o">=</span> <span class="n">names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span>
+    
+<div class="viewcode-block" id="Rename.run">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Rename.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">,</span> <span class="n">input_path</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="Replace">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Replace">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Replace</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Replace patterns in CSV data.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">replacement</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">ignore_case</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">literal</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">exact</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">select</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">unicode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">size_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+        <span class="n">dfa_size_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">not_one</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">jobs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">progressbar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">quiet</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;replace&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span> <span class="o">=</span> <span class="n">pattern</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">replacement</span> <span class="o">=</span> <span class="n">replacement</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;ignore_case&quot;</span><span class="p">:</span> <span class="n">ignore_case</span><span class="p">,</span>
+            <span class="s2">&quot;literal&quot;</span><span class="p">:</span> <span class="n">literal</span><span class="p">,</span>
+            <span class="s2">&quot;exact&quot;</span><span class="p">:</span> <span class="n">exact</span><span class="p">,</span>
+            <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="n">select</span><span class="p">,</span>
+            <span class="s2">&quot;unicode&quot;</span><span class="p">:</span> <span class="n">unicode</span><span class="p">,</span>
+            <span class="s2">&quot;size_limit&quot;</span><span class="p">:</span> <span class="n">size_limit</span> <span class="k">if</span> <span class="n">size_limit</span> <span class="o">!=</span> <span class="mi">50</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;dfa_size_limit&quot;</span><span class="p">:</span> <span class="n">dfa_size_limit</span> <span class="k">if</span> <span class="n">dfa_size_limit</span> <span class="o">!=</span> <span class="mi">10</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;not_one&quot;</span><span class="p">:</span> <span class="n">not_one</span><span class="p">,</span>
+            <span class="s2">&quot;jobs&quot;</span><span class="p">:</span> <span class="n">jobs</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="s2">&quot;progressbar&quot;</span><span class="p">:</span> <span class="n">progressbar</span><span class="p">,</span>
+            <span class="s2">&quot;quiet&quot;</span><span class="p">:</span> <span class="n">quiet</span>
+        <span class="p">}</span>
+    
+<div class="viewcode-block" id="Replace.run">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Replace.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">replacement</span><span class="p">,</span> <span class="n">input_path</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="Reverse">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Reverse">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Reverse</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reverse rows of CSV data.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">memcheck</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;reverse&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="s2">&quot;memcheck&quot;</span><span class="p">:</span> <span class="n">memcheck</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Sample">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Sample">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Sample</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Randomly sample CSV data.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+        <span class="n">seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;sample&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size_arg</span> <span class="o">=</span> <span class="n">size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="n">seed</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span>
+    
+<div class="viewcode-block" id="Sample.run">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Sample.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size_arg</span><span class="p">),</span> <span class="n">input_path</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="Schema">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Schema">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Schema</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate JSON Schema or Polars Schema from CSV data.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">enum_threshold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+        <span class="n">ignore_case</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">strict_dates</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">strict_formats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">pattern_columns</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dates_whitelist</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;date,time,due,open,close,created&quot;</span><span class="p">,</span>
+        <span class="n">prefer_dmy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">stdout</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">jobs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">polars</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">memcheck</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;schema&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;enum_threshold&quot;</span><span class="p">:</span> <span class="n">enum_threshold</span> <span class="k">if</span> <span class="n">enum_threshold</span> <span class="o">!=</span> <span class="mi">50</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;ignore_case&quot;</span><span class="p">:</span> <span class="n">ignore_case</span><span class="p">,</span>
+            <span class="s2">&quot;strict_dates&quot;</span><span class="p">:</span> <span class="n">strict_dates</span><span class="p">,</span>
+            <span class="s2">&quot;strict_formats&quot;</span><span class="p">:</span> <span class="n">strict_formats</span><span class="p">,</span>
+            <span class="s2">&quot;pattern_columns&quot;</span><span class="p">:</span> <span class="n">pattern_columns</span><span class="p">,</span>
+            <span class="s2">&quot;dates_whitelist&quot;</span><span class="p">:</span> <span class="n">dates_whitelist</span> <span class="k">if</span> <span class="n">dates_whitelist</span> <span class="o">!=</span> <span class="s2">&quot;date,time,due,open,close,created&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;prefer_dmy&quot;</span><span class="p">:</span> <span class="n">prefer_dmy</span><span class="p">,</span>
+            <span class="s2">&quot;force&quot;</span><span class="p">:</span> <span class="n">force</span><span class="p">,</span>
+            <span class="s2">&quot;stdout&quot;</span><span class="p">:</span> <span class="n">stdout</span><span class="p">,</span>
+            <span class="s2">&quot;jobs&quot;</span><span class="p">:</span> <span class="n">jobs</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;polars&quot;</span><span class="p">:</span> <span class="n">polars</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="s2">&quot;memcheck&quot;</span><span class="p">:</span> <span class="n">memcheck</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Search">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Search">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Search</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Search CSV data with a regex.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">ignore_case</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">select</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">invert_match</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">unicode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">flag</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">preview</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">count</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">size_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+        <span class="n">dfa_size_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">json</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">not_one</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">jobs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">progressbar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">quiet</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;search&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span> <span class="o">=</span> <span class="n">pattern</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;ignore_case&quot;</span><span class="p">:</span> <span class="n">ignore_case</span><span class="p">,</span>
+            <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="n">select</span><span class="p">,</span>
+            <span class="s2">&quot;invert_match&quot;</span><span class="p">:</span> <span class="n">invert_match</span><span class="p">,</span>
+            <span class="s2">&quot;unicode&quot;</span><span class="p">:</span> <span class="n">unicode</span><span class="p">,</span>
+            <span class="s2">&quot;flag&quot;</span><span class="p">:</span> <span class="n">flag</span><span class="p">,</span>
+            <span class="s2">&quot;preview&quot;</span><span class="p">:</span> <span class="n">preview</span> <span class="k">if</span> <span class="n">preview</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span>
+            <span class="s2">&quot;size_limit&quot;</span><span class="p">:</span> <span class="n">size_limit</span> <span class="k">if</span> <span class="n">size_limit</span> <span class="o">!=</span> <span class="mi">50</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;dfa_size_limit&quot;</span><span class="p">:</span> <span class="n">dfa_size_limit</span> <span class="k">if</span> <span class="n">dfa_size_limit</span> <span class="o">!=</span> <span class="mi">10</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;json&quot;</span><span class="p">:</span> <span class="n">json</span><span class="p">,</span>
+            <span class="s2">&quot;not_one&quot;</span><span class="p">:</span> <span class="n">not_one</span><span class="p">,</span>
+            <span class="s2">&quot;jobs&quot;</span><span class="p">:</span> <span class="n">jobs</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="s2">&quot;progressbar&quot;</span><span class="p">:</span> <span class="n">progressbar</span><span class="p">,</span>
+            <span class="s2">&quot;quiet&quot;</span><span class="p">:</span> <span class="n">quiet</span>
+        <span class="p">}</span>
+    
+<div class="viewcode-block" id="Search.run">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Search.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="p">,</span> <span class="n">input_path</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="SearchSet">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.SearchSet">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SearchSet</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Search CSV data with a regex set.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">regexset_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">ignore_case</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">literal</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">exact</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">select</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">invert_match</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">unicode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">flag</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">flag_matches_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">unmatched_output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">quick</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">count</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">json</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">size_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+        <span class="n">dfa_size_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">not_one</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">jobs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">progressbar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">quiet</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;searchset&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">regexset_file</span> <span class="o">=</span> <span class="n">regexset_file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;ignore_case&quot;</span><span class="p">:</span> <span class="n">ignore_case</span><span class="p">,</span>
+            <span class="s2">&quot;literal&quot;</span><span class="p">:</span> <span class="n">literal</span><span class="p">,</span>
+            <span class="s2">&quot;exact&quot;</span><span class="p">:</span> <span class="n">exact</span><span class="p">,</span>
+            <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="n">select</span><span class="p">,</span>
+            <span class="s2">&quot;invert_match&quot;</span><span class="p">:</span> <span class="n">invert_match</span><span class="p">,</span>
+            <span class="s2">&quot;unicode&quot;</span><span class="p">:</span> <span class="n">unicode</span><span class="p">,</span>
+            <span class="s2">&quot;flag&quot;</span><span class="p">:</span> <span class="n">flag</span><span class="p">,</span>
+            <span class="s2">&quot;flag_matches_only&quot;</span><span class="p">:</span> <span class="n">flag_matches_only</span><span class="p">,</span>
+            <span class="s2">&quot;unmatched_output&quot;</span><span class="p">:</span> <span class="n">unmatched_output</span><span class="p">,</span>
+            <span class="s2">&quot;quick&quot;</span><span class="p">:</span> <span class="n">quick</span><span class="p">,</span>
+            <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span>
+            <span class="s2">&quot;json&quot;</span><span class="p">:</span> <span class="n">json</span><span class="p">,</span>
+            <span class="s2">&quot;size_limit&quot;</span><span class="p">:</span> <span class="n">size_limit</span> <span class="k">if</span> <span class="n">size_limit</span> <span class="o">!=</span> <span class="mi">50</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;dfa_size_limit&quot;</span><span class="p">:</span> <span class="n">dfa_size_limit</span> <span class="k">if</span> <span class="n">dfa_size_limit</span> <span class="o">!=</span> <span class="mi">10</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;not_one&quot;</span><span class="p">:</span> <span class="n">not_one</span><span class="p">,</span>
+            <span class="s2">&quot;jobs&quot;</span><span class="p">:</span> <span class="n">jobs</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="s2">&quot;progressbar&quot;</span><span class="p">:</span> <span class="n">progressbar</span><span class="p">,</span>
+            <span class="s2">&quot;quiet&quot;</span><span class="p">:</span> <span class="n">quiet</span>
+        <span class="p">}</span>
+    
+<div class="viewcode-block" id="SearchSet.run">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.SearchSet.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">regexset_file</span><span class="p">,</span> <span class="n">input_path</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="Select">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Select">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Select</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Select, re-order, duplicate or drop columns.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">selection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">random</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">sort</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;select&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">selection</span> <span class="o">=</span> <span class="n">selection</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;random&quot;</span><span class="p">:</span> <span class="n">random</span><span class="p">,</span>
+            <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="n">seed</span><span class="p">,</span>
+            <span class="s2">&quot;sort&quot;</span><span class="p">:</span> <span class="n">sort</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span>
+
+<div class="viewcode-block" id="Select.run">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Select.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selection</span><span class="p">,</span> <span class="n">input_path</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="Slice">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Slice">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Slice</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Slice records from CSV.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">index</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="nb">len</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="nb">next</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;slice&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">index</span><span class="p">,</span>
+            <span class="s2">&quot;len&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">,</span>
+            <span class="s2">&quot;next&quot;</span><span class="p">:</span> <span class="nb">next</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Sniff">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Sniff">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Sniff</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Quickly sniff CSV metadata.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">sample</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+        <span class="n">prefer_dmy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">json</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">pretty_json</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;sniff&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;sample&quot;</span><span class="p">:</span> <span class="n">sample</span> <span class="k">if</span> <span class="n">sample</span> <span class="o">!=</span> <span class="mi">100</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;prefer_dmy&quot;</span><span class="p">:</span> <span class="n">prefer_dmy</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="s2">&quot;json&quot;</span><span class="p">:</span> <span class="n">json</span><span class="p">,</span>
+            <span class="s2">&quot;pretty_json&quot;</span><span class="p">:</span> <span class="n">pretty_json</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Sort">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Sort">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Sort</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sort CSV data in alphabetical, numerical, reverse or random order.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">select</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">numeric</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">natural</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">reverse</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">ignore_case</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">unique</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">random</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">rng</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;standard&quot;</span><span class="p">,</span>
+        <span class="n">jobs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">faster</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">memcheck</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;sort&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="n">select</span><span class="p">,</span>
+            <span class="s2">&quot;numeric&quot;</span><span class="p">:</span> <span class="n">numeric</span><span class="p">,</span>
+            <span class="s2">&quot;natural&quot;</span><span class="p">:</span> <span class="n">natural</span><span class="p">,</span>
+            <span class="s2">&quot;reverse&quot;</span><span class="p">:</span> <span class="n">reverse</span><span class="p">,</span>
+            <span class="s2">&quot;ignore_case&quot;</span><span class="p">:</span> <span class="n">ignore_case</span><span class="p">,</span>
+            <span class="s2">&quot;unique&quot;</span><span class="p">:</span> <span class="n">unique</span><span class="p">,</span>
+            <span class="s2">&quot;random&quot;</span><span class="p">:</span> <span class="n">random</span><span class="p">,</span>
+            <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="n">seed</span><span class="p">,</span>
+            <span class="s2">&quot;rng&quot;</span><span class="p">:</span> <span class="n">rng</span> <span class="k">if</span> <span class="n">rng</span> <span class="o">!=</span> <span class="s2">&quot;standard&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;jobs&quot;</span><span class="p">:</span> <span class="n">jobs</span><span class="p">,</span>
+            <span class="s2">&quot;faster&quot;</span><span class="p">:</span> <span class="n">faster</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="s2">&quot;memcheck&quot;</span><span class="p">:</span> <span class="n">memcheck</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Sqlp">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Sqlp">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Sqlp</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run a SQL query against several CSVs using the Pola.rs engine.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;csv&quot;</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">try_parsedates</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">low_memory</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">no_cache</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">ignore_errors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;sqlp&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">query</span> <span class="o">=</span> <span class="n">query</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;format&quot;</span><span class="p">:</span> <span class="nb">format</span> <span class="k">if</span> <span class="nb">format</span> <span class="o">!=</span> <span class="s2">&quot;csv&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="s2">&quot;try_parsedates&quot;</span><span class="p">:</span> <span class="n">try_parsedates</span><span class="p">,</span>
+            <span class="s2">&quot;low_memory&quot;</span><span class="p">:</span> <span class="n">low_memory</span><span class="p">,</span>
+            <span class="s2">&quot;no_cache&quot;</span><span class="p">:</span> <span class="n">no_cache</span><span class="p">,</span>
+            <span class="s2">&quot;ignore_errors&quot;</span><span class="p">:</span> <span class="n">ignore_errors</span>
+        <span class="p">}</span>
+    
+<div class="viewcode-block" id="Sqlp.run">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Sqlp.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">input_paths</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">query</span><span class="p">,</span> <span class="o">*</span><span class="n">input_paths</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="Stats">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Stats">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Stats</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes summary statistics for CSV data.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">select</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">everything</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">typesonly</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">infer_boolean</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">boolean_patterns</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;1:0,t*:f*,y*:n*&quot;</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">cardinality</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">median</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">mad</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">quartiles</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">percentiles</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">percentile_list</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;5,10,40,60,90,95&quot;</span><span class="p">,</span>
+        <span class="n">round_places</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">nulls</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">infer_dates</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">dates_whitelist</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;date,time,due,open,close,created&quot;</span><span class="p">,</span>
+        <span class="n">prefer_dmy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">jobs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">stats_jsonl</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">cache_threshold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5000</span><span class="p">,</span>
+        <span class="n">vis_whitespace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">dataset_stats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">no_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">memcheck</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">weight</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;stats&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="n">select</span><span class="p">,</span>
+            <span class="s2">&quot;everything&quot;</span><span class="p">:</span> <span class="n">everything</span><span class="p">,</span>
+            <span class="s2">&quot;typesonly&quot;</span><span class="p">:</span> <span class="n">typesonly</span><span class="p">,</span>
+            <span class="s2">&quot;infer_boolean&quot;</span><span class="p">:</span> <span class="n">infer_boolean</span><span class="p">,</span>
+            <span class="s2">&quot;boolean_patterns&quot;</span><span class="p">:</span> <span class="n">boolean_patterns</span> <span class="k">if</span> <span class="n">boolean_patterns</span> <span class="o">!=</span> <span class="s2">&quot;1:0,t*:f*,y*:n*&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="n">mode</span><span class="p">,</span>
+            <span class="s2">&quot;cardinality&quot;</span><span class="p">:</span> <span class="n">cardinality</span><span class="p">,</span>
+            <span class="s2">&quot;median&quot;</span><span class="p">:</span> <span class="n">median</span><span class="p">,</span>
+            <span class="s2">&quot;mad&quot;</span><span class="p">:</span> <span class="n">mad</span><span class="p">,</span>
+            <span class="s2">&quot;quartiles&quot;</span><span class="p">:</span> <span class="n">quartiles</span><span class="p">,</span>
+            <span class="s2">&quot;percentiles&quot;</span><span class="p">:</span> <span class="n">percentiles</span><span class="p">,</span>
+            <span class="s2">&quot;percentile_list&quot;</span><span class="p">:</span> <span class="n">percentile_list</span> <span class="k">if</span> <span class="n">percentile_list</span> <span class="o">!=</span> <span class="s2">&quot;5,10,40,60,90,95&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;round_places&quot;</span><span class="p">:</span> <span class="n">round_places</span><span class="p">,</span>
+            <span class="s2">&quot;nulls&quot;</span><span class="p">:</span> <span class="n">nulls</span><span class="p">,</span>
+            <span class="s2">&quot;infer_dates&quot;</span><span class="p">:</span> <span class="n">infer_dates</span><span class="p">,</span>
+            <span class="s2">&quot;dates_whitelist&quot;</span><span class="p">:</span> <span class="n">dates_whitelist</span> <span class="k">if</span> <span class="n">dates_whitelist</span> <span class="o">!=</span> <span class="s2">&quot;date,time,due,open,close,created&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;prefer_dmy&quot;</span><span class="p">:</span> <span class="n">prefer_dmy</span><span class="p">,</span>
+            <span class="s2">&quot;force&quot;</span><span class="p">:</span> <span class="n">force</span><span class="p">,</span>
+            <span class="s2">&quot;jobs&quot;</span><span class="p">:</span> <span class="n">jobs</span><span class="p">,</span>
+            <span class="s2">&quot;stats_jsonl&quot;</span><span class="p">:</span> <span class="n">stats_jsonl</span><span class="p">,</span>
+            <span class="s2">&quot;cache_threshold&quot;</span><span class="p">:</span> <span class="n">cache_threshold</span> <span class="k">if</span> <span class="n">cache_threshold</span> <span class="o">!=</span> <span class="mi">5000</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;vis_whitespace&quot;</span><span class="p">:</span> <span class="n">vis_whitespace</span><span class="p">,</span>
+            <span class="s2">&quot;dataset_stats&quot;</span><span class="p">:</span> <span class="n">dataset_stats</span><span class="p">,</span>
+            <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+            <span class="s2">&quot;no_headers&quot;</span><span class="p">:</span> <span class="n">no_headers</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="s2">&quot;memcheck&quot;</span><span class="p">:</span> <span class="n">memcheck</span><span class="p">,</span>
+            <span class="s2">&quot;weight&quot;</span><span class="p">:</span> <span class="n">weight</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Validate">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Validate">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Validate</span><span class="p">(</span><span class="n">QSVCommand</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate CSV data for RFC4180-compliance or with JSON Schema.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">json_schema</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">trim</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">no_format_validation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">fail_fast</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">valid_suffix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;valid&quot;</span><span class="p">,</span>
+        <span class="n">invalid_suffix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;invalid&quot;</span><span class="p">,</span>
+        <span class="n">json</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">pretty_json</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">valid_output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">jobs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">batch</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50000</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">progressbar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">quiet</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;validate&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">json_schema</span> <span class="o">=</span> <span class="n">json_schema</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;trim&quot;</span><span class="p">:</span> <span class="n">trim</span><span class="p">,</span>
+            <span class="s2">&quot;no_format_validation&quot;</span><span class="p">:</span> <span class="n">no_format_validation</span><span class="p">,</span>
+            <span class="s2">&quot;fail_fast&quot;</span><span class="p">:</span> <span class="n">fail_fast</span><span class="p">,</span>
+            <span class="s2">&quot;valid&quot;</span><span class="p">:</span> <span class="n">valid_suffix</span> <span class="k">if</span> <span class="n">valid_suffix</span> <span class="o">!=</span> <span class="s2">&quot;valid&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;invalid&quot;</span><span class="p">:</span> <span class="n">invalid_suffix</span> <span class="k">if</span> <span class="n">invalid_suffix</span> <span class="o">!=</span> <span class="s2">&quot;invalid&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;json&quot;</span><span class="p">:</span> <span class="n">json</span><span class="p">,</span>
+            <span class="s2">&quot;pretty_json&quot;</span><span class="p">:</span> <span class="n">pretty_json</span><span class="p">,</span>
+            <span class="s2">&quot;valid_output&quot;</span><span class="p">:</span> <span class="n">valid_output</span><span class="p">,</span>
+            <span class="s2">&quot;jobs&quot;</span><span class="p">:</span> <span class="n">jobs</span><span class="p">,</span>
+            <span class="s2">&quot;batch&quot;</span><span class="p">:</span> <span class="n">batch</span> <span class="k">if</span> <span class="n">batch</span> <span class="o">!=</span> <span class="mi">50000</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">:</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="s2">&quot;progressbar&quot;</span><span class="p">:</span> <span class="n">progressbar</span><span class="p">,</span>
+            <span class="s2">&quot;quiet&quot;</span><span class="p">:</span> <span class="n">quiet</span>
+        <span class="p">}</span>
+    
+<div class="viewcode-block" id="Validate.run">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.Validate.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">input_paths</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">input_paths</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">json_schema</span><span class="p">:</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">json_schema</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span></div>
+</div>
+
+
+<span class="c1"># --- Function Wrappers for Backward Compatibility ---</span>
+
+<div class="viewcode-block" id="index">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.index">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">index</span><span class="p">(</span><span class="n">input_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates an index of the given CSV data.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Index</span><span class="p">(</span><span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="frequency">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.frequency">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">frequency</span><span class="p">(</span><span class="n">input_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute a frequency table of the given CSV data.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Frequency</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="stats">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.stats">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">stats</span><span class="p">(</span><span class="n">input_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes summary statistics for CSV data.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Stats</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="schema">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.schema">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">schema</span><span class="p">(</span><span class="n">input_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate JSON Schema or Polars Schema from CSV data.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Schema</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="describegpt">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.describegpt">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">describegpt</span><span class="p">(</span><span class="n">input_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Inference metadata and provide a summary of the given CSV data using an LLM.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">DescribeGPT</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="select">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.select">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">select</span><span class="p">(</span><span class="n">input_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">selection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Select columns from CSV data efficiently.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Select</span><span class="p">(</span><span class="n">selection</span><span class="o">=</span><span class="n">selection</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="moarstats">
+<a class="viewcode-back" href="../../../dartfx.qsv.html#dartfx.qsv.cmd.moarstats">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">moarstats</span><span class="p">(</span><span class="n">input_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes additional statistics and outlier metadata for CSV data.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">MoarStats</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Pascal Heus.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
