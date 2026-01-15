@@ -25,8 +25,6 @@ import os
 from dartfx.qsv.cmd import QSV
 
 def main():
-    all_in_one_md = "# QSV Commands\n\n"
-
     # collect all help outputs
     cmd_help = {}
     for cmd in QSV.commands():
@@ -43,7 +41,7 @@ def main():
             f.write(md)
 
     # write all help outputs to a single file
-    all_in_one_md += "# QSV Commands\n\n"
+    all_in_one_md = "# QSV Commands\n\n"
     for cmd_name, help_txt in cmd_help.items():
         all_in_one_md += f"## {cmd_name}\n\n"
         all_in_one_md += f"```text\n"

@@ -1,7 +1,5 @@
 # QSV Commands
 
-# QSV Commands
-
 ## apply
 
 ```text
