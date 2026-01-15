@@ -1,4 +1,4 @@
-# qsv apply
+# apply
 
 ```text
 Apply a series of transformation functions to given CSV column/s. This can be used to

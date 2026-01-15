@@ -1,4 +1,4 @@
-# qsv slice
+# slice
 
 ```text
 Returns the rows in the range specified (starting at 0, half-open interval).

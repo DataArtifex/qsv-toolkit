@@ -1,4 +1,4 @@
-# qsv behead
+# behead
 
 ```text
 Drop a CSV file's header.

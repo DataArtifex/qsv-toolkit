@@ -1,4 +1,4 @@
-# qsv describegpt
+# describegpt
 
 ```text
 Create a "neuro-procedural" Data Dictionary and/or infer Description & Tags about a Dataset

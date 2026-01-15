@@ -1,4 +1,4 @@
-# qsv dedup
+# dedup
 
 ```text
 Deduplicates CSV rows. 

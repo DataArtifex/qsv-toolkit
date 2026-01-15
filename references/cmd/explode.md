@@ -1,4 +1,4 @@
-# qsv explode
+# explode
 
 ```text
 Explodes a row into multiple ones by splitting a column value based on the

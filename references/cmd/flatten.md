@@ -1,4 +1,4 @@
-# qsv flatten
+# flatten
 
 ```text
 Prints flattened records such that fields are labeled separated by a new line.

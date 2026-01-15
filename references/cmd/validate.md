@@ -1,4 +1,4 @@
-# qsv validate
+# validate
 
 ```text
 Validates CSV data using two main modes:

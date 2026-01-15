@@ -10,13 +10,11 @@ It is assume that you have QSV is installed and available in your PATH.
   e.g. `qsv stats --help`
 - If a command already exists, verify that its description and input parameters are up to date with the latest version of QSV
 - The commands should be sorted alphabetically, except for generic/inherited classes, which may appear at the top. 
+- Make sure a 'help' method is available for each command.
+- Do include a class for the `qsv` command itself, which is the entry point for the QSV command line tool.
 
 ## QSV commands documentation
-- For each of the QSV commands, generate a markdown documentation file in the `references/cmd` directory.
-- Each documentation file:
-  - should be named and titled after the command it documents.
-  - should only include the output of the command line options in a code block.
-- Maintain a `references/cmd/README.md` file that lists all the commands and their documentation files.
+- Maintain a `references/cmd/README.md` file that lists all the QSV documented commands and their documentation files.
   - The list should be sorted alphabetically.
   - The list should include the name of the command and a short description.
 

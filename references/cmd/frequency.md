@@ -1,4 +1,4 @@
-# qsv frequency
+# frequency
 
 ```text
 Compute a frequency distribution table on input data. It has CSV and JSON output modes.

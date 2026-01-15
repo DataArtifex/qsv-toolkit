@@ -1,4 +1,4 @@
-# qsv sniff
+# sniff
 
 ```text
 Quickly sniff the first n rows and infer CSV metadata (delimiter, header row, number of

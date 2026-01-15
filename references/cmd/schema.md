@@ -1,4 +1,4 @@
-# qsv schema
+# schema
 
 ```text
 Generate JSON Schema or Polars Schema (with the `--polars` option) from CSV data.

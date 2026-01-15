@@ -1,4 +1,4 @@
-# qsv moarstats
+# moarstats
 
 ```text
 Add dozens of additional statistics, including extended outlier & robust statistics

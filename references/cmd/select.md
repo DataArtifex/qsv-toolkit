@@ -1,4 +1,4 @@
-# qsv select
+# select
 
 ```text
 Select columns from CSV data efficiently.

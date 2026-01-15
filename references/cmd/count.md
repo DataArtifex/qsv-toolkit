@@ -1,4 +1,4 @@
-# qsv count
+# count
 
 ```text
 Returns a count of the number of records in the CSV data.

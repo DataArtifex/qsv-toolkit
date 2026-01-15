@@ -1,4 +1,4 @@
-# qsv index
+# index
 
 ```text
 Creates an index of the given CSV data, which can make other operations like

@@ -1,4 +1,4 @@
-# qsv sample
+# sample
 
 ```text
 Randomly samples CSV data.

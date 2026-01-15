@@ -1,4 +1,4 @@
-# qsv replace
+# replace
 
 ```text
 Replace occurrences of a pattern across a CSV file.

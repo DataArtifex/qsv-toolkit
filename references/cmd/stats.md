@@ -1,4 +1,4 @@
-# qsv stats
+# stats
 
 ```text
 Compute summary statistics & infers data types for each column in a CSV.

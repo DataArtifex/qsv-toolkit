@@ -1,4 +1,4 @@
-# qsv cat
+# cat
 
 ```text
 Concatenate CSV files by row or by column.

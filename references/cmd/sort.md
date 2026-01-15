@@ -1,4 +1,4 @@
-# qsv sort
+# sort
 
 ```text
 Sorts CSV data in lexicographical, natural, numerical, reverse, unique or random order.

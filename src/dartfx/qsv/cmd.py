@@ -10,7 +10,10 @@ def _run_qsv_command(command: str, args: List[str]) -> str:
     import shutil
     if shutil.which("qsv") is None:
         raise RuntimeError("The 'qsv' command-line tool is not installed or not found in PATH.")
-    cmd = ["qsv", command] + args
+    cmd = ["qsv"]
+    if command:
+        cmd.append(command)
+    cmd.extend(args)
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     return result.stdout
 
@@ -55,8 +58,50 @@ class QSVCommand:
         args.extend(inputs)
         return _run_qsv_command(self.command, args)
 
+    @classmethod
+    def name(cls) -> str:
+        return cls.__name__.lower()
+
+    @classmethod
+    def help(cls) -> str:
+        """Returns the help output for the command."""
+        if cls is QSVCommand:
+            return "Help not available for base QSVCommand."
+        cmd_name = cls.__name__.lower()
+        if cmd_name == "qsv":
+            cmd_name = ""
+        return _run_qsv_command(cmd_name, ["--help"])
+
+class QSV(QSVCommand):
+    """The qsv command itself."""
+    def __init__(
+        self,
+        list: bool = False,
+        envlist: bool = False,
+        update: bool = False,
+        updatenow: bool = False,
+        update_mcp_skills: bool = False,
+        version: bool = False
+    ):
+        super().__init__("")
+        self.params = {
+            "list": list,
+            "envlist": envlist,
+            "update": update,
+            "updatenow": updatenow,
+            "update-mcp-skills": update_mcp_skills,
+            "version": version
+        }
+
+    @staticmethod
+    def commands() -> List[type]:
+        """Returns a list of all available command classes."""
+        cmds = [cls for cls in QSVCommand.__subclasses__() if cls is not QSV]
+        return sorted(cmds, key=lambda x: x.__name__)
+
 class Apply(QSVCommand):
     """Apply series of transformations to a column."""
+
     def __init__(
         self,
         column: str,
@@ -101,6 +146,7 @@ class Apply(QSVCommand):
 
 class Behead(QSVCommand):
     """Drop a CSV file's header."""
+
     def __init__(
         self,
         flexible: bool = False,
@@ -114,6 +160,7 @@ class Behead(QSVCommand):
 
 class Cat(QSVCommand):
     """Concatenate CSV files by row or by column."""
+
     def __init__(
         self,
         subcommand: str = "rows",
@@ -142,6 +189,7 @@ class Cat(QSVCommand):
 
 class Count(QSVCommand):
     """Returns a count of the number of records in the CSV data."""
+
     def __init__(
         self,
         human_readable: bool = False,
@@ -169,6 +217,7 @@ class Count(QSVCommand):
 
 class Dedup(QSVCommand):
     """Remove redundant rows."""
+
     def __init__(
         self,
         select: Optional[str] = None,
@@ -198,6 +247,7 @@ class Dedup(QSVCommand):
 
 class DescribeGPT(QSVCommand):
     """Inference metadata and provide a summary of the given CSV data using an LLM."""
+
     def __init__(
         self,
         all_: bool = False,
@@ -976,6 +1026,7 @@ class Sqlp(QSVCommand):
 
 class Stats(QSVCommand):
     """Computes summary statistics for CSV data."""
+
     def __init__(
         self,
         select: Optional[str] = None,

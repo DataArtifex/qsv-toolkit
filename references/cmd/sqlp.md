@@ -1,4 +1,4 @@
-# qsv sqlp
+# sqlp
 
 ```text
 Run blazing-fast Polars SQL queries against several CSVs - replete with joins, aggregations,

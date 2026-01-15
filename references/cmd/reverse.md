@@ -1,4 +1,4 @@
-# qsv reverse
+# reverse
 
 ```text
 Reverses rows of CSV data.

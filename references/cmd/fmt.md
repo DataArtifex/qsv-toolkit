@@ -1,4 +1,4 @@
-# qsv fmt
+# fmt
 
 ```text
 Formats CSV data with a custom delimiter or CRLF line endings.

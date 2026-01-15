@@ -1,4 +1,4 @@
-# qsv searchset
+# searchset
 
 ```text
 Filters CSV data by whether the given regex set matches a row.

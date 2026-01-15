@@ -1,4 +1,4 @@
-# qsv headers
+# headers
 
 ```text
 Prints the fields of the first row in the CSV data.

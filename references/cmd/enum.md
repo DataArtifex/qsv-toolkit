@@ -1,4 +1,4 @@
-# qsv enum
+# enum
 
 ```text
 Add a new column enumerating the lines of a CSV file. This can be useful to keep
