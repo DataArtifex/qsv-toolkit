@@ -19,14 +19,16 @@ Key Features:
 Usage:
 python utils/cmd_references.py --output ./docs/commands
 """
+
 import argparse
 import os
 
 from dartfx.qsv.cmd import QSV
 
-def main():
+
+def main(args: argparse.Namespace) -> None:
     # collect all help outputs
-    cmd_help = {}
+    cmd_help: dict[str, str] = {}
     for cmd in QSV.commands():
         cmd_help[cmd.name()] = cmd.help()
 
@@ -34,9 +36,9 @@ def main():
     for cmd_name, help_txt in cmd_help.items():
         cmd_filename = os.path.join(args.output, f"{cmd_name}.md")
         md = f"# {cmd_name}\n\n"
-        md += f"```text\n"
+        md += "```text\n"
         md += help_txt
-        md += f"```\n"
+        md += "```\n"
         with open(cmd_filename, "w") as f:
             f.write(md)
 
@@ -44,16 +46,22 @@ def main():
     all_in_one_md = "# QSV Commands\n\n"
     for cmd_name, help_txt in cmd_help.items():
         all_in_one_md += f"## {cmd_name}\n\n"
-        all_in_one_md += f"```text\n"
+        all_in_one_md += "```text\n"
         all_in_one_md += help_txt
-        all_in_one_md += f"```\n"
+        all_in_one_md += "```\n"
     with open(os.path.join(args.output, "ALL.md"), "w") as f:
         f.write(all_in_one_md)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-o", "--output", default=os.path.join(os.path.dirname(__file__), "..", "references", "cmd"), help="Output directory")
+    parser.add_argument(
+        "-o",
+        "--output",
+        default=os.path.join(os.path.dirname(__file__), "..", "references", "cmd"),
+        help="Output directory",
+    )
     args = parser.parse_args()
 
     os.makedirs(args.output, exist_ok=True)
-    main()
+    main(args)
