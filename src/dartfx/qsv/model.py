@@ -11,27 +11,27 @@ class DataFile(BaseModel):
     name: str
     subpath: str = "" # path to file under data product root
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def stem(self) -> str:
         return os.path.splitext(self.filename)[0]
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def dirpath(self) -> str:
         return os.path.join(self.product.root, self.subpath)
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def extension(self) -> str:
         return os.path.splitext(self.name)[1].lower()[1:]
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def filename(self) -> str:
         return self.name
     
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def filepath(self) -> str:
         return os.path.join(self.product.root, self.subpath, self.name)
@@ -105,12 +105,12 @@ class QsvStatsFile(BaseModel):
     datafile: DataFile # The associated data file
     _data: list[QsvStatsDataModel]
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def jsonl_filename(self) -> str:
         return f"{self.datafile.stem}.stats.{self.datafile.extension}.data.jsonl"
     
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def jsonl_filepath(self) -> str:
         return os.path.join(self.datafile.dirpath, self.jsonl_filename)

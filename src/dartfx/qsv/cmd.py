@@ -1,5 +1,5 @@
 import subprocess
-from typing import Optional, List, Union
+from typing import Any, Optional, List, Union
 
 def _run_qsv_command(command: str, args: List[str]) -> str:
     """
@@ -22,7 +22,7 @@ class QSVCommand:
     
     def __init__(self, command: str):
         self.command = command
-        self.params = {}
+        self.params: dict[str, Any] = {}
 
     def _get_args(self) -> List[str]:
         args = []
@@ -53,9 +53,9 @@ class QSVCommand:
                 args.extend([flag, str(value)])
         return args
 
-    def run(self, *inputs: str) -> str:
+    def run(self, *inputs: str | None) -> str:
         args = self._get_args()
-        args.extend(inputs)
+        args.extend(i for i in inputs if i is not None)
         return _run_qsv_command(self.command, args)
 
     @classmethod
@@ -135,7 +135,7 @@ class Apply(QSVCommand):
             "progressbar": progressbar
         }
     
-    def run(self, input_path: Optional[str] = None) -> str:
+    def run(self, input_path: Optional[str] = None) -> str:  # type: ignore[override]
         args = []
         if self.operation:
             args.append(self.operation)
@@ -184,7 +184,7 @@ class Cat(QSVCommand):
             "delimiter": delimiter
         }
     
-    def run(self, *input_paths: str) -> str:
+    def run(self, *input_paths: str | None) -> str:
         return super().run(self.subcommand, *input_paths)
 
 class Count(QSVCommand):
@@ -383,7 +383,7 @@ class Explode(QSVCommand):
             "delimiter": delimiter
         }
     
-    def run(self, input_path: Optional[str] = None) -> str:
+    def run(self, input_path: Optional[str] = None) -> str:  # type: ignore[override]
         return super().run(self.column, input_path)
 
 class Fill(QSVCommand):
@@ -595,7 +595,7 @@ class Join(QSVCommand):
             "delimiter": delimiter
         }
 
-    def run(self, input1: str, input2: str) -> str:
+    def run(self, input1: str, input2: str) -> str:  # type: ignore[override]
         return super().run(self.columns1, input1, self.columns2, input2)
 
 class MoarStats(QSVCommand):
@@ -638,7 +638,7 @@ class Py(QSVCommand):
             "delimiter": delimiter
         }
     
-    def run(self, input_path: Optional[str] = None) -> str:
+    def run(self, input_path: Optional[str] = None) -> str:  # type: ignore[override]
         return super().run(self.script, input_path)
 
 class Rename(QSVCommand):
@@ -658,7 +658,7 @@ class Rename(QSVCommand):
             "delimiter": delimiter
         }
     
-    def run(self, input_path: str) -> str:
+    def run(self, input_path: str) -> str:  # type: ignore[override]
         return super().run(self.names, input_path)
 
 class Replace(QSVCommand):
@@ -702,7 +702,7 @@ class Replace(QSVCommand):
             "quiet": quiet
         }
     
-    def run(self, input_path: Optional[str] = None) -> str:
+    def run(self, input_path: Optional[str] = None) -> str:  # type: ignore[override]
         return super().run(self.pattern, self.replacement, input_path)
 
 class Reverse(QSVCommand):
@@ -741,7 +741,7 @@ class Sample(QSVCommand):
             "delimiter": delimiter
         }
     
-    def run(self, input_path: str) -> str:
+    def run(self, input_path: str) -> str:  # type: ignore[override]
         return super().run(str(self.size_arg), input_path)
 
 class Schema(QSVCommand):
@@ -828,7 +828,7 @@ class Search(QSVCommand):
             "quiet": quiet
         }
     
-    def run(self, input_path: Optional[str] = None) -> str:
+    def run(self, input_path: Optional[str] = None) -> str:  # type: ignore[override]
         return super().run(self.pattern, input_path)
 
 class SearchSet(QSVCommand):
@@ -884,7 +884,7 @@ class SearchSet(QSVCommand):
             "quiet": quiet
         }
     
-    def run(self, input_path: Optional[str] = None) -> str:
+    def run(self, input_path: Optional[str] = None) -> str:  # type: ignore[override]
         return super().run(self.regexset_file, input_path)
 
 class Select(QSVCommand):
@@ -910,7 +910,7 @@ class Select(QSVCommand):
             "delimiter": delimiter
         }
 
-    def run(self, input_path: str) -> str:
+    def run(self, input_path: str) -> str:  # type: ignore[override]
         return super().run(self.selection, input_path)
 
 class Slice(QSVCommand):
@@ -1021,7 +1021,7 @@ class Sqlp(QSVCommand):
             "ignore_errors": ignore_errors
         }
     
-    def run(self, *input_paths: str) -> str:
+    def run(self, *input_paths: str | None) -> str:
         return super().run(self.query, *input_paths)
 
 class Stats(QSVCommand):
@@ -1127,8 +1127,8 @@ class Validate(QSVCommand):
             "quiet": quiet
         }
     
-    def run(self, *input_paths: str) -> str:
-        args = list(input_paths)
+    def run(self, *input_paths: str | None) -> str:
+        args = [p for p in input_paths if p is not None]
         if self.json_schema:
             args.append(self.json_schema)
         return super().run(*args)
