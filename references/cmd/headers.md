@@ -1,5 +1,6 @@
-# headers
+# qsv headers
 
+<small>19.1.0</small>
 ```text
 Prints the fields of the first row in the CSV data.
 
@@ -7,7 +8,7 @@ These names can be used in commands like 'select' to refer to columns in the
 CSV data.
 
 Note that multiple CSV files may be given to this command. This is useful with
-the --intersect flag.
+the --union flag.
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_headers.rs.
 
@@ -29,9 +30,10 @@ headers options:
                            This is automatically enabled if more than one
                            input is given.
     -J, --just-count       Only show the number of headers.
-    --intersect            Shows the intersection of all headers in all of
-                           the inputs given.
-    --trim                 Trim space & quote characters from header name.
+    --union                Shows the union of headers across all inputs
+                           (deduplicated).
+    --trim                 Trim leading/trailing space, tab, and quote
+                           characters from header name.
 
 Common options:
     -h, --help             Display this message

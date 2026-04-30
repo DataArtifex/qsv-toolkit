@@ -1,5 +1,6 @@
-# schema
+# qsv schema
 
+<small>19.1.0</small>
 ```text
 Generate JSON Schema or Polars Schema (with the `--polars` option) from CSV data.
 

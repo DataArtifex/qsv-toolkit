@@ -1,5 +1,6 @@
 # qsv input
 
+<small>19.1.0</small>
 ```text
 Read CSV data with special commenting, quoting, trimming, line-skipping &
 non UTF-8 encoding rules and transforms it to a "normalized", UTF-8 encoded CSV.
@@ -40,21 +41,22 @@ input options:
                              Possible values: all, necessary, nonnumeric and never.
                               All: Quotes all fields.
                               Necessary: Quotes fields only when necessary - when fields
-                               contain a quote, delimiter or record terminator. 
-                               Quotes are also necessary when writing an empty record 
+                               contain a quote, delimiter or record terminator.
+                               Quotes are also necessary when writing an empty record
                                (which is indistinguishable from a record with one empty field).
                               NonNumeric: Quotes all fields that are non-numeric.
                               Never: Never write quotes. Even if it produces invalid CSV.
                              [default: necessary]
-    --skip-lines <arg>       The number of preamble lines to skip.
-    --auto-skip              Sniffs a CSV for preamble lines and automatically
+    --skip-lines <arg>       The number of preamble CSV records to skip.
+    --auto-skip              Sniffs a CSV for preamble records and automatically
                              skips them. Takes precedence over --skip-lines option.
                              Does not work with <stdin>.
-    --skip-lastlines <arg>   The number of epilogue lines to skip.
+    --skip-lastlines <arg>   The number of epilogue CSV records to skip.
     --trim-headers           Trim leading & trailing whitespace & quotes from header values.
     --trim-fields            Trim leading & trailing whitespace from field values.
-    --comment <char>         The comment character to use. When set, lines
-                             starting with this character will be skipped.
+    --comment <char>         The comment character to use (single-byte; only the
+                             first byte of the UTF-8 encoding is matched). When set,
+                             lines starting with this byte will be skipped.
     --encoding-errors <arg>  How to handle UTF-8 encoding errors.
                              Possible values: replace, skip, strict.
                                replace: Replace invalid UTF-8 sequences with �.

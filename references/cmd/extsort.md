@@ -1,5 +1,6 @@
 # qsv extsort
 
+<small>19.1.0</small>
 ```text
 Sort an arbitrarily large CSV/text file using a multithreaded external sort algorithm.
 
@@ -10,7 +11,7 @@ This command has TWO modes of operation.
    See `qsv select --help` for select syntax details.
  * LINE MODE
    when --select is NOT set, it sorts any input text file (not just CSVs) on a
-   line-by-line basis. If sorting a non-CSV file, be sure to set --no-headers, 
+   line-by-line basis. If sorting a non-CSV file, be sure to set --no-headers,
    otherwise, the first line will not be included in the external sort.
 
 Usage:

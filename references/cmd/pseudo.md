@@ -1,5 +1,6 @@
 # qsv pseudo
 
+<small>19.1.0</small>
 ```text
 Pseudonymise the value of a given column by replacing it with an
 incremental identifier. See https://en.wikipedia.org/wiki/Pseudonymization
@@ -20,23 +21,27 @@ incremental identifier starting at 1000 and incrementing by 5:
 
 If run on the following CSV data:
 
-    Name,Color
-    Mary,yellow
-    John,blue
-    Mary,purple
-    Sue,orange
-    John,magenta
-    Mary,cyan
+```csv
+Name,Color
+Mary,yellow
+John,blue
+Mary,purple
+Sue,orange
+John,magenta
+Mary,cyan
+```
 
- will replace the value of the "Name" column with the following values:
+will replace the value of the "Name" column with the following values:
 
-    Name,Color
-    ID-1000,yellow
-    ID-1005,blue
-    ID-1000,purple
-    ID-1010,orange
-    ID-1005,magenta
-    ID-1000,cyan
+```csv
+Name,Color
+ID-1000,yellow
+ID-1005,blue
+ID-1000,purple
+ID-1010,orange
+ID-1005,magenta
+ID-1000,cyan
+```
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_pseudo.rs.
 
@@ -56,6 +61,7 @@ Common options:
     --start <number>        The starting number for the incremental identifier.
                             [default: 0]
     --increment <number>    The increment for the incremental identifier.
+                            Must be greater than 0.
                             [default: 1]
     --formatstr <template>  The format string for the incremental identifier.
                             The format string must contain a single "{}" which

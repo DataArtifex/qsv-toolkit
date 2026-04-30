@@ -1,7 +1,8 @@
-# dedup
+# qsv dedup
 
+<small>19.1.0</small>
 ```text
-Deduplicates CSV rows. 
+Deduplicates CSV rows.
 
 This requires reading all of the CSV data into memory because because the rows need
 to be sorted first.
@@ -13,6 +14,26 @@ than memory CSV files. This will make dedup run in streaming mode with constant 
 Either way, the output will not only be deduplicated, it will also be sorted.
 
 A duplicate count will also be sent to <stderr>.
+
+Examples:
+
+  # Deduplicate an unsorted CSV file:
+  qsv dedup unsorted.csv -o deduped.csv
+
+  # Deduplicate a sorted CSV file:
+  qsv sort unsorted.csv | qsv dedup --sorted -o deduped.csv
+
+  # Deduplicate based on specific columns:
+  qsv dedup --select col1,col2 unsorted.csv -o deduped.csv
+
+  # Deduplicate based on numeric comparison of col1 and col2 columns:
+  qsv dedup -s col1,col2 --numeric unsorted.csv -o deduped.csv
+
+  # Deduplicate ignoring case of col1 and col2 columns:
+  qsv dedup -s col1,col2 --ignore-case unsorted.csv -o deduped.csv
+
+  # Write duplicates to a separate file:
+  qsv dedup -s col1,col2 --dupes-output dupes.csv unsorted.csv -o deduped.csv
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_dedup.rs.
 
@@ -51,4 +72,6 @@ Common options:
     -q, --quiet                Do not print duplicate count to stderr.
     --memcheck                 Check if there is enough memory to load the entire
                                CSV into memory using CONSERVATIVE heuristics.
+                               Has no effect when --sorted is set, as that path
+                               streams the input and never loads it into memory.
 ```

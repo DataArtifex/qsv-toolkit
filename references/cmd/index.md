@@ -1,5 +1,6 @@
-# index
+# qsv index
 
+<small>19.1.0</small>
 ```text
 Creates an index of the given CSV data, which can make other operations like
 slicing, splitting and gathering statistics much faster.

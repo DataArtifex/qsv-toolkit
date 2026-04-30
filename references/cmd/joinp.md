@@ -1,5 +1,6 @@
 # qsv joinp
 
+<small>19.1.0</small>
 ```text
 Joins two sets of CSV data on the specified columns using the Polars engine.
 
@@ -110,9 +111,9 @@ joinp options:
                            POLARS CSV PARSING OPTIONS:
     --try-parsedates       When set, will attempt to parse the columns as dates.
                            If the parse fails, columns remain as strings.
-                           This is useful when the join keys are formatted as 
+                           This is useful when the join keys are formatted as
                            dates with differing date formats, as the date formats
-                           will be normalized. Note that this will be automatically 
+                           will be normalized. Note that this will be automatically
                            enabled when using asof joins.
     --infer-len <arg>      The number of rows to scan when inferring the schema of the CSV.
                            Set to 0 to do a full table scan (warning: very slow).
@@ -123,16 +124,16 @@ joinp options:
                            Ignored when --infer-len is 0.
                            ‎ -2: treat all columns as String. A Polars schema file is created & cached.
                            ‎ -1: treat all columns as String. No Polars schema file is created.
-                             0: do not cache Polars schema. Uses --infer-len to infer schema.
-                             1: cache Polars schema with the following behavior:
-                                - If schema file exists and is newer than input: use cached schema
-                                - If schema file missing/outdated and stats cache exists: 
+                           ‎  0: do not cache Polars schema. Uses --infer-len to infer schema.
+                           ‎  1: cache Polars schema with the following behavior:
+                                * If schema file exists and is newer than input: use cached schema
+                                * If schema file missing/outdated and stats cache exists:
                                   derive schema from stats and cache it
-                                - If no schema or stats cache: infer schema using --infer-len 
+                                * If no schema or stats cache: infer schema using --infer-len
                                   and cache the result
                                 Schema files use the same name as input with .pschema.json extension
-                                (e.g., data.csv -> data.pschema.json)
-                           NOTE: If the input files have pschema.json files that are newer or created
+                                (e.g., data.csv -> data.pschema.json).
+                           ‎NOTE: If the input files have pschema.json files that are newer or created
                            at the same time as the input files, they will be used to inform the join
                            operation regardless of the value of --cache-schema unless --infer-len is 0.
                            [default: 0]
@@ -140,7 +141,7 @@ joinp options:
                            but will be slower. It will also process the join in streaming mode.
                            Only use this when you get out of memory errors.
     --no-optimizations     Disable non-default join optimizations. This will make joins slower.
-                           Only use this when you get join errors.                           
+                           Only use this when you get join errors.
     --ignore-errors        Ignore errors when parsing CSVs. If set, rows with errors
                            will be skipped. If not set, the query will fail.
                            Only use this when debugging queries, as polars does batched
@@ -171,16 +172,16 @@ joinp options:
                            the left CSV. Columns are referenced by name. Specify
                            multiple columns by separating them with a comma.
     --right_by <arg>       Do an 'asof_by' join. This specifies the column/s for
-                           the right CSV.     
+                           the right CSV.
     --strategy <arg>       The strategy to use for the asof join:
                              backward - For each row in the first CSV data set,
                                         we find the last row in the second data set
-                                        whose key is less than or equal to the key
-                                        in the first data set.
+                                        whose key is less than the key in the first
+                                        data set (or <= with --allow-exact-matches).
                              forward -  For each row in the first CSV data set,
                                         we find the first row in the second data set
-                                        whose key is greater than or equal to the key
-                                        in the first data set.
+                                        whose key is greater than the key in the
+                                        first data set (or >= with --allow-exact-matches).
                              nearest -  selects the last row in the second data set
                                         whose value is nearest to the value in the
                                         first data set.

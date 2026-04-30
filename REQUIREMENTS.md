@@ -9,7 +9,7 @@ It is assume that you have QSV is installed and available in your PATH.
 - Run the shell command with the `--help` parameter to get its description and the list of arguments and options.
   e.g. `qsv stats --help`
 - If a command already exists, verify that its description and input parameters are up to date with the latest version of QSV
-- The commands should be sorted alphabetically, except for generic/inherited classes, which may appear at the top. 
+- The commands should be sorted alphabetically, except for generic/inherited classes, which may appear at the top.
 - Make sure a 'help' method is available for each command.
 - Do include a class for the `qsv` command itself, which is the entry point for the QSV command line tool.
 

@@ -1,5 +1,6 @@
-# replace
+# qsv replace
 
+<small>19.1.0</small>
 ```text
 Replace occurrences of a pattern across a CSV file.
 
@@ -35,7 +36,7 @@ in the file.csv file.
 Replace all valid email addresses (using a regex)
 with '<EMAIL>' in the file.csv file.
 
-  $ qsv replace '([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})' /
+  $ qsv replace '([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})' \
    '<EMAIL>' file.csv
 
 

@@ -1,5 +1,6 @@
-# sort
+# qsv sort
 
+<small>19.1.0</small>
 ```text
 Sorts CSV data in lexicographical, natural, numerical, reverse, unique or random order.
 
@@ -23,25 +24,36 @@ sort options:
                             "data1.txt", "data10.txt", "data2.txt" when sorting
                             lexicographically)
                             https://en.wikipedia.org/wiki/Natural_sort_order
+                            When combined with --numeric, --natural takes precedence.
     -R, --reverse           Reverse order
-    -i, --ignore-case       Compare strings disregarding case
+    -i, --ignore-case       Compare strings disregarding case.
+                            Has no effect when numeric comparison is selected
+                            (i.e. when --numeric is used without --natural).
     -u, --unique            When set, identical consecutive lines will be dropped
-                            to keep only one line per sorted value.
+                            to keep only one line per sorted value. The same
+                            comparison mode used to sort the input is also used
+                            here, so unique-equality always agrees with the sort.
 
                             RANDOM SORTING OPTIONS:
-    --random                Randomize (scramble) the data by row
+    --random                Randomize (scramble) the data by row.
+                            When set, the numeric, natural, and
+                            ignore-case comparison flags still apply
+                            to unique-filtering (if --unique is also
+                            set). The reverse flag has no effect on
+                            unique-filter equality and is ignored for
+                            the shuffle itself.
     --seed <number>         Random Number Generator (RNG) seed to use if --random is set
     --rng <kind>            The RNG algorithm to use if --random is set.
                             Three RNGs are supported:
-                            - standard: Use the standard RNG.
+                            * standard: Use the standard RNG.
                               1.5 GB/s throughput.
-                            - faster: Use faster RNG using the Xoshiro256Plus algorithm.
+                            * faster: Use faster RNG using the Xoshiro256Plus algorithm.
                               8 GB/s throughput.
-                            - cryptosecure: Use cryptographically secure HC128 algorithm.
+                            * cryptosecure: Use cryptographically secure HC128 algorithm.
                               Recommended by eSTREAM (https://www.ecrypt.eu.org/stream/).
                               2.1 GB/s throughput though slow initialization.
                             [default: standard]
-    
+
 
     -j, --jobs <arg>        The number of jobs to run in parallel.
                             When not set, the number of jobs is set to the
@@ -51,7 +63,7 @@ sort options:
                             (i.e. the order of identical values is not guaranteed
                             to be preserved). It has the added side benefit that the
                             sort will also be in-place (i.e. does not allocate),
-                            which is useful for sorting large files that will 
+                            which is useful for sorting large files that will
                             otherwise NOT fit in memory using the default allocating
                             stable sort.
 

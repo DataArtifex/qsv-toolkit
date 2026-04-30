@@ -1,5 +1,6 @@
 # qsv json
 
+<small>19.1.0</small>
 ```text
 Convert JSON to CSV.
 

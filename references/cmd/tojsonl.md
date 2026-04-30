@@ -1,5 +1,6 @@
 # qsv tojsonl
 
+<small>19.1.0</small>
 ```text
 Smartly converts CSV to a newline-delimited JSON (JSONL/NDJSON).
 
@@ -33,13 +34,14 @@ Tojsonl options:
                            Set to 0 to load all rows in one batch.
                            Set to 1 to force batch optimization even for files with
                            less than 50000 rows.
-                           [default: 50000]                           
+                           [default: 50000]
 
 Common options:
     -h, --help             Display this message
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
     -o, --output <file>    Write output to <file> instead of stdout.
+                           Use "-" to explicitly write to stdout.
     --memcheck             Check if there is enough memory to load the entire
                            CSV into memory using CONSERVATIVE heuristics.
     -q, --quiet            Do not display enum/const list inferencing messages.

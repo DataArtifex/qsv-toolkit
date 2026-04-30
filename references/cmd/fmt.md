@@ -1,5 +1,6 @@
-# fmt
+# qsv fmt
 
+<small>19.1.0</small>
 ```text
 Formats CSV data with a custom delimiter or CRLF line endings.
 
@@ -18,18 +19,21 @@ Usage:
 fmt options:
     -t, --out-delimiter <arg>  The field delimiter for writing CSV data.
                                Must be a single character.
-                               If set to "T", uses tab as the delimiter.
+                               "T" or "\t" can be used as shortcuts for tab.
                                [default: ,]
     --crlf                     Use '\r\n' line endings in the output.
-    --ascii                    Use ASCII field and record separators.
-                               Use Substitute (U+00A1) as the quote character.
-    --quote <arg>              The quote character to use. [default: "]
+    --ascii                    Use ASCII field/record separators: Unit Separator
+                               (U+001F) for fields and Record Separator (U+001E)
+                               for records. Substitute (U+001A) is used as the
+                               quote character.
+    --quote <arg>              The quote character to use. Must be a single
+                               character. [default: "]
     --quote-always             Put quotes around every value.
     --quote-never              Never put quotes around any value.
     --escape <arg>             The escape character to use. When not specified,
                                quotes are escaped by doubling them.
     --no-final-newline         Do not write a newline at the end of the output.
-                               This makes it easier to paste the output into Excel. 
+                               This makes it easier to paste the output into Excel.
 
 Common options:
     -h, --help             Display this message

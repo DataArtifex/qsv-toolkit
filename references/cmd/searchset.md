@@ -1,13 +1,17 @@
-# searchset
+# qsv searchset
 
+<small>19.1.0</small>
 ```text
 Filters CSV data by whether the given regex set matches a row.
 
-Unlike the search operation, this allows regex matching of multiple regexes 
+Unlike the search operation, this allows regex matching of multiple regexes
 in a single pass.
 
-The regexset-file is a plain text file with multiple regexes, with a regex on 
-each line.
+The regexset-file is a plain text file with multiple regexes, with a regex on
+each line. Lines starting with '#' (optionally preceded by whitespace) are
+treated as comments and ignored. For an example scanning for common Personally Identifiable Information (PII) -
+SSN, credit cards, email, bank account numbers & phones, see
+https://github.com/dathere/qsv/blob/master/resources/examples/searchset/pii_regexes.txt
 
 The regex set is applied to each field in each row, and if any field matches,
 then the row is written to the output, and the number of matches to stderr.
@@ -15,10 +19,12 @@ then the row is written to the output, and the number of matches to stderr.
 The columns to search can be limited with the '--select' flag (but the full row
 is still written to the output if there is a match).
 
-Returns exitcode 0 when matches are found, returning number of matches to stderr.
+Returns exitcode 0 when matches are found.
 Returns exitcode 1 when no match is found, unless the '--not-one' flag is used.
+Use --count to also write the number of matches to stderr (suppressed by --quiet).
+With --json, a JSON summary is always written to stderr instead.
 
-When --quick is enabled, no output is produced and exitcode 0 is returned on 
+When --quick is enabled, no output is produced and exitcode 0 is returned on
 the first match.
 
 When the CSV is indexed, a faster parallel search is used.
@@ -30,7 +36,7 @@ Usage:
     qsv searchset --help
 
 searchset arguments:
-    <regexset-file>            The file containing regular expressions to match, with a 
+    <regexset-file>            The file containing regular expressions to match, with a
                                regular expression on each line.
                                See https://docs.rs/regex/latest/regex/index.html#syntax
                                or https://regex101.com with the Rust flavor for regex syntax.
@@ -65,12 +71,12 @@ searchset options:
                                the row number of the first match to stderr.
                                Return exit code 1 if no match is found.
                                No output is produced. Ignored if --json is enabled.
-    -c, --count                Return number of matches to stderr.
-                               Ignored if --json is enabled.
+    -c, --count                Write the number of matches to stderr.
+                               Suppressed by --quiet. Ignored if --json is enabled.
     -j, --json                 Return number of matches, number of rows with matches,
                                and number of rows to stderr in JSON format.
     --size-limit <mb>          Set the approximate size limit (MB) of the compiled
-                               regular expression. If the compiled expression exceeds this 
+                               regular expression. If the compiled expression exceeds this
                                number, then a compilation error is returned.
                                Modify this only if you're getting regular expression
                                compilation errors. [default: 50]
@@ -92,5 +98,7 @@ Common options:
     -d, --delimiter <arg>      The field delimiter for reading CSV data.
                                Must be a single character. (default: ,)
     -p, --progressbar          Show progress bars. Not valid for stdin.
-    -q, --quiet                Do not return number of matches to stderr.
+    -q, --quiet                Do not write the match count (--count) or the
+                               first match row number reported by --quick to stderr.
+                               Does not suppress the --json summary.
 ```

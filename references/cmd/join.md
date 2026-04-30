@@ -1,5 +1,6 @@
-# join
+# qsv join
 
+<small>19.1.0</small>
 ```text
 Joins two sets of CSV data on the specified columns.
 
@@ -37,10 +38,10 @@ join options:
                            corresponding row exists, it is padded out with
                            empty fields.
     --left-anti            Do a 'left anti' join. This returns all rows in
-                           first CSV data set that has no match with the 
+                           first CSV data set that has no match with the
                            second data set.
     --left-semi            Do a 'left semi' join. This returns all rows in
-                           first CSV data set that has a match with the 
+                           first CSV data set that has a match with the
                            second data set.
     --right                Do a 'right outer' join. This returns all rows in
                            second CSV data set, including rows with no

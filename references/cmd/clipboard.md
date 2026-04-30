@@ -1,5 +1,6 @@
 # qsv clipboard
 
+<small>19.1.0</small>
 ```text
 Provide input from the clipboard or save output to the clipboard.
 

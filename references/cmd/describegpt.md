@@ -1,5 +1,6 @@
-# describegpt
+# qsv describegpt
 
+<small>19.1.0</small>
 ```text
 Create a "neuro-procedural" Data Dictionary and/or infer Description & Tags about a Dataset
 using an OpenAI API-compatible Large Language Model (LLM).
@@ -25,7 +26,7 @@ and provide it to the LLM as additional context to help it generate a SQL query 
 answers the natural language question.
 
 Two SQL dialects are currently supported - DuckDB (highly recommended) & Polars. If the
-QSV_DESCRIBEGPT_DB_ENGINE environment variable is set to the absolute path of the DuckDB binary,
+QSV_DUCKDB_PATH environment variable is set to the absolute path of the DuckDB binary,
 DuckDB will be used to answer the question. Otherwise, if the "polars" feature is enabled,
 Polars SQL will be used.
 
@@ -44,6 +45,7 @@ SUPPORTED MODELS & LLM PROVIDERS:
 OpenAI's open-weights gpt-oss model (both 20b and 120b variants) was used during development &
 is recommended for most use cases.
 It was also tested with OpenAI, TogetherAI, OpenRouter and Google Gemini cloud providers.
+For Gemini, use the base URL "https://generativelanguage.googleapis.com/v1beta/openai".
 Local LLMs tested include Ollama, Jan and LM Studio.
 
 NOTE: LLMs are prone to inaccurate information being produced. Verify output results before using them.
@@ -51,10 +53,12 @@ NOTE: LLMs are prone to inaccurate information being produced. Verify output res
 CACHING:
 As LLM inferencing takes time and can be expensive, describegpt caches the LLM inferencing results
 in a either a disk cache (default) or a Redis cache. It does so by calculating the BLAKE3 hash of the
-input file and using it as the primary cache key along with the prompt type, model and other parameters
-as required.
+input file and using it as the primary cache key along with the prompt type, model and every flag that
+influences the rendered prompt (including prompt-file, language, tag-vocab, num-tags, enum-threshold,
+sample-size, fewshot-examples, the QSV_DUCKDB_PATH toggle and the generated Data Dictionary), so
+changing any of them produces a fresh LLM call rather than stale cached output.
 
-The default disk cache is stored in the ~/.qsv/cache/describegpt directory with a default TTL of 28 days
+The default disk cache is stored in the ~/.qsv-cache/describegpt directory with a default TTL of 28 days
 and cache hits NOT refreshing an existing cached value's TTL.
 Adjust the QSV_DISKCACHE_TTL_SECS & QSV_DISKCACHE_TTL_REFRESH env vars to change disk cache settings.
 
@@ -62,45 +66,62 @@ Alternatively a Redis cache can be used instead of the disk cache. This is espec
 to share the cache across the network with other users or computers.
 The Redis cache is stored in database 3 by default with a TTL of 28 days and cache hits NOT refreshing
 an existing cached value's TTL. Adjust the QSV_DG_REDIS_CONNSTR, QSV_REDIS_MAX_POOL_SIZE,
-QSV_REDIS_TTL_SECONDS & QSV_REDIS_TTL_REFRESH env vars to change Redis cache settings.
+QSV_REDIS_TTL_SECS & QSV_REDIS_TTL_REFRESH env vars to change Redis cache settings.
 
 Examples:
 
   # Generate a Data Dictionary, Description & Tags of data.csv using default OpenAI gpt-oss-20b model
   # (replace <API_KEY> with your OpenAI API key)
-  $ qsv describegpt data.csv --api-key <API_KEY> --all
+  qsv describegpt data.csv --api-key <API_KEY> --all
 
   # Generate a Data Dictionary of data.csv using the DeepSeek R1:14b model on a local Ollama instance
-  $ qsv describegpt data.csv -u http://localhost:11434/v1 --model deepseek-r1:14b --dictionary
+  qsv describegpt data.csv -u http://localhost:11434/v1 --model deepseek-r1:14b --dictionary
 
   # Ask questions about the sample NYC 311 dataset using LM Studio with the default gpt-oss-20b model.
   # Questions that can be answered using the Summary Statistics & Frequency Distribution of the dataset.
-  $ export QSV_LLM_BASE_URL=http://localhost:1234/v1
-  $ qsv describegpt NYC_311.csv --prompt "What is the most common complaint?"
-  $ qsv describegpt NYC_311.csv --prompt "List the top 10 complaints."
-  $ qsv describegpt NYC_311.csv -p "Can you tell me how many complaints were resolved?"
+  qsv describegpt NYC_311.csv --prompt "What is the most common complaint?"
 
-  # Ask detailed questions that require SQL queries and auto-invoke SQL RAG mode
+  # Ask detailed natural language questions that require SQL queries and auto-invoke SQL RAG mode
   # Generate a DuckDB SQL query to answer the question
-  $ export QSV_DESCRIBEGPT_DB_ENGINE=/path/to/duckdb
-  $ qsv describegpt NYC_311.csv -p "What's the breakdown of complaint types by borough descending order?"
-  # Prompt requires a SQL query. Execute query and save results to a file with the --sql-results option.
-  # If generated SQL query runs successfully, the file is "results.csv". Otherwise, it is "results.sql".
-  $ qsv describegpt NYC_311.csv -p "Aggregate complaint types by community board" --sql-results results
+  QSV_DUCKDB_PATH=/path/to/duckdb \
+  qsv describegpt NYC_311.csv -p "What's the breakdown of complaint types by borough descending order?"
+
+  # Prompt requires a natural language query. Convert query to SQL using the LLM and save results to
+  # a file with the --sql-results option.  If generated SQL query runs successfully,
+  # the file is "results.csv". Otherwise, it is "results.sql".
+  qsv describegpt NYC_311.csv -p "Aggregate complaint types by community board" --sql-results results
 
   # Cache Dictionary, Description & Tags inference results using the Redis cache instead of the disk cache
-  $ qsv describegpt data.csv --all --redis-cache
+  qsv describegpt data.csv --all --redis-cache
+
   # Get fresh Description & Tags inference results from the LLM and refresh disk cache entries for both
-  $ qsv describegpt data.csv --description --tags --fresh
+  qsv describegpt data.csv --description --tags --fresh
+
   # Get fresh inference results from the LLM and refresh the Redis cache entries for all three
-  $ qsv describegpt data.csv --all --redis-cache --fresh
+  qsv describegpt data.csv --all --redis-cache --fresh
 
   # Forget a cached response for data.csv's data dictionary if it exists and then exit
-  $ qsv describegpt data.csv --dictionary --forget
+  qsv describegpt data.csv --dictionary --forget
+
   # Flush/Remove ALL cached entries in the disk cache
-  $ qsv describegpt --flush-cache
+  qsv describegpt --flush-cache
+
   # Flush/Remove ALL cached entries in the Redis cache
-  $ qsv describegpt --redis-cache --flush-cache
+  qsv describegpt --redis-cache --flush-cache
+
+  # Generate Data Dictionary but exclude ID columns from frequency analysis to reduce overhead
+  qsv describegpt data.csv --dictionary --freq-options "--select '!id,!uuid' --limit 20"
+
+  # Generate Data Dictionary, Description & Tags but reduce frequency context
+  # by showing only top 5 values per field
+  qsv describegpt data.csv --all --freq-options "--limit 5"
+
+  # Generate Description using weighted frequencies with ascending sort
+  qsv describegpt data.csv --description --freq-options "--limit 50 --asc --weight count_column"
+
+  # Generate a Data Dictionary, Description & Tags using a previously compiled stats CSV file and
+  # frequency CSV file instead of running the stats and frequency commands
+  qsv describegpt data.csv --all --stats-options "file:my_stats.csv" --freq-options "file:my_freq.csv"
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_describegpt.rs.
 
@@ -109,6 +130,8 @@ see https://github.com/dathere/qsv/blob/master/docs/Describegpt.md
 
 Usage:
     qsv describegpt [options] [<input>]
+    qsv describegpt --prepare-context [options] [<input>]
+    qsv describegpt --process-response [options]
     qsv describegpt (--redis-cache) (--flush-cache)
     qsv describegpt --help
 
@@ -169,9 +192,23 @@ describegpt options:
 
                            STATS/FREQUENCY OPTIONS:
     --stats-options <arg>  Options for the stats command used to generate summary statistics.
+                           If it starts with "file:" prefix, the statistics are read from the
+                           specified CSV file instead of running the stats command.
+                           e.g. "file:my_custom_stats.csv"
                            [default: --infer-dates --infer-boolean --mad --quartiles --percentiles --force --stats-jsonl]
+    --freq-options <arg>   Options for the frequency command used to generate frequency distributions.
+                           You can use this to exclude certain variable types from frequency analysis
+                           (e.g., --select '!id,!uuid'), limit results differently per use case, or
+                           control output format. If --limit is specified here, it takes precedence
+                           over --enum-threshold.
+                           If it starts with "file:" prefix, the frequency data is read from the
+                           specified CSV file instead of running the frequency command.
+                           e.g. "file:my_custom_frequency.csv"
+                           [default: --rank-strategy dense]
     --enum-threshold <n>   The threshold for compiling Enumerations with the frequency command
                            before bucketing other unique values into the "Other" category.
+                           This is a convenience shortcut for --freq-options --limit <n>.
+                           If --freq-options contains --limit, this flag is ignored.
                            [default: 10]
 
                            CUSTOM PROMPT OPTIONS:
@@ -179,7 +216,7 @@ describegpt options:
                            The prompt will be answered based on the dataset's Summary Statistics,
                            Frequency data & Data Dictionary. If the prompt CANNOT be answered by looking
                            at these metadata, a SQL query will be generated to answer the question.
-                           If the "polars" or the "QSV_DESCRIBEGPT_DB_ENGINE" environment variable is set
+                           If the "polars" or the "QSV_DUCKDB_PATH" environment variable is set
                            & the `--sql-results` option is used, the SQL query will be automatically
                            executed and its results returned.
                            Otherwise, the SQL query will be returned along with the reasoning behind it.
@@ -187,7 +224,7 @@ describegpt options:
                            e.g. "file:my_long_prompt.txt"
     --sql-results <file>   The file to save the SQL query results to.
                            Only valid if the --prompt option is used & the "polars" or the
-                           "QSV_DESCRIBEGPT_DB_ENGINE" environment variable is set.
+                           "QSV_DUCKDB_PATH" environment variable is set.
                            If the SQL query executes successfully, the results will be saved with a
                            ".csv" extension. Otherwise, it will be saved with a ".sql" extension so
                            the user can inspect why it failed and modify it.
@@ -212,26 +249,42 @@ describegpt options:
     --session-len <n>      Maximum number of recent messages to keep in session context before
                            summarizing older messages. Only used when --session is specified.
                            [default: 10]
+    --no-score-sql         Disable scoresql validation of generated SQL queries before execution.
+                           By default, when --prompt generates a SQL query and --sql-results is set,
+                           the query is scored and iteratively improved if below threshold.
+    --score-threshold <n>  Minimum scoresql score for a SQL query to be accepted.
+                           Typical range is 0-100; values >100 will always trigger retries
+                           and the below-threshold warning.
+                           [default: 50]
+    --score-max-retries <n>  Max LLM re-prompts to improve a low-scoring SQL query.
+                           [default: 3]
 
                            LLM API OPTIONS:
     -u, --base-url <url>   The LLM API URL. Supports APIs & local LLMs compatible with
-                           the OpenAI API specification (Ollama, Jan, LM Studio, TogetherAI, etc.).
-                           The default base URL for Ollama is http://localhost:11434/v1.
-                           The default for Jan is https://localhost:1337/v1.
-                           The default for LM Studio is http://localhost:1234/v1.
-                           The base URL will be the base URL of the prompt file.
-                           If the QSV_LLM_BASE_URL environment variable is set, it'll be used instead.
-                           [default: https://api.openai.com/v1]
-    -m, --model <model>    The model to use for inferencing.
-                           If the QSV_LLM_MODEL environment variable is set, it'll be used instead.
+                           the OpenAI API specification. Some common base URLs:
+                             OpenAI: https://api.openai.com/v1
+                             Gemini: https://generativelanguage.googleapis.com/v1beta/openai
+                             TogetherAI: https://api.together.ai/v1
+                           Local LLMs:
+                             Ollama: http://localhost:11434/v1
+                             Jan: https://localhost:1337/v1
+                             LM Studio: http://localhost:1234/v1
+                           NOTE: If set, takes precedence over the QSV_LLM_BASE_URL environment variable
+                           and the base URL specified in the prompt file.
+                           [default: http://localhost:1234/v1]
+    -m, --model <model>    The model to use for inferencing. This model must be compatible with OpenAI API spec.
+                           Works with both cloud LLM providers and local LLMs.
+                           If set, takes precedence over the QSV_LLM_MODEL environment variable.
+                           Tested open weights models include OpenAI's gpt-oss-20b and gpt-oss-120b;
+                           Google's Gemma family of open models; and Mistral's Magistral reasoning models.
                            [default: openai/gpt-oss-20b]
-    --language <lang>      The output language/dialect to use for the response. (e.g., "Spanish", "French",
+    --language <lang>      The output language/dialect/tone to use for the response. (e.g., "Spanish", "French",
                            "Hindi", "Mandarin", "Italian", "Castilian", "Franglais", "Taglish", "Pig Latin",
                            "Valley Girl", "Pirate", "Shakespearean English", "Chavacano", "Gen Z", "Yoda", etc.)
-    
+
                              CHAT MODE (--prompt) LANGUAGE DETECTION BEHAVIOR:
                              When --prompt is used and --language is not set, automatically detects
-                             the language of the prompt with an 80% confidence threshold.
+                             the language of the prompt with an 80% confidence threshold using whatlang.
                              If the threshold is met, it will specify the detected language in its response.
                              If set to a float (0.0 to 1.0), specifies the detection confidence threshold.
                              If set to a string, specifies the language/dialect to use for the response.
@@ -243,8 +296,8 @@ describegpt options:
                            For instance, gpt-oss-20b supports the "reasoning_effort" property.
                            e.g. to set the "reasoning_effort" property to "high" & "temperature"
                            to 0.5, use '{"reasoning_effort": "high", "temperature": 0.5}'
-    -k, --api-key <key>    The API key to use. If the QSV_LLM_APIKEY envvar is set,
-                           it will be used instead. Required when the base URL is not localhost.
+    -k, --api-key <key>    The API key to use. If set, takes precedence over the QSV_LLM_APIKEY envvar.
+                           Required when the base URL is not localhost.
                            Set to NONE to suppress sending the API key.
     -t, --max-tokens <n>   Limits the number of generated tokens in the output.
                            Set to 0 to disable token limits.
@@ -265,12 +318,11 @@ describegpt options:
 
                            CACHING OPTIONS:
     --no-cache             Disable default disk cache.
-  --disk-cache-dir <dir>   The directory <dir> to store the disk cache. Note that if the directory
-                           does not exist, it will be created. If the directory exists, it will be used as is,
-                           and will not be flushed. This option allows you to maintain several disk caches
-                           for different describegpt jobs (e.g. one for a data portal, another for internal
-                           data exchange, etc.)
-                           [default: ~/.qsv/cache/describegpt]
+  --disk-cache-dir <dir>   The directory to store the disk cache. Note that if the directory does not exist,
+                           it will be created. If the directory exists, it will be used as is, and will not
+                           be flushed. This option allows you to maintain several disk caches for different
+                           describegpt jobs (e.g. one for a data portal, another for internal data exchange).
+                           [default: ~/.qsv-cache/describegpt]
     --redis-cache          Use Redis instead of the default disk cache to cache LLM completions.
                            It connects to "redis://127.0.0.1:6379/3" by default, with a connection pool
                            size of 20, with a TTL of 28 days, and cache hits NOT refreshing an existing
@@ -282,6 +334,16 @@ describegpt options:
     --forget               Remove a cached response if it exists and then exit.
     --flush-cache          Flush the current cache entries on startup.
                            WARNING: This operation is irreversible.
+
+                           MCP SAMPLING OPTIONS:
+    --prepare-context      Output the prompt context as JSON to stdout without calling the LLM.
+                           JSON includes system/user prompts, cache state, and analysis results
+                           for each inference phase. Useful for inspecting prompts or piping to
+                           custom LLM integrations. Used by the MCP server for sampling mode.
+    --process-response     Process LLM responses provided as JSON via stdin. Takes the output
+                           format from --prepare-context with LLM responses filled in, and
+                           produces the final output (dictionary, description, tags, or prompt
+                           results). Used by the MCP server for sampling mode.
 
 Common options:
     -h, --help             Display this message

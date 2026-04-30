@@ -1,5 +1,6 @@
 # qsv geoconvert
 
+<small>19.1.0</small>
 ```text
 Convert between various spatial formats and CSV/SVG including GeoJSON, SHP, and more.
 
@@ -30,7 +31,8 @@ geoconvert REQUIRED arguments:
     <output-format>   Valid values are:
                       - For GeoJSON input: "csv", "svg", and "geojsonl"
                       - For SHP input: "csv", "geojson", and "geojsonl"
-                      - For CSV input: "geojson", "geojsonl", "csv", and "svg"
+                      - For CSV input: "geojson", "geojsonl", and "svg"
+                                       ("csv" only with --max-length, for truncation)
 
 geoconvert options:
                                  REQUIRED FOR CSV INPUT

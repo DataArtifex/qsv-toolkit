@@ -1,5 +1,6 @@
-# frequency
+# qsv frequency
 
+<small>19.1.0</small>
 ```text
 Compute a frequency distribution table on input data. It has CSV and JSON output modes.
 https://en.wikipedia.org/wiki/Frequency_(statistics)#Frequency_distribution_table
@@ -44,7 +45,8 @@ is dynamically calculated based on available memory and record sampling.
 
 You can override this behavior by setting the QSV_FREQ_CHUNK_MEMORY_MB environment variable.
 (set to 0 for dynamic sizing, or a positive number for a fixed memory limit per chunk,
-or -1 for CPU-based chunking (1 chunk = num records/number of CPUs)), or by setting the --jobs option.
+or any non-u64 value (e.g. -1 or "auto") for CPU-based chunking (1 chunk = num records/number of
+CPUs)), or by setting the --jobs option.
 
 NOTE: "Complete" Frequency Tables:
 
@@ -91,6 +93,7 @@ frequency options:
     -u, --unq-limit <arg>   If a column has all unique values, limit the
                             frequency table to a sample of N unique items.
                             Set to '0' to disable a unique_limit.
+                            Only applies in unweighted mode; ignored when --weight is set.
                             [default: 10]
     --lmt-threshold <arg>   The threshold for which --limit and --unq-limit
                             will be applied. If the number of unique items
@@ -100,12 +103,12 @@ frequency options:
 -r, --rank-strategy <arg>   The strategy to use when there are count-tied values in the frequency table.
                             See https://en.wikipedia.org/wiki/Ranking for more info.
                             Valid values are:
-                              - dense: Assigns consecutive integers regardless of ties,
+                              * dense: Assigns consecutive integers regardless of ties,
                                 incrementing by 1 for each new count value (AKA "1223" ranking).
-                              - min: Tied items receive the minimum rank position (AKA "1224" ranking).
-                              - max: Tied items receive the maximum rank position (AKA "1334" ranking).
-                              - ordinal: The next rank is the current rank plus 1 (AKA "1234" ranking).
-                              - average: Tied items receive the average of their ordinal positions
+                              * min: Tied items receive the minimum rank position (AKA "1224" ranking).
+                              * max: Tied items receive the maximum rank position (AKA "1334" ranking).
+                              * ordinal: The next rank is the current rank plus 1 (AKA "1234" ranking).
+                              * average: Tied items receive the average of their ordinal positions
                                 (AKA "1 2.5 2.5 4" ranking).
                             Note that tied values with the same rank are sorted alphabetically.
                             [default: dense]
@@ -119,19 +122,57 @@ frequency options:
                             end of the frequency table for a field. If this is enabled, the
                             "Other" category will be sorted with the rest of the
                             values by count.
-    --other-text <arg>      The text to use for the "Other" category. If set to "<NONE>",
-                            the "Other" category will not be included in the frequency table.
+    --other-text <arg>      The text to use for the "Other" category. If set to the
+                            literal string "<NONE>" (case-sensitive, exact match), the
+                            "Other" category will not be included in the frequency table.
                             [default: Other]
+    --no-other              Don't include the "Other" category in the frequency table.
+                            This is equivalent to --other-text "<NONE>".
+    --null-sorted           By default, the NULL category (controlled by --null-text)
+                            is placed at the end of the frequency table for a field,
+                            after "Other" if present. If this is enabled, the NULL
+                            category will be sorted with the rest of the values by count.
     -a, --asc               Sort the frequency tables in ascending order by count.
                             The default is descending order. Note that this option will
                             also reverse ranking - i.e. the LEAST frequent values will
                             have a rank of 1.
     --no-trim               Don't trim whitespace from values when computing frequencies.
                             The default is to trim leading and trailing whitespaces.
-    --null-text <arg>       The text to use for NULL values.
+    --null-text <arg>       The text to use for NULL values. If set to the literal
+                            string "<NONE>" (case-sensitive, exact match), NULLs
+                            will not be included in the frequency table
+                            (equivalent to --no-nulls).
                             [default: (NULL)]
     --no-nulls              Don't include NULLs in the frequency table.
+                            This is equivalent to --null-text "<NONE>".
+    --pct-nulls             Include NULL values in percentage and rank calculations.
+                            When disabled (default), percentages are "valid percentages"
+                            calculated with NULLs excluded from the denominator, and
+                            NULL entries display empty percentage and rank values.
+                            When enabled, NULLs are included in the denominator
+                            (original behavior).
+                            Has no effect when --no-nulls is set.
     -i, --ignore-case       Ignore case when computing frequencies.
+    --no-float <cols>       Exclude Float columns from frequency analysis.
+                            Floats typically contain continuous values where
+                            frequency tables are not meaningful.
+                            To exclude ALL Float columns, use --no-float "*"
+                            To exclude Floats except specific columns, specify
+                            a comma-separated list of Float columns to INCLUDE.
+                            e.g. "--no-float *" excludes all Floats
+                                 "--no-float price,rate" excludes Floats
+                                    except 'price' and 'rate'
+                            Requires stats cache for type detection.
+    --stats-filter <expr>   Filter columns based on their statistics using a Luau expression.
+                            Columns where the expression evaluates to `true` are EXCLUDED.
+                            Available fields: field, type, is_ascii, cardinality, nullcount,
+                            sum, min, max, range, sort_order, min_length, max_length, mean,
+                            stddev, variance, cv, sparsity, q1, q2_median, q3, iqr, mad,
+                            skewness, mode, antimode, n_negative, n_zero, n_positive, etc.
+                            e.g. "nullcount > 1000" - exclude columns with many nulls
+                                 "type == 'Float'" - exclude Float columns
+                                 "cardinality > 500 and nullcount > 0" - compound expression
+                            Requires stats cache and the "luau" feature.
    --all-unique-text <arg>  The text to use for the "<ALL_UNIQUE>" category.
                             [default: <ALL_UNIQUE>]
     --vis-whitespace        Visualize whitespace characters in the output. See
@@ -140,6 +181,36 @@ frequency options:
     -j, --jobs <arg>        The number of jobs to run in parallel when the given CSV data has
                             an index. Note that a file handle is opened for each job.
                             When not set, defaults to the number of CPUs detected.
+
+                            FREQUENCY CACHE OPTIONS:
+    --frequency-jsonl       Write the complete frequency distribution as a
+                            JSONL cache file (FILESTEM.freq.csv.data.jsonl).
+                            Requires a non-stdin input file. The cache contains
+                            metadata and per-column frequency data.
+                            ALL_UNIQUE columns (rowcount == cardinality) get a single
+                            ALL_UNIQUE sentinel. HIGH_CARDINALITY columns (cardinality
+                            exceeds the smaller of --high-card-threshold/--high-card-pct
+                            of rowcount) get a single HIGH_CARDINALITY sentinel.
+                            When a valid (fresh) cache already exists, frequency will
+                            automatically reuse it instead of recomputing from the CSV.
+                            Use --force to regenerate the cache even when it is valid.
+                            Cache is NOT used when --ignore-case, --no-trim, or --weight
+                            are active, as these change how values are computed.
+    --high-card-threshold <arg>  Absolute cardinality threshold for HIGH_CARDINALITY
+                                 classification in the frequency cache.
+                                 Can also be set with QSV_FREQ_HIGH_CARD_THRESHOLD env var
+                                 (env var takes precedence when CLI value equals the default).
+                                 Only used with --frequency-jsonl.
+                                 [default: 100]
+    --high-card-pct <arg>   Percentage of rowcount threshold for HIGH_CARDINALITY
+                            classification in the frequency cache. Must be between 1 and 100.
+                            Can also be set with QSV_FREQ_HIGH_CARD_PCT env var
+                            (env var takes precedence when CLI value equals the default).
+                            Only used with --frequency-jsonl.
+                            [default: 90]
+    --force                 Force recomputation even when a valid frequency cache
+                            exists, bypassing the auto-reuse path. Also regenerates
+                            the cache when combined with --frequency-jsonl.
 
                             JSON OUTPUT OPTIONS:
     --json                  Output frequency table as nested JSON instead of CSV.

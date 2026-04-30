@@ -1,8 +1,9 @@
 # qsv luau
 
+<small>19.1.0</small>
 ```text
 Create multiple new computed columns, filter rows or compute aggregations by
-executing a Luau 0.702 script for every row (SEQUENTIAL MODE) or for
+executing a Luau 0.716 script for every row (SEQUENTIAL MODE) or for
 specified rows (RANDOM ACCESS MODE) of a CSV file.
 
 Luau is not just another qsv command. It is qsv's Domain-Specific Language (DSL)
@@ -63,7 +64,7 @@ Some examples:
   $ qsv luau filter "tonumber(a) >= tonumber(b)"
 
 PATTERN MATCHING WITH string.find AND OTHER STRING FUNCTIONS:
-  Lua/Luau string functions like string.find, string.match, string.gsub use 
+  Lua/Luau string functions like string.find, string.match, string.gsub use
   PATTERN MATCHING by default, where certain characters have special meanings:
     ( ) . % + - * ? [ ] ^ $
 

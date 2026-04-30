@@ -1,7 +1,8 @@
-# py
+# qsv py
 
+<small>19.1.0</small>
 ```text
-Create a new computed column or filter rows by evaluating a Python expression on 
+Create a new computed column or filter rows by evaluating a Python expression on
 every row of a CSV file.
 
 The executed Python has 4 ways to reference cell values (as strings):
@@ -22,7 +23,7 @@ Some usage examples:
   $ qsv py map c "int(col.a) + int(col['b'])"
   $ qsv py map c "int(col[0]) + int(col[1])"
 
-  Use Python f-strings to calculate using multiple columns (qty, fruit & "unit cost") 
+  Use Python f-strings to calculate using multiple columns (qty, fruit & "unit cost")
     and format into a new column 'formatted'
   $ qsv py map formatted 'f"{qty} {fruit} cost ${(float(unit_cost) * float(qty)):.2f}"'
 
@@ -68,13 +69,13 @@ Some usage examples:
   1,a2,a3,a4,cb675342ed940908eef0844d17c35fab
   2,b2,b3,b4,7d594b33f82bdcbc1cfa6f924a84c4cd
   3,c2,c3,c4,6eabbfdbfd9ab6ae7737fb2b82f6a1af
-  
+
   Note that qsv with the `python` feature enabled will panic on startup even if you're not
   using the `py` command if Python's shared libraries are not found.
-  
+
   Also, the following Python modules are automatically loaded and available to the user -
   builtins, math, random & datetime. The user can import additional modules with the --helper option,
-  with the ability to use any Python module that's installed in the current Python virtualenv. 
+  with the ability to use any Python module that's installed in the current Python virtualenv.
 
   The Python expression is evaluated on a per record basis.
   With "py map", if the expression is invalid for a record, "<ERROR>" is returned for that record.
@@ -102,7 +103,7 @@ py argument:
                            to load helper code that you can call from the expression.
 
 py options:
-    -f, --helper <file>    File containing Python code that's loaded into the 
+    -f, --helper <file>    File containing Python code that's loaded into the
                            qsv_uh Python module. Functions with a return statement
                            in the file can be called with the prefix "qsv_uh".
                            The returned value is used in the map or filter operation.

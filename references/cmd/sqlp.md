@@ -1,5 +1,6 @@
-# sqlp
+# qsv sqlp
 
+<small>19.1.0</small>
 ```text
 Run blazing-fast Polars SQL queries against several CSVs - replete with joins, aggregations,
 grouping, table functions, sorting, and more - working on larger than memory CSV files directly,
@@ -14,7 +15,7 @@ the Python version of Polars, so there will be some minor syntax differences.
 
 Returns the shape of the query result (number of rows, number of columns) to stderr.
 
-Example queries:
+Examples:
 
   $ qsv sqlp data.csv 'select * from data where col1 > 10 order by all desc limit 20'
 
@@ -54,7 +55,7 @@ Example queries:
 
   # Natural Joins are supported too! (https://www.w3resource.com/sql/joins/natural-join.php)
   $ qsv sqlp data1.csv data2.csv data3.csv \
-    "SELECT COLUMNS('^[^:]+$') FROM data1 NATURAL JOIN data2 NATURAL JOIN data3 ORDER BY COMPANY_ID",
+    "SELECT COLUMNS('^[^:]+$') FROM data1 NATURAL JOIN data2 NATURAL JOIN data3 ORDER BY COMPANY_ID"
 
   # Use a SQL script to run a long, complex SQL query or to run SEVERAL SQL queries.
   # When running several queries, each query needs to be separated by a semicolon,
@@ -177,12 +178,7 @@ sqlp arguments:
 
 sqlp options:
     --format <arg>            The output format to use. Valid values are:
-                                csv      Comma-separated values
-                                json     JSON
-                                jsonl    JSONL (JSON Lines)
-                                parquet  Apache Parquet
-                                arrow    Apache Arrow IPC
-                                avro     Apache Avro
+                                csv, json, jsonl, parquet, arrow, avro
                               [default: csv]
 
                               POLARS CSV INPUT PARSING OPTIONS:
@@ -252,10 +248,13 @@ sqlp options:
                               [default: <empty string>]
 
                               ARROW/AVRO/PARQUET OUTPUT FORMATS ONLY:
-    --compression <arg>       The compression codec to use when writing arrow or parquet files.
-                                For Arrow, valid values are: zstd, lz4, uncompressed
-                                For Avro, valid values are: deflate, snappy, uncompressed (default)
-                                For Parquet, valid values are: zstd, lz4raw, gzip, snappy, uncompressed
+    --compression <arg>       The compression codec to use when writing arrow, avro or parquet files.
+                              The `zstd` default below applies to Arrow and Parquet. Avro does not
+                              support zstd, so when `--compression` is omitted Avro silently falls
+                              back to uncompressed unless you pass an Avro-supported codec.
+                                For Arrow, valid values are: `zstd`, `lz4`, `uncompressed`.
+                                For Avro, valid values are: `deflate`, `snappy`, `uncompressed`.
+                                For Parquet, valid values are: `zstd`, `lz4raw`, `gzip`, `snappy`, `uncompressed`.
                               [default: zstd]
 
                               PARQUET OUTPUT FORMAT ONLY:

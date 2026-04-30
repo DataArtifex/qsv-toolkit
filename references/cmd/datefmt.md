@@ -1,5 +1,6 @@
 # qsv datefmt
 
+<small>19.1.0</small>
 ```text
 Formats recognized date fields (19 formats recognized) to a specified date format
 using strftime date format specifiers.
@@ -7,39 +8,33 @@ using strftime date format specifiers.
 For recognized date formats, see
 https://github.com/dathere/qsv-dateparser?tab=readme-ov-file#accepted-date-formats
 
-See https://docs.rs/chrono/latest/chrono/format/strftime/ for 
+See https://docs.rs/chrono/latest/chrono/format/strftime/ for
 accepted date format specifiers for --formatstr.
 Defaults to ISO 8601/RFC 3339 format when --formatstr is not specified.
 ( "%Y-%m-%dT%H:%M:%S%z" - e.g. 2001-07-08T00:34:60.026490+09:30 )
 
 Examples:
-Format dates in Open Date column to ISO 8601/RFC 3339 format:
 
-  $ qsv datefmt 'Open Date' file.csv
+  # Format dates in Open Date column to ISO 8601/RFC 3339 format:
+  qsv datefmt 'Open Date' file.csv
 
-Format multiple date columns in file.csv to ISO 8601/RFC 3339 format:
+  # Format multiple date columns in file.csv to ISO 8601/RFC 3339 format:
+  qsv datefmt 'Open Date,Modified Date,Closed Date' file.csv
 
-  $ qsv datefmt 'Open Date,Modified Date,Closed Date' file.csv
+  # Format all columns that end with "_date" case-insensitive in file.csv to ISO 8601/RFC 3339 format:
+  qsv datefmt '/(?i)_date$/' file.csv
 
-Format all columns that end with "_date" case-insensitive in file.csv to ISO 8601/RFC 3339 format:
+  # Format dates in OpenDate column using '%Y-%m-%d' format:
+  qsv datefmt OpenDate --formatstr '%Y-%m-%d' file.csv
 
-  $ qsv datefmt '/(?i)_date$/' file.csv
+  # Format multiple date columns using '%Y-%m-%d' format:
+  qsv datefmt OpenDate,CloseDate,ReopenDate --formatstr '%Y-%m-%d' file.csv
 
-Format dates in OpenDate column using '%Y-%m-%d' format:
+  # Get the week number for OpenDate and store it in the week_number column:
+  qsv datefmt OpenDate --formatstr '%V' --new-column week_number file.csv
 
-  $ qsv datefmt OpenDate --formatstr '%Y-%m-%d' file.csv
-
-Format multiple date columns using '%Y-%m-%d' format:
-
-  $ qsv datefmt OpenDate,CloseDate,ReopenDate --formatstr '%Y-%m-%d' file.csv
-
-Get the week number for OpenDate and store it in the week_number column:
-
-  $ qsv datefmt OpenDate --formatstr '%V' --new-column week_number file.csv
-
-Get the day of the week for several date columns and store it in the corresponding weekday columns:
-
-  $ qsv datefmt OpenDate,CloseDate --formatstr '%u' --rename Open_weekday,Close_weekday file.csv
+  # Get the day of the week for several date columns and store it in the corresponding weekday columns:
+  qsv datefmt OpenDate,CloseDate --formatstr '%u' --rename Open_weekday,Close_weekday file.csv
 
 For more extensive examples, see https://github.com/dathere/qsv/blob/master/tests/test_datefmt.rs.
 
@@ -58,11 +53,15 @@ datefmt arguments:
                                 Default to ISO 8601 / RFC 3339 date & time format -
                                 "%Y-%m-%dT%H:%M:%S%z" - e.g. 2001-07-08T00:34:60.026490+09:30
                                 [default: %+]
-        
+
     <input>                     The input file to read from. If not specified, reads from stdin.
 
 datefmt options:
-    -c, --new-column <name>     Put the transformed values in a new column instead.
+    -c, --new-column <name>     Put the transformed values in new column(s) instead of replacing
+                                the source column(s). When the selection has multiple columns,
+                                pass a comma-separated list of new column names that match the
+                                selection count (e.g. --new-column 'open_iso,close_iso' for
+                                'OpenDate,CloseDate'). To rename in place instead, use --rename.
     -r, --rename <name>         New name for the transformed column.
     --prefer-dmy                Prefer to parse dates in dmy format. Otherwise, use mdy format.
     --keep-zero-time            If a formatted date ends with "T00:00:00+00:00", keep the time
@@ -76,8 +75,10 @@ datefmt options:
     --output-tz=<string>        The timezone to use for the output date.
                                 The timezone must be a valid IANA timezone name or the string "local".
                                 [default: UTC]
-    --default-tz=<string>       The timezone to use for BOTH input and output dates when they do have timezone.
-                                Shortcut for --input-tz and --output-tz set to the same timezone.
+    --default-tz=<string>       Fallback timezone consulted only when --input-tz or --output-tz
+                                is set to "local" but local-timezone detection fails. Defaults
+                                to UTC. Does NOT override the --input-tz / --output-tz defaults —
+                                use --utc to force both input and output to UTC.
                                 The timezone must be a valid IANA timezone name or the string "local".
     --utc                       Shortcut for --input-tz and --output-tz set to UTC.
     --zulu                      Shortcut for --output-tz set to UTC and --formatstr set to "%Y-%m-%dT%H:%M:%SZ".

@@ -1,13 +1,15 @@
 # qsv safenames
 
+<small>19.1.0</small>
 ```text
 Modify headers of a CSV to only have "safe" names - guaranteed "database-ready" names
-(optimized specifically for PostgreSQL column identifiers). 
+(optimized specifically for PostgreSQL column identifiers).
 
 Fold to lowercase. Trim leading & trailing whitespaces. Replace whitespace/non-alphanumeric
 characters with _. If name starts with a number & check_first_char is true, prepend the unsafe prefix.
 If a header with the same name already exists, append a sequence suffix (e.g. col, col_2, col_3).
-Names are limited to 60 characters in length. Empty names are replaced with the unsafe prefix.
+Names are limited to 60 bytes in length (snapped to UTF-8 char boundary, including any
+duplicate-disambiguation suffix). Empty names are replaced with the unsafe prefix.
 
 In addition, specifically because of CKAN Datastore requirements:
 - Headers with leading underscores are replaced with "unsafe_" prefix.
@@ -53,7 +55,7 @@ Given data.csv:
 
 Note that even if "Col with Embedded Spaces" is technically safe, it is generally discouraged.
 Though it can be created as a "quoted identifier" in PostgreSQL, it is still marked "unsafe"
-by default, unless mode is set to "conditional." 
+by default, unless mode is set to "conditional."
 
 It is discouraged because the embedded spaces can cause problems later on.
 (see https://lerner.co.il/2013/11/30/quoting-postgresql/ for more info).
@@ -65,27 +67,27 @@ Usage:
     qsv safenames --help
 
 safenames options:
-    --mode <c|a|v|V|j|J>   Rename header names to "safe" names - i.e.
-                           guaranteed "database-ready" names.
-                           It has six modes - conditional, always, verify, Verbose,
-                           with Verbose having two submodes - JSON & pretty JSON.
-
-                           conditional (c) - check first before renaming and allow
-                           "quoted identifiers" - mixed case with embedded spaces.
-                           always (a) - goes ahead and renames all headers
-                           without checking if they're already "safe".
-
-                           verify (v) - count "unsafe" header names without
-                           modifying them. Note that verify does not count
-                           "quoted identifiers" as unsafe.
-                           verbose (V) - like verify, but verbose, showing
-                           total header count, duplicates, unsafe headers & safe headers.
-
-                           JSON (j) - similar to verbose in minified JSON.
-                           pretty JSON (J) - verbose in pretty-printed JSON
+    --mode <mode>          Rename header names to "safe" names — guaranteed
+                           "database-ready" names. Mode is selected by the FIRST
+                           character: c/C conditional, a/A always, v verify,
+                           V Verbose, j JSON, J pretty JSON (case matters for
+                           v vs V and j vs J; --mode verbose maps to 'v', NOT V).
+                           Mode details:
+                             c, C  - conditional. Check first before renaming;
+                                     preserves "quoted identifiers" (mixed case
+                                     with embedded spaces).
+                             a, A  - always. Rename every header, even safe ones.
+                             v     - verify. Count unsafe headers; result to stderr.
+                             V     - Verbose. Like verify, but also lists header
+                                     count, duplicates, unsafe & safe headers.
+                             j     - JSON. Verbose data as minified JSON to stdout.
+                             J     - Pretty JSON. Verbose data as pretty-printed JSON.
+                           Quoted identifiers are only treated as safe in
+                           conditional mode; verify, Verbose, and the JSON modes
+                           flag them as unsafe.
                            [default: Always]
     --reserved <list>      Comma-delimited list of additional case-insensitive reserved names
-                           that should be considered "unsafe." If a header name is found in 
+                           that should be considered "unsafe." If a header name is found in
                            the reserved list, it will be prefixed with "reserved_".
                            [default: _id]
     --prefix <string>      Certain systems do not allow header names to start with "_" (e.g. CKAN Datastore).

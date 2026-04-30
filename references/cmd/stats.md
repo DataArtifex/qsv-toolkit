@@ -1,5 +1,6 @@
-# stats
+# qsv stats
 
+<small>19.1.0</small>
 ```text
 Compute summary statistics & infers data types for each column in a CSV.
 
@@ -83,45 +84,50 @@ hasn't changed, the stats will be loaded from the cache instead of recomputing i
 These cached stats are also used by other qsv commands (currently `describegpt`, `frequency`,
 `joinp`, `pivotp`, `schema`, `sqlp` & `tojsonl`) to work smarter & faster.
 If the cached stats are not current (i.e., the input file is newer than the cached stats),
-the cached stats will be ignored and recomputed. For example, see the "boston311" test files in
-https://github.com/dathere/qsv/blob/4529d51273218347fef6aca15ac24e22b85b2ec4/tests/test_stats.rs#L608.
+the cached stats will be ignored and recomputed.
 
 Examples:
 
-Compute "streaming" statistics for the "nyc311.csv" file:
-  $ qsv stats nyc311.csv
+  # Compute "streaming" statistics for "nyc311.csv"
+  qsv stats nyc311.csv
 
-Compute all statistics for the "nyc311.csv" file:
-  $ qsv stats --everything nyc311.csv
-  $ qsv stats -E nyc311.csv
-  $ qsv stats -E nyc311.tsv // Tab-separated
-  $ qsv stats -E nyc311.tab // Tab-separated
-  $ qsv stats -E nyc311.ssv // Semicolon-separated
-  $ qsv stats -E nyc311.csv.sz // Snappy-compressed CSV
-  $ qsv stats -E nyc311.tsv.sz // Snappy-compressed Tab-separated
-  $ qsv stats -E nyc311.ssv.sz // Snappy-compressed Semicolon-separated
+  # Compute all statistics for "nyc311.csv"
+  qsv stats --everything nyc311.csv
 
-Compute all statistics for "nyc311.tsv", inferring dates using default date column name patterns:
-  $ qsv stats -E --infer-dates nyc311.tsv
+  # Compute all statistics for "nyc311.tsv" (Tab-separated)
+  qsv stats -E nyc311.tsv
 
-Compute all statistics for "nyc311.tab", inferring dates only for columns with "_date" & "_dte"
-in the column names:
-  $ qsv stats -E --infer-dates --dates-whitelist _date,_dte nyc311.tab
+  # Compute all stats for "nyc311.tsv", inferring dates using sniff to auto-detect date columns
+  qsv stats -E --infer-dates nyc311.tsv
 
-In addition, also infer boolean data types for "nyc311.ssv" file:
-  $ qsv stats -E --infer-dates --dates-whitelist _date --infer-boolean nyc311.ssv
+  # Compute all stats for "nyc311.tab", inferring dates only for columns
+  #  with "_date" & "_dte" in the column names
+  qsv stats -E --infer-dates --dates-whitelist _date,_dte nyc311.tab
 
-In addition to basic "streaming" stats, also compute cardinality for the "nyc311.csv" file:
-  $ qsv stats --cardinality nyc311.csv
+  # Compute all stats, infer dates and boolean data types for "nyc311.ssv" file
+  qsv stats -E --infer-dates --infer-boolean nyc311.ssv
 
-Prefer DMY format when inferring dates for the "nyc311.csv" file:
-  $ qsv stats -E --infer-dates --prefer-dmy nyc311.csv
+  # In addition to basic "streaming" stats, also compute cardinality for "nyc311.csv"
+  qsv stats --cardinality nyc311.csv
 
-Infer data types only for the "nyc311.csv" file:
-  $ qsv stats --typesonly nyc311.csv
+  # Prefer DMY format when inferring dates for the "nyc311.csv"
+  qsv stats -E --infer-dates --prefer-dmy nyc311.csv
 
-Infer data types only, including boolean and date types for the "nyc311.csv" file:
+  # Infer data types only for the "nyc311.csv" file:
+  qsv stats --typesonly nyc311.csv
+
+  # Infer data types only, including boolean and date types for "nyc311.csv"
   $ qsv stats --typesonly --infer-boolean --infer-dates nyc311.csv
+
+  # Automatically create an index for the "nyc311.csv" file to enable multithreading
+  # if it's larger than 5MB and there is no existing index file:
+  qsv stats -E --cache-threshold -5000000 nyc311.csv
+
+  # Auto-create a TEMPORARY index for the "nyc311.csv" file to enable multithreading
+  # if it's larger than 5MB and delete the index and the stats cache file after the stats run:
+  qsv stats -E --cache-threshold -5000005 nyc311.csv
+
+For more examples, see https://github.com/dathere/qsv/tree/master/resources/test
 
 If the polars feature is enabled, support additional tabular file formats and
 compression formats:
@@ -133,27 +139,7 @@ compression formats:
   $ qsv stats data.tab.zlib // Zlib-compressed Tab-separated
   $ qsv stats data.ssv.zst // Zstd-compressed Semicolon-separated
 
-Automatically create an index for the "nyc311.csv" file to enable multithreading
-if it's larger than 5MB and there is no existing index file:
-  $ qsv stats -E --cache-threshold -5000000 nyc311.csv
-
-Auto-create a TEMPORARY index for the "nyc311.csv" file to enable multithreading
-if it's larger than 5MB and delete the index and the stats cache file after the stats run:
-  $ qsv stats -E --cache-threshold -5000005 nyc311.csv
-
-Prompt for CSV/TSV/TAB file to compute stats for:
-  $ qsv prompt -F tsv,csv,tab | qsv stats -E | qsv table
-
-Prompt for a file to save the stats to in the ~/Documents directory:
-  $ qsv stats -E nyc311.csv | qsv prompt -d ~/Documents --fd-output
-
-Prompt for both INPUT and OUTPUT files in the ~/Documents dir with custom prompts:
-  $ qsv prompt -m 'Select a CSV file to summarize' -d ~/Documents -F csv | \
-      qsv stats -E --infer-dates | \
-      qsv prompt -m 'Save summary to...' -d ~/Documents --fd-output --save-fname summarystats.csv
-
-For more examples, see https://github.com/dathere/qsv/tree/master/resources/test
-For more info, see https://github.com/dathere/qsv/wiki/Supplemental#stats-command-output-explanation
+For more info, see https://github.com/dathere/qsv/blob/master/docs/STATS_DEFINITIONS.md
 
 Usage:
     qsv stats [options] [<input>]
@@ -164,7 +150,7 @@ stats options:
                               See 'qsv select --help' for the format details.
                               This is provided here because piping 'qsv select'
                               into 'qsv stats' will prevent the use of indexing.
-    -E, --everything          Compute all statistics available EXCEPT --dataset-stats.
+    -E, --everything          Compute all statistics available.
     --typesonly               Infer data types only and do not compute statistics.
                               Note that if you want to infer dates and boolean types, you'll
                               still need to use the --infer-dates & --infer-boolean options.
@@ -222,8 +208,8 @@ stats options:
                               Midpoint Nearest Even (aka "Bankers Rounding") rule.
                               https://docs.rs/rust_decimal/latest/rust_decimal/enum.RoundingStrategy.html
                               If set to the sentinel value 9999, no rounding is done.
-                              For dates - range, stddev & IQR are always at least 5 decimal places as
-                              they are reported in days, and 5 places gives us millisecond precision.
+                              For dates - range, stddev & IQR are rounded to 1e-5 day precision
+                              (sub-second), with trailing zeros trimmed in the displayed output.
                               [default: 4]
     --nulls                   Include NULLs in the population size for computing
                               mean and standard deviation.
@@ -246,8 +232,10 @@ stats options:
                               shortlisting fields for date inferencing.
                               i.e. if the field's name has any of these patterns,
                               it is shortlisted for date inferencing.
-                              Set to "all" to inspect ALL fields for
-                              date/datetime types. Ignored if --infer-dates is false.
+
+                              Special values:
+                              * "all" - inspect ALL fields for date/datetime types
+                              * "sniff" - use `qsv sniff` to auto-detect date/datetime columns
 
                               Note that false positive date matches WILL most likely occur
                               when using "all" as unix epoch timestamps are just numbers.
@@ -257,7 +245,14 @@ stats options:
                               To avoid false positives, preprocess the file first
                               with the `datefmt` command to convert unix epoch timestamp
                               columns to RFC3339 format.
-                              [default: date,time,due,open,close,created]
+
+                              When set to "sniff", we do two-stage date inferencing.
+                              First running sniff on the input file and then second,
+                              only inferring dates for the columns that sniff identifies
+                              as date/datetime candidates.
+                              This is much faster than "all", and more convenient than
+                              manually specifying patterns in the whitelist.
+                              [default: sniff]
     --prefer-dmy              Parse dates in dmy format. Otherwise, use mdy format.
                               Ignored if --infer-dates is false.
 
@@ -276,12 +271,12 @@ stats options:
                               You can preemptively create the stats-jsonl file by using this option
                               BEFORE running "smart" commands and they will automatically use it.
  -c, --cache-threshold <arg>  Controls the creation of stats cache files.
-                                - when greater than 1, the threshold in milliseconds before caching
+                                * when greater than 1, the threshold in milliseconds before caching
                                   stats results. If a stats run takes longer than this threshold,
                                   the stats results will be cached.
-                                - 0 to suppress caching.
-                                - 1 to force caching.
-                                - a negative number to automatically create an index when
+                                * 0 to suppress caching.
+                                * 1 to force caching.
+                                * a negative number to automatically create an index when
                                   the input file size is greater than abs(arg) in bytes.
                                   If the negative number ends with 5, it will delete the index
                                   file and the stats cache file after the stats run. Otherwise,
@@ -290,10 +285,6 @@ stats options:
     --vis-whitespace          Visualize whitespace characters in the output.
                               See https://github.com/dathere/qsv/wiki/Supplemental#whitespace-markers
                               for the list of whitespace markers.
-    --dataset-stats           Compute dataset statistics (e.g. row count, column count, file size and
-                              fingerprint hash) and add them as additional rows to the output, with
-                              the qsv__ prefix and an additional qsv__value column.
-                              The --everything option DOES NOT enable this option.
 
 Common options:
     -h, --help             Display this message

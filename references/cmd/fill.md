@@ -1,5 +1,6 @@
-# fill
+# qsv fill
 
+<small>19.1.0</small>
 ```text
 Fill empty fields in selected columns of a CSV.
 
@@ -10,6 +11,8 @@ the first time they are encountered.
 
 The option `--default <value>` fills all empty values
 in the selected columns with the provided default value.
+When `--default` is set, it takes precedence over forward-fill
+and `--first`, which become no-ops.
 
 The option `--first` fills empty values using the first
 seen non-empty value in that column, instead of the most
@@ -38,10 +41,10 @@ Usage:
     qsv fill --help
 
 fill options:
-    -g --groupby <keys>    Group by specified columns.
-    -f --first             Fill using the first valid value of a column, instead of the latest.
-    -b --backfill          Fill initial empty values with the first valid value.
-    -v --default <value>   Fill using this default value.
+    -g, --groupby <keys>    Group by specified columns.
+    -f, --first             Fill using the first valid value of a column, instead of the latest.
+    -b, --backfill          Fill initial empty values with the first valid value.
+    -v, --default <value>   Fill using this default value.
 
 Common options:
     -h, --help             Display this message

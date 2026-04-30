@@ -1,5 +1,6 @@
 # qsv geocode
 
+<small>19.1.0</small>
 ```text
 Geocodes a location in CSV data against an updatable local copy of the Geonames cities index
 and a local copy of the MaxMind GeoLite2 City database.
@@ -17,7 +18,7 @@ index from the qsv GitHub repo and use it going forward. You can operate on the 
 index using the `geocode index-*` subcommands.
 
 By default, the prebuilt index uses the Geonames Gazeteer cities15000.zip file using
-English names. It contains cities with populations > 15,000 (about ~26k cities). 
+English names. It contains cities with populations > 15,000 (about ~26k cities).
 See https://download.geonames.org/export/dump/ for more information.
 
 It has seven major subcommands:
@@ -40,18 +41,17 @@ It has seven major subcommands:
                     instead of CSV data.
  * index-*        - operations to update the local Geonames cities index.
                     (index-check, index-update, index-load & index-reset)
- 
+
 SUGGEST
 Suggest a Geonames city based on a partial city name. It returns the closest Geonames
 city record based on the Jaro-Winkler distance between the partial city name and the
 Geonames city name.
 
-The geocoded information is formatted based on --formatstr, returning it in 
+The geocoded information is formatted based on --formatstr, returning it in
 '%location' format (i.e. "(lat, long)") if not specified.
 
-Use the --new-column option if you want to keep the location column:
+Use the --new-column option if you want to keep the location column, e.g.
 
-Examples:
 Geocode file.csv city column and set the geocoded value to a new column named lat_long.
 
   $ qsv geocode suggest city --new-column lat_long file.csv
@@ -69,7 +69,7 @@ If we use admin1 codes, we can omit --country as it will be inferred from the ad
 
   $ qsv geocode suggest city --admin1 "US.NY,US.CA" file.csv
 
-Geocode file.csv city column with --formatstr=%state and set the 
+Geocode file.csv city column with --formatstr=%state and set the
 geocoded value a new column named state.
 
   $ qsv geocode suggest city --formatstr %state --new-column state file.csv
@@ -77,7 +77,9 @@ geocoded value a new column named state.
 Use dynamic formatting to create a custom format.
 
   $ qsv geocode suggest city -f "{name}, {admin1}, {country} in {timezone}" file.csv
-  # using French place names. You'll need to rebuild the index with the --languages option first
+
+Using French place names. You'll need to rebuild the index with the --languages option first
+
   $ qsv geocode suggest city -f "{name}, {admin1}, {country} in {timezone}" -l fr file.csv
 
 SUGGESTNOW
@@ -94,9 +96,8 @@ city record based on the Euclidean distance between the coordinate and the neare
 It accepts "lat, long" or "(lat, long)" format.
 
 The geocoded information is formatted based on --formatstr, returning it in
-'%city-admin1' format if not specified.
+'%city-admin1' format if not specified, e.g.
 
-Examples:
 Reverse geocode file.csv LatLong column. Set the geocoded value to a new column named City.
 
   $ qsv geocode reverse LatLong -c City file.csv
@@ -115,7 +116,7 @@ Accepts the same options as reverse, but does not require an input file.
 
   $ qsv geocode reversenow "40.71427, -74.00597"
   $ qsv geocode reversenow --country US -f %cityrecord "40.71427, -74.00597"
-  $ qsv geocode reversenow --admin1 "US:OH" "(39.32924, -82.10126)"
+  $ qsv geocode reversenow "(39.32924, -82.10126)"
 
 COUNTRYINFO
 Returns the country information for the specified ISO-3166 2-letter country code.
@@ -166,19 +167,33 @@ It has four operations:
             If set to 500, 1000, 5000 or 15000, it will download the corresponding English-only
             Geonames index rkyv file from the qsv GitHub repo for the current qsv version.
 
-Examples:
 Update the Geonames cities index with the latest changes.
 
   $ qsv geocode index-update
-  # or rebuild the index using the latest Geonames data
-  # with English, French, German & Spanish place names
+
+Rebuild the index using the latest Geonames data w/ English, French, German & Spanish place names
+
   $ qsv geocode index-update --languages en,fr,de,es
 
 Load an alternative Geonames cities index from a file, making it the default index going forward.
 
   $ qsv geocode index-load my_geonames_index.rkyv
 
-For more extensive examples, see https://github.com/dathere/qsv/blob/master/tests/test_geocode.rs.
+Examples:
+
+# For US locations, you can retrieve the us_state_fips_code and us_county_fips_code fields of a US City
+# to help with Census data enrichment.
+qsv geocode suggest city_col --country US -f \
+"%dyncols: {geocoded_city_col:name}, {state_col:admin1}, {county_col:admin2},  {state_fips_code:us_state_fips_code}, {county_fips_code:us_county_fips_code}"\
+    input_data.csv -o output_data_with_fips.csv
+
+# For US locations, you can reverse geocode the us_state_fips_code and us_county_fips_code fields of a WGS 84 coordinate
+# to help with Census data enrichment. The coordinate can be in "lat, long" or "(lat, long)" format.
+qsv geocode reverse wgs84_coordinate_col --country US -f \
+"%dyncols: {geocoded_city_col:name}, {state_col:admin1}, {county_col:admin2},  {state_fips_code:us_state_fips_code}, {county_fips_code:us_county_fips_code}"\
+    input_data.csv -o output_data_with_fips.csv
+
+For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_geocode.rs.
 
 Usage:
 qsv geocode suggest [--formatstr=<string>] [options] <column> [<input>]
@@ -196,7 +211,7 @@ qsv geocode index-reset
 qsv geocode --help
 
 geocode arguments:
-        
+
     <input>                     The input file to read from. If not specified, reads from stdin.
 
     <column>                    The column to geocode. Used by suggest, reverse & countryinfo subcommands.
@@ -230,7 +245,7 @@ geocode options:
 
                                 It is the topmost priority filter, and will be applied first. If multiple
                                 countries are specified, they are matched in priority order.
-                                
+
                                 For suggest, this will limit the search to the specified countries.
 
                                 For reverse, this ensures that the returned city is in the specified
@@ -242,7 +257,7 @@ geocode options:
     --min-score <score>         The minimum Jaro-Winkler distance score.
                                 [default: 0.8]
     --admin1 <admin1_list>      The comma-delimited, case-insensitive list of admin1s to filter for.
-    
+
                                 If all uppercase, it will be treated as an admin1 code (e.g. US.NY, JP.40, CN.23).
                                 Otherwise, it will be treated as an admin1 name (e.g New York, Tokyo, Shanghai).
 
@@ -273,30 +288,30 @@ geocode options:
                                 2. Use dynamic formatting to create a custom format.
                                 3. Use the special format "%dyncols:" to dynamically add multiple
                                    columns to the output CSV using fields from a geocode result.
-    
+
                                 PREDEFINED FORMATS:
-                                  - '%city-state' - e.g. Brooklyn, New York
-                                  - '%city-country' - Brooklyn, US
-                                  - '%city-state-country' | '%city-admin1-country' - Brooklyn, New York US
-                                  - '%city-county-state' | '%city-admin2-admin1' - Brooklyn, Kings County, New York
-                                  - '%city' - Brooklyn
-                                  - '%state' | '%admin1' - New York
-                                  - "%county' | '%admin2' - Kings County
-                                  - '%country' - US
-                                  - '%country_name' - United States
-                                  - '%cityrecord' - returns the full city record as a string
-                                  - '%admin1record' - returns the full admin1 record as a string
-                                  - '%admin2record' - returns the full admin2 record as a string
-                                  - '%lat-long' - <latitude>, <longitude>
-                                  - '%location' - (<latitude>, <longitude>)
-                                  - '%id' - the Geonames ID
-                                  - '%capital' - the capital
-                                  - '%continent' - the continent (only valid for countryinfo subcommand)
-                                  - '%population' - the population
-                                  - '%timezone' - the timezone
-                                  - '%json' - the full city record as JSON
-                                  - '%pretty-json' - the full city record as pretty JSON
-                                  - '%+' - use the subcommand's default format. 
+                                  * '%city-state' - e.g. Brooklyn, New York
+                                  * '%city-country' - Brooklyn, US
+                                  * '%city-state-country' | '%city-admin1-country' - Brooklyn, New York US
+                                  * '%city-county-state' | '%city-admin2-admin1' - Brooklyn, Kings County, New York
+                                  * '%city' - Brooklyn
+                                  * '%state' | '%admin1' - New York
+                                  * '%county' | '%admin2' - Kings County
+                                  * '%country' - US
+                                  * '%country_name' - United States
+                                  * '%cityrecord' - returns the full city record as a string
+                                  * '%admin1record' - returns the full admin1 record as a string
+                                  * '%admin2record' - returns the full admin2 record as a string
+                                  * '%lat-long' - <latitude>, <longitude>
+                                  * '%location' - (<latitude>, <longitude>)
+                                  * '%id' - the Geonames ID
+                                  * '%capital' - the capital
+                                  * '%continent' - the continent (only valid for countryinfo subcommand)
+                                  * '%population' - the population
+                                  * '%timezone' - the timezone
+                                  * '%json' - the full city record as JSON
+                                  * '%pretty-json' - the full city record as pretty JSON
+                                  * '%+' - use the subcommand's default format.
                                            suggest - '%location'
                                            suggestnow - '{name}, {admin1} {country}: {latitude}, {longitude}'
                                            reverse & reversenow - '%city-admin1-country'
@@ -304,7 +319,7 @@ geocode options:
                                            iplookup - '%cityrecord'
                                            iplookupnow - '{name}, {admin1} {country}: {latitude}, {longitude}'
 
-                                
+
                                 If an invalid format is specified, it will be treated as '%+'.
 
                                 Note that when using the JSON predefined formats with the now subcommands,
@@ -325,7 +340,7 @@ geocode options:
 
                                 For US places, two additional fields are available:
                                   us_county_fips_code and us_state_fips_code
-                                    
+
                                   e.g. "City: {name}, State: {admin1}, Country: {country} {continent} - {languages}"
 
                                 If an invalid template is specified, "Invalid dynfmt template" is returned.
@@ -346,7 +361,7 @@ geocode options:
 
                                 will add three columns to the output CSV named city_col, state_col & county_col.
 
-                                Note that using "%dyncols:" will cause the the command to geocode EACH row without
+                                Note that using "%dyncols:" will cause the command to geocode EACH row without
                                 using the cache, so it will be slower than predefined or dynamic formatting.
                                 Also, countryinfo and countryinfonow subcommands currently do not support "%dyncols:".
                                 [default: %+]
@@ -368,7 +383,7 @@ geocode options:
     --cache-dir <dir>           The directory to use for caching the Geonames cities index.
                                 If the directory does not exist, qsv will attempt to create it.
                                 If the QSV_CACHE_DIR envvar is set, it will be used instead.
-                                [default: ~/.qsv-cache]                                
+                                [default: ~/.qsv-cache]
 
                                 INDEX-UPDATE only options:
     --languages <lang-list>     The comma-delimited, case-insensitive list of languages to use when building
@@ -386,7 +401,7 @@ geocode options:
                                   cities15000.zip - population > 15000; ~26k cities, 13mb
                                 Note that the more cities are included, the larger the local index file will be,
                                 lookup times will be slower, and the search results will be different.
-                                For convenience, if this is set to 500, 1000, 5000 or 15000, it will be 
+                                For convenience, if this is set to 500, 1000, 5000 or 15000, it will be
                                 converted to a geonames cities URL.
                                 [default: https://download.geonames.org/export/dump/cities15000.zip]
     --force                     Force update the Geonames cities index. If not set, qsv will check if there

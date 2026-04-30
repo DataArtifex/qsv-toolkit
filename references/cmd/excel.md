@@ -1,83 +1,74 @@
 # qsv excel
 
+<small>19.1.0</small>
 ```text
 Exports a specified Excel/ODS sheet to a CSV file.
 The first non-empty row of a sheet is assumed to be the header row.
 
 Examples:
 
-Export the first sheet of an Excel file to a CSV file:
-  $ qsv excel input.xlsx > output.csv
-  $ qsv excel input.xlsx --output output.csv
+# Export the first sheet of an Excel file to a CSV file:
+qsv excel input.xlsx --output output.csv
 
-Export the first sheet of an ODS file to a CSV file:
-  $ qsv excel input.ods > output.csv
-  $ qsv excel input.ods -o output.csv
+# Export the first sheet of an ODS file to a CSV file:
+qsv excel input.ods -o output.csv
 
-Export the first sheet of an Excel file to a CSV file with different delimiters:
-  # semicolon
-  $ qsv excel input.xlsx -d ";" > output.csv
-  # tab
-  $ qsv excel input.xlsx -d "\t" > output.tsv
+# Export the first sheet of an Excel file to a CSV file with a custom delimiter:
+qsv excel input.xlsx -d ";" > output.csv
 
-Export a sheet by name (case-insensitive):
-  $ qsv excel --sheet "Sheet 3" input.xlsx
+# Export a sheet by name (case-insensitive):
+qsv excel --sheet "Sheet 3" input.xlsx
 
-Export a sheet by index:
-  # this exports the 3nd sheet (0-based index)
-  $ qsv excel -s 2 input.xlsx
+# Export a sheet by index:
+# this exports the 3rd sheet (0-based index)
+qsv excel -s 2 input.xlsx
 
-Export the last sheet (negative index)):
-  $ qsv excel -s -1 input.xlsx
+# Export the last sheet (negative index):
+qsv excel -s -1 input.xlsx
 
-Export the second to last sheet:
-  $ qsv excel -s -2 input.xls
+# Export the second to last sheet:
+qsv excel -s -2 input.xls
 
-Export a table named "Table1" in an XLSX file. Note that --sheet is not required
-as the table definition includes the sheet.
-  $ qsv excel --table "Table1" input.xlsx
+# Export a table named "Table1" in an XLSX file. Note that --sheet is not required
+# as the table definition includes the sheet.
+qsv excel --table "Table1" input.xlsx
 
-Export a range of cells in the first sheet:
-  $ qsv excel --range C3:T25 input.xlsx
+# Export a range of cells in the first sheet:
+qsv excel --range C3:T25 input.xlsx
 
-Export a named range in the workbook. Note that --sheet is not required
-as named ranges include the sheet.
-  $ qsv excel --range MyRange input.xlsx
+# Export a named range in the workbook. Note that --sheet is not required
+# as named ranges include the sheet.
+qsv excel --range MyRange input.xlsx
 
-Export a range of cells in the second sheet:
-  $ qsv excel --range C3:T25 -s 1 input.xlsx
+# Export a range of cells in the second sheet:
+qsv excel --range C3:T25 -s 1 input.xlsx
 
-Export a range of cells in a sheet by name.
-Note the range name must be enclosed in single quotes in certain shells
-as it may contain special characters like ! and $:
-  $ qsv excel --range 'Sheet2!C3:T25' input.xlsx
-  $ qsv excel --range 'Sheet2!$C$3:$T$25' input.xlsx
+# Export a range of cells in a sheet by name.
+# Note the range name must be enclosed in single quotes in certain shells
+# as it may contain special characters like ! and $:
+qsv excel --range 'Sheet2!C3:T25' input.xlsx
 
-Export the cell C3 in the first sheet:
-  $ qsv excel --cell C3 input.xlsx
+# Export the cell C3 in the first sheet:
+qsv excel --cell C3 input.xlsx
 
-Export a single cell from a specific sheet:
-  $ qsv excel --cell 'Sheet2!C3' input.xlsx
+# Export a single cell from a specific sheet:
+qsv excel --cell 'Sheet2!C3' input.xlsx
 
-Export metadata for all sheets in CSV format:
-  $ qsv excel --metadata csv input.xlsx
-  $ qsv excel --metadata c input.xlsx
-  # short CSV mode is much faster, but doesn't contain as much metadata
-  $ qsv excel --metadata short input.xlsx
-  $ qsv excel --metadata s input.xlsx
+# Export metadata for all sheets in CSV format:
+qsv excel --metadata csv input.xlsx
 
-Export metadata for all sheets in JSON format:
-  $ qsv excel --metadata json input.xlsx
-  $ qsv excel --metadata j input.xlsx
-  # pretty-printed JSON - first letter is capital J
-  $ qsv excel --metadata J input.xlsx
-  # short, minified JSON mode - first letter is capital S
-  $ qsv excel --metadata Short input.xlsx
-  $ qsv excel --metadata S input.xlsx
+# Export metadata in short CSV mode which is much faster
+# but doesn't contain as much metadata
+qsv excel --metadata short input.xlsx
 
-Prompt for spreadsheets to export and then prompt where to save the CSV:
-  $ qsv prompt -d ~/Documents -m 'Select a spreadsheet to export to CSV' -F xlsx,xls,ods | \
-      qsv excel - | qsv prompt -m 'Save exported CSV to...' --fd-output
+# Export metadata for all sheets in JSON format:
+qsv excel --metadata json input.xlsx
+
+# Export metadata to pretty-printed JSON - first letter is capital J
+qsv excel --metadata JSON input.xlsx
+
+# Export metadata in short, minified JSON mode - first letter is capital S
+qsv excel --metadata Short input.xlsx
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_excel.rs.
 
@@ -96,7 +87,7 @@ Excel options:
                                [default: 0]
     --header-row <row>         The header row. Set if other than the first non-empty row of the sheet.
     --metadata <c|s|j|J|S>     Outputs workbook metadata in CSV or JSON format:
-                                 index, sheet_name, headers, type, visible, column_count, row_count,
+                                 index, sheet_name, type, visible, headers, column_count, row_count,
                                  safe_headers, safe_headers_count, unsafe_headers, unsafe_headers_count
                                  and duplicate_headers_count, names, name_count, tables, table_count.
                                headers is a list of the first row which is presumed to be the header row.
@@ -141,11 +132,11 @@ Excel options:
 
     --error-format <format>    The format to use when formatting error cells.
                                There are 3 formats:
-                                 - "code": return the error code.
+                                 * "code": return the error code.
                                     (#DIV/0!; #N/A; #NAME?; #NULL!; #NUM!; #REF!; #VALUE!; #DATA!)
-                                 - "formula": return the formula, prefixed with '#'.
+                                 * "formula": return the formula, prefixed with '#'.
                                     (e.g. #=A1/B1 where B1 is 0; #=100/0)
-                                 - "both": return both error code and the formula.
+                                 * "both": return both error code and the formula.
                                     (e.g. #DIV/0!: =A1/B1)
                                [default: code]
     --flexible                 Continue even if the number of columns is different from row to row.

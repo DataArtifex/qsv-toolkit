@@ -1,23 +1,26 @@
 # qsv edit
 
+<small>19.1.0</small>
 ```text
 Replace the value of a cell specified by its row and column.
 
-For example we have the following CSV file named items.csv:
+Example:
 
+items.csv
+```csv
 item,color
 shoes,blue
 flashlight,gray
+```
 
-To output the data with the color of the shoes as green instead of blue, run:
+# To output the data with the color of the shoes as green instead of blue
+$ qsv edit items.csv color 0 green
 
-  $ qsv edit items.csv color 0 green
-
-The following is returned as output:
-
+```csv
 item,color
 shoes,green
 flashlight,gray
+```
 
 You may also choose to specify the column name by its index (in this case 1).
 Specifying a column as a number is prioritized by index rather than name.
@@ -35,9 +38,16 @@ edit arguments:
     row                    The cell's row index. Indices start from the first non-header row as 0.
     value                  The new value to replace the old cell content with.
 
+If <row> is out of range:
+  - in stdout/--output mode, the input is passed through unchanged with a warning on stderr.
+  - in --in-place mode, the command errors and the input file is left untouched.
+
 edit options:
     -i, --in-place         Overwrite the input file data with the output.
                            The input file is renamed to a .bak file in the same directory.
+                           If the .bak file already exists, the command errors instead of overwriting it.
+                           Symbolic links are rejected; pass the resolved path instead.
+                           (Other Windows reparse points such as junction points are not detected.)
 
 Common options:
     -h, --help             Display this message

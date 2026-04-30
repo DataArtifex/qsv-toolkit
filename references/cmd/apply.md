@@ -1,5 +1,6 @@
-# apply
+# qsv apply
 
+<small>19.1.0</small>
 ```text
 Apply a series of transformation functions to given CSV column/s. This can be used to
 perform typical data-wrangling tasks and/or to harmonize some values, etc.
@@ -23,12 +24,11 @@ applied in order:
       Damerau-Levenshtein similarity to --comparand
 
 Operations support multi-column transformations. Just make sure the
-number of transformed columns with the --rename option is the same. e.g.:
+number of transformed columns with the --rename option is the same.
+For example, to trim and fold to uppercase the col1,col2 and col3 columns &
+rename them to newcol1,newcol2 and newcol3:
 
-# trim and fold to uppercase the col1,col2 and col3 columns and rename them
-# to newcol1,newcol2 and newcol3
-
-  $ qsv apply operations trim,upper col1,col2,col3 -r newcol1,newcol2,newcol3 file.csv
+  qsv apply operations trim,upper col1,col2,col3 -r newcol1,newcol2,newcol3 file.csv
 
 It has 40 supported operations:
 
@@ -100,79 +100,11 @@ It has 40 supported operations:
        question mark (e.g. 0.9?)
        https://github.com/greyblake/whatlang-rs/blob/master/SUPPORTED_LANGUAGES.md
 
-Examples:
-Trim, then transform to uppercase the surname field.
-
-  $ qsv apply operations trim,upper surname file.csv
-
-Trim, then transform to uppercase the surname field and rename the column uppercase_clean_surname.
-
-  $ qsv apply operations trim,upper surname -r uppercase_clean_surname file.csv
-
-Trim, then transform to uppercase the surname field and
-save it to a new column named uppercase_clean_surname.
-
-  $ qsv apply operations trim,upper surname -c uppercase_clean_surname file.csv
-
-Trim, then transform to uppercase the firstname and surname fields and
-rename the columns ufirstname and usurname.
-
-  $ qsv apply operations trim,upper firstname,surname -r ufirstname,usurname file.csv
-
-Trim parentheses & brackets from the description field.
-
-  $ qsv apply operations mtrim description --comparand '()<>' file.csv
-
-Replace ' and ' with ' & ' in the description field.
-
-  $ qsv apply operations replace description --comparand ' and ' --replacement ' & ' file.csv
-
-Extract the numeric value of the Salary column in a new column named Salary_num.
-
-  $ qsv apply operations currencytonum Salary -c Salary_num file.csv
-
-Convert the USD_Price to PHP_Price using the currency symbol "PHP" with a conversion rate of 60.
-
-  $ qsv apply operations numtocurrency USD_Price -C PHP -R 60 -c PHP_Price file.csv
-
-Base64 encode the text_col column & save the encoded value into new column named encoded & decode it.
-
-  $ qsv apply operations encode64 text_col -c encoded file.csv | qsv apply operations decode64 encoded
-
-Compute the Normalized Damerau-Levenshtein similarity of the neighborhood column to the string 'Roxbury'
-and save it to a new column named dln_roxbury_score.
-
-  $ qsv apply operations lower,simdln neighborhood --comparand roxbury -c dln_roxbury_score boston311.csv
-
-You can also use this subcommand command to make a copy of a column:
-
-  $ qsv apply operations copy col_to_copy -c col_copy file.csv
 
 EMPTYREPLACE (multi-column capable)
 Replace empty cells with <--replacement> string.
 Non-empty cells are not modified. See the `fill` command for more complex empty field operations.
 
-Examples:
-Replace empty cells in file.csv Measurement column with 'None'.
-
-  $ qsv apply emptyreplace Measurement --replacement None file.csv
-
-Replace empty cells in file.csv Measurement column with 'Unknown Measurement'.
-
-  $ qsv apply emptyreplace Measurement --replacement 'Unknown Measurement' file.csv
-
-Replace empty cells in file.csv M1,M2 and M3 columns with 'None'.
-
-  $ qsv apply emptyreplace M1,M2,M3 --replacement None file.csv
-
-Replace all empty cells in file.csv for columns that start with 'Measurement' with 'None'.
-
-  $ qsv apply emptyreplace '/^Measurement/' --replacement None file.csv
-
-Replace all empty cells in file.csv for columns that start with 'observation'
-case insensitive with 'None'.
-
-  $ qsv apply emptyreplace --replacement None '/(?i)^observation/' file.csv
 
 DYNFMT
 Dynamically constructs a new column from other columns using the <--formatstr> template.
@@ -182,14 +114,6 @@ column name in curly braces, replacing all non-alphanumeric characters with unde
 If you need to dynamically construct a column with more complex formatting requirements and
 computed values, check out the py command to take advantage of Python's f-string formatting.
 
-Examples:
-Create a new column 'mailing address' from 'house number', 'street', 'city' and 'zip-code' columns:
-
-  $ qsv apply dynfmt --formatstr '{house_number} {street}, {city} {zip_code} USA' -c 'mailing address' file.csv
-
-Create a new column 'FullName' from 'FirstName', 'MI', and 'LastName' columns:
-
-  $ qsv apply dynfmt --formatstr 'Sir/Madam {FirstName} {MI}. {LastName}' -c FullName file.csv
 
 CALCCONV
 Parse and evaluate math expressions into a new column, with support for units and conversions.
@@ -200,33 +124,100 @@ inferred unit will be appended to the result.
 For a complete list of supported units, constants, operators and functions, see https://docs.rs/cpc
 
 Examples:
-Do simple arithmetic:
-  $ qsv apply calcconv --formatstr '{col1} + {col2} * {col3}' --new-column result file.csv
 
-With support for operators like % and ^:
-  $ qsv apply calcconv --formatstr '{col1} % 3' --new-column remainder file.csv
+== OPERATIONS ==
 
-Convert from one unit to another:
-  $ qsv apply calcconv --formatstr '{col1}mb in gigabytes' -c gb file.csv
-  $ qsv apply calcconv --formatstr '{col1} Fahrenheit in Celsius" -c metric_temperature file.csv
+  # Trim, then transform to uppercase the surname field.
+  qsv apply operations trim,upper surname file.csv
 
-Mix units and conversions are automatically done for you:
-  $ qsv apply calcconv --formatstr '{col1}km + {col2}mi in meters' -c meters file.csv
+  # Trim, then transform to uppercase the surname field and rename the column uppercase_clean_surname.
+  qsv apply operations trim,upper surname -r uppercase_clean_surname file.csv
 
-You can append the inferred unit at the end of the result by ending the expression with '<UNIT>':
-  $ qsv apply calcconv --formatstr '({col1} + {col2})km to light years <UNIT>' -c light_years file.csv
+  # Trim, then transform to uppercase the surname field and
+  # save it to a new column named uppercase_clean_surname.
+  qsv apply operations trim,upper surname -c uppercase_clean_surname file.csv
 
-You can even do complex temporal unit conversions:
-  $ qsv apply calcconv --formatstr '{col1}m/s + {col2}mi/h in kilometers per h' -c kms_per_h file.csv
+  # Trim, then transform to uppercase the firstname and surname fields and
+  # rename the columns ufirstname and usurname.
+  qsv apply operations trim,upper firstname,surname -r ufirstname,usurname file.csv
 
-Use math functions - see https://docs.rs/cpc/latest/cpc/enum.FunctionIdentifier.html for list of functions:
-  $ qsv apply calcconv --formatstr 'round(sqrt{col1}^4)! liters' -c liters file.csv
+  # Trim parentheses & brackets from the description field.
+  qsv apply operations mtrim description --comparand '()<>' file.csv
 
-Use percentages:
-  $ qsv apply calcconv --formatstr '10% of abs(sin(pi)) horsepower to watts' -c watts file.csv
+  # Replace ' and ' with ' & ' in the description field.
+  qsv apply operations replace description --comparand ' and ' --replacement ' & ' file.csv
 
-And use very large numbers:
-  $ qsv apply calcconv --formatstr '{col1} Billion Trillion * {col2} quadrillion vigintillion' -c num_atoms file.csv
+  # Extract the numeric value of the Salary column in a new column named Salary_num.
+  qsv apply operations currencytonum Salary -c Salary_num file.csv
+
+  # Convert the USD_Price to PHP_Price using the currency symbol "PHP" with a conversion rate of 60.
+  qsv apply operations numtocurrency USD_Price -C PHP -R 60 -c PHP_Price file.csv
+
+  # Base64 encode the text_col column & save the encoded value into new column named encoded & decode it.
+  qsv apply operations encode64 text_col -c encoded file.csv | qsv apply operations decode64 encoded
+
+  # Compute the Normalized Damerau-Levenshtein similarity of the neighborhood column to
+  # the string 'Roxbury' and save it to a new column named dln_roxbury_score.
+  qsv apply operations lower,simdln neighborhood --comparand roxbury -c dln_roxbury_score boston311.csv
+
+  # You can also use this subcommand command to make a copy of a column:
+  qsv apply operations copy col_to_copy -c col_copy file.csv
+
+== EMPTYREPLACE ==
+
+  # Replace empty cells in file.csv Measurement column with 'None'.
+  qsv apply emptyreplace Measurement --replacement None file.csv
+
+  # Replace empty cells in file.csv Measurement column with 'Unknown Measurement'.
+  qsv apply emptyreplace Measurement --replacement 'Unknown Measurement' file.csv
+
+  # Replace empty cells in file.csv M1,M2 and M3 columns with 'None'.
+  qsv apply emptyreplace M1,M2,M3 --replacement None file.csv
+
+  # Replace all empty cells in file.csv for columns that start with 'Measurement' with 'None'.
+  qsv apply emptyreplace '/^Measurement/' --replacement None file.csv
+
+  # Replace all empty cells in file.csv for columns that start with 'observation'
+  # case insensitive with 'None'.
+  qsv apply emptyreplace --replacement None '/(?i)^observation/' file.csv
+
+== DYNFMT ==
+
+  # Create a new column 'mailing address' from 'house number', 'street', 'city'
+  # and 'zip-code' columns:
+  qsv apply dynfmt --formatstr '{house_number} {street}, {city} {zip_code} USA' -c 'mailing address' file.csv
+
+  # Create a new column 'FullName' from 'FirstName', 'MI', and 'LastName' columns:
+  qsv apply dynfmt --formatstr 'Sir/Madam {FirstName} {MI}. {LastName}' -c FullName file.csv
+
+== CALCCONV ==
+
+  # Do simple arithmetic:
+  qsv apply calcconv --formatstr '{col1} + {col2} * {col3}' --new-column result file.csv
+
+  # Arithmetic with support for operators like % and ^:
+  qsv apply calcconv --formatstr '{col1} % 3' --new-column remainder file.csv
+
+  # Convert from one unit to another:
+  qsv apply calcconv --formatstr '{col1} Fahrenheit in Celsius' -c metric_temperature file.csv
+
+  # Mix units and conversions are automatically done for you:
+  qsv apply calcconv --formatstr '{col1}km + {col2}mi in meters' -c meters file.csv
+
+  # You can append the inferred unit at the end of the result by ending the expression with '<UNIT>':
+  qsv apply calcconv --formatstr '({col1} + {col2})km to light years <UNIT>' -c light_years file.csv
+
+  # You can even do complex temporal unit conversions:
+  qsv apply calcconv --formatstr '{col1}m/s + {col2}mi/h in kilometers per h' -c kms_per_h file.csv
+
+  # Use math functions - see https://docs.rs/cpc/latest/cpc/enum.FunctionIdentifier.html for list of functions:
+  qsv apply calcconv --formatstr 'round(sqrt{col1}^4)! liters' -c liters file.csv
+
+  # Use percentages:
+  qsv apply calcconv --formatstr '10% of abs(sin(pi)) horsepower to watts' -c watts file.csv
+
+  # Use very large numbers:
+  qsv apply calcconv --formatstr '{col1} Billion Trillion * {col2} quadrillion vigintillion' -c num_atoms file.csv
 
 For more extensive examples, see https://github.com/dathere/qsv/blob/master/tests/test_apply.rs.
 
@@ -256,7 +247,7 @@ apply arguments:
                                     See DYNFMT example above for more details.
         --new-column=<name>         Put the generated values in a new column.
 
-    CALCONV subcommand:
+    CALCCONV subcommand:
         --formatstr=<string>        The calculation/conversion expression to use.
         --new-column=<name>         Put the calculated/converted values in a new column.
 

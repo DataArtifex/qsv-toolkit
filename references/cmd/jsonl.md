@@ -1,5 +1,6 @@
 # qsv jsonl
 
+<small>19.1.0</small>
 ```text
 Convert newline-delimited JSON (JSONL/NDJSON) to CSV.
 
@@ -19,7 +20,7 @@ Usage:
 jsonl options:
     --ignore-errors        Skip malformed input lines.
     -j, --jobs <arg>       The number of jobs to run in parallel.
-                           When not set, the number of jobs is set to the 
+                           When not set, the number of jobs is set to the
                            number of CPUs detected.
     -b, --batch <size>     The number of rows per batch to load into memory,
                            before running in parallel. Set to 0 to load all

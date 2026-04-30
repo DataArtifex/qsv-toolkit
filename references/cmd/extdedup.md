@@ -1,11 +1,12 @@
 # qsv extdedup
 
+<small>19.1.0</small>
 ```text
 Remove duplicate rows from an arbitrarily large CSV/text file using a memory-mapped,
 on-disk hash table.
 
 Unlike the 'dedup' command, this command does not load the entire file into memory
-to sort the CSV first before deduping it. 
+to sort the CSV first before deduping it.
 
 This allows it to run in constant memory and the output will retain the input sort order.
 
@@ -31,10 +32,12 @@ extdedup options:
                                the input as a text file on a line-by-line basis.
     --no-output                Do not write deduplicated output to <output>.
                                Use this if you only want to know the duplicate count.
+                               Applies to both CSV MODE and LINE MODE.
     -D, --dupes-output <file>  Write duplicates to <file>.
-                               Note that the file will NOT be a valid CSV.
-                               It is a list of duplicate lines, with the row number of the
-                               duplicate separated by a tab from the duplicate line itself.
+                               In CSV MODE, <file> is a valid CSV with the same columns as the
+                               input plus a leading "dupe_rowno" column (1-based data row number).
+                               In LINE MODE, <file> is NOT a valid CSV — each duplicate line is
+                               prefixed by its 0-based file line index and a tab character.
     -H, --human-readable       Comma separate duplicate count.
     --memory-limit <arg>       The maximum amount of memory to buffer the on-disk hash table.
                                If less than 50, this is a percentage of total memory.

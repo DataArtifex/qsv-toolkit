@@ -1,21 +1,27 @@
-# explode
+# qsv explode
 
+<small>19.1.0</small>
 ```text
 Explodes a row into multiple ones by splitting a column value based on the
 given separator.
 
-For instance the following CSV:
+Example:
 
+```csv
 name,colors
 John,blue|yellow
 Mary,red
+```
 
-Can be exploded on the "colors" <column> based on the "|" <separator> to:
+# Can be exploded on the "colors" <column> based on the "|" <separator>
+$ qsv explode colors "|" data.csv
 
+```csv
 name,colors
 John,blue
 John,yellow
 Mary,red
+```
 
 Usage:
     qsv explode [options] <column> <separator> [<input>]

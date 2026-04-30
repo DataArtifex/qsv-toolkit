@@ -1,20 +1,21 @@
-# sample
+# qsv sample
 
+<small>19.1.0</small>
 ```text
 Randomly samples CSV data.
 
 It supports eight sampling methods:
-- RESERVOIR: the default sampling method when NO INDEX is present and no sampling method
+* RESERVOIR: the default sampling method when NO INDEX is present and no sampling method
   is specified. Visits every CSV record exactly once, using MEMORY PROPORTIONAL to the
   sample size (k) - O(k).
   https://en.wikipedia.org/wiki/Reservoir_sampling
 
-- INDEXED: the default sampling method when an INDEX is present and no sampling method
+* INDEXED: the default sampling method when an INDEX is present and no sampling method
   is specified. Uses random I/O to sample efficiently, as it only visits records selected
   by random indexing, using MEMORY PROPORTIONAL to the sample size (k) - O(k).
   https://en.wikipedia.org/wiki/Random_access
 
-- BERNOULLI: the sampling method when the --bernoulli option is specified.
+* BERNOULLI: the sampling method when the --bernoulli option is specified.
   Each record has an independent probability p of being selected, where p is
   specified by the <sample-size> argument. For example, if p=0.1, then each record
   has a 10% chance of being selected, regardless of the other records. The final
@@ -23,7 +24,7 @@ It supports eight sampling methods:
   entirely, making it especially efficient for sampling large remote files.
   https://en.wikipedia.org/wiki/Bernoulli_sampling
 
-- SYSTEMATIC: the sampling method when the --systematic option is specified.
+* SYSTEMATIC: the sampling method when the --systematic option is specified.
   Selects every nth record from the input, where n is the integer part of <sample-size>
   and the fraction part is the percentage of the population to sample.
   For example, if <sample-size> is 10.5, it will select every 10th record and 50% of the
@@ -33,10 +34,10 @@ It supports eight sampling methods:
   want evenly spaced samples.
   https://en.wikipedia.org/wiki/Systematic_sampling
 
-- STRATIFIED: the sampling method when the --stratified option is specified.
+* STRATIFIED: the sampling method when the --stratified option is specified.
   Stratifies the population by the specified column and then samples from each stratum.
   Particularly useful when a population has distinct subgroups (strata) that are
-  heterogeneous within but homogeneous between in terms of the variable of interest. 
+  heterogeneous within but homogeneous between in terms of the variable of interest.
   For example, if you want to sample 1,000 records from a population of 100,000 across the US,
   you can stratify the population by US state and then sample 20 records from each stratum.
   This will ensure that you have a representative sample from each of the 50 states.
@@ -44,7 +45,7 @@ It supports eight sampling methods:
   number of strata (s) and samples per stratum (k) as specified by <sample-size> - O(s*k).
   https://en.wikipedia.org/wiki/Stratified_sampling
 
-- WEIGHTED: the sampling method when the --weighted option is specified.
+* WEIGHTED: the sampling method when the --weighted option is specified.
   Samples records with probabilities proportional to values in a specified weight column.
   Records with higher weights are more likely to be selected. For example, if you have
   sales data and want to sample transactions weighted by revenue, high-value transactions
@@ -54,7 +55,7 @@ It supports eight sampling methods:
   sample size (k) - O(k).
   "Weighted random sampling with a reservoir" https://doi.org/10.1016/j.ipl.2005.11.003
 
-- CLUSTER: the sampling method when the --cluster option is specified.
+* CLUSTER: the sampling method when the --cluster option is specified.
   Samples entire groups of records together based on a cluster identifier column.
   The number of clusters is specified by the <sample-size> argument.
   Useful when records are naturally grouped (e.g., by household, neighborhood, etc.).
@@ -64,7 +65,7 @@ It supports eight sampling methods:
   Uses MEMORY PROPORTIONAL to the number of clusters (c) - O(c).
   https://en.wikipedia.org/wiki/Cluster_sampling
 
-- TIMESERIES: the sampling method when the --timeseries option is specified.
+* TIMESERIES: the sampling method when the --timeseries option is specified.
   Samples records based on time intervals from a time-series dataset. Groups records by
   time windows (e.g., hourly, daily, weekly) and selects one record per interval.
   Supports adaptive sampling (e.g., prefer business hours or weekends) and aggregation
@@ -86,9 +87,39 @@ weighted and cluster sampling, and to speed up sampling in general.
 
 This command is intended to provide a means to sample from a CSV data set that
 is too big to fit into memory (for example, for use with commands like
-'qsv stats' with the '--everything' option). 
+'qsv stats' with the '--everything' option).
 
-For examples, see https://github.com/dathere/qsv/blob/master/tests/test_sample.rs.
+Examples:
+
+  # Take a sample of 1000 records from data.csv using RESERVOIR or INDEXED sampling
+  # depending on whether an INDEX is present.
+  qsv sample 1000 data.csv
+
+  # Take a sample of approximately 10% of the records from data.csv using RESERVOIR
+  # or INDEXED sampling depending on whether an INDEX is present.
+  qsv sample 0.1 data.csv
+
+  # Take a sample using BERNOULLI sampling where each record has a 5% chance of being selected
+  qsv sample --bernoulli 0.05 data.csv
+
+  # Take a sample using SYSTEMATIC sampling where every 10th record is selected
+  # and approximately 50% of the population is sampled, starting from a random point.
+  qsv sample --systematic random 10.5 data.csv
+
+  # Take a sample using STRATIFIED sampling where 20 records are sampled from each
+  # stratum defined by the 'State' column.
+  qsv sample --stratified State 20 data.csv
+
+  # Take a sample using WEIGHTED sampling where records are sampled with probabilities
+  # proportional to the 'Revenue' column, for a total sample size of 1000 records.
+  qsv sample --weighted Revenue 1000 data.csv
+
+  # Take a sample using CLUSTER sampling where 10 clusters defined by the
+  # 'Neighborhood' column are randomly selected and all records from those clusters
+  # are included in the sample.
+  qsv sample --cluster Neighborhood 10 data.csv
+
+For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_sample.rs.
 
 Usage:
     qsv sample [options] <sample-size> [<input>]
@@ -100,7 +131,7 @@ sample arguments:
 
     <sample-size>          When using INDEXED, RESERVOIR or WEIGHTED sampling, the sample size.
                              Can either be a whole number or a value between value between 0 and 1.
-                             If a fraction, specifies the sample size as a percentage of the population. 
+                             If a fraction, specifies the sample size as a percentage of the population.
                              (e.g. 0.15 - 15 percent of the CSV)
                            When using BERNOULLI sampling, the probability of selecting each record
                              (between 0 and 1).
@@ -112,17 +143,17 @@ sample arguments:
                            When using CLUSTER sampling, the number of clusters.
                            When using TIMESERIES sampling, the interval number (treated as hours
                              by default, e.g., 1 = 1 hour). Use --ts-interval for custom intervals
-                             like "1d" (daily), "1w" (weekly), "1m" (monthly), "1y" (yearly), etc.                       
+                             like "1d" (daily), "1w" (weekly), "1m" (monthly), "1y" (yearly), etc.
 
 sample options:
     --seed <number>        Random Number Generator (RNG) seed.
     --rng <kind>           The Random Number Generator (RNG) algorithm to use.
                            Three RNGs are supported:
-                            - standard: Use the standard RNG.
+                            * standard: Use the standard RNG.
                               1.5 GB/s throughput.
-                            - faster: Use faster RNG using the Xoshiro256Plus algorithm.
+                            * faster: Use faster RNG using the Xoshiro256Plus algorithm.
                               8 GB/s throughput.
-                            - cryptosecure: Use cryptographically secure HC128 algorithm.
+                            * cryptosecure: Use cryptographically secure HC128 algorithm.
                               Recommended by eSTREAM (https://www.ecrypt.eu.org/stream/).
                               2.1 GB/s throughput though slow initialization.
                            [default: standard]
