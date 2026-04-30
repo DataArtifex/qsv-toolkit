@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+import builtins
+import re
+import shutil
 import subprocess
 from typing import Any
 
@@ -8,8 +13,6 @@ def _run_qsv_command(command: str, args: list[str]) -> str:
     Checks that the `qsv` executable is available in the PATH.
     Raises a RuntimeError if not found.
     """
-    import shutil
-
     if shutil.which("qsv") is None:
         raise RuntimeError("The 'qsv' command-line tool is not installed or not found in PATH.")
     cmd = ["qsv"]
@@ -58,7 +61,7 @@ class QSVCommand:
 
     def run(self, *inputs: str | None) -> str:
         args = self._get_args()
-        args.extend(i for i in inputs if i is not None)
+        args.extend(str(i) for i in inputs if i is not None)
         return _run_qsv_command(self.command, args)
 
     @classmethod
@@ -85,6 +88,7 @@ class QSV(QSVCommand):
         envlist: bool = False,
         update: bool = False,
         updatenow: bool = False,
+        generate_help_md: bool = False,
         update_mcp_skills: bool = False,
         version: bool = False,
     ):
@@ -94,6 +98,7 @@ class QSV(QSVCommand):
             "envlist": envlist,
             "update": update,
             "updatenow": updatenow,
+            "generate-help-md": generate_help_md,
             "update-mcp-skills": update_mcp_skills,
             "version": version,
         }
@@ -104,14 +109,69 @@ class QSV(QSVCommand):
         cmds = [cls for cls in QSVCommand.__subclasses__() if cls is not QSV]
         return sorted(cmds, key=lambda x: x.__name__)
 
+    @staticmethod
+    def version() -> str:
+        """Returns the full output of `qsv --version`."""
+        return _run_qsv_command("", ["--version"])
+
+    @staticmethod
+    def version_number() -> str:
+        """
+        Returns the QSV version number extracted from the `qsv --version` command.
+        For example '19.1.0'.
+        """
+        output = QSV.version()
+        match = re.search(r"qsv\s+([\d\.]+)", output)
+        if match:
+            return match.group(1)
+        return "unknown"
+
+    @staticmethod
+    def list() -> builtins.list[dict[str, str]]:
+        """
+        Parses the output of `qsv --list` and returns a list of command name/description objects.
+        """
+        output = _run_qsv_command("", ["--list"])
+        commands = []
+        started = False
+        for line in output.splitlines():
+            if "Installed commands" in line:
+                started = True
+                continue
+            if started and line.startswith("    "):
+                stripped = line.strip()
+                parts = stripped.split(maxsplit=1)
+                if len(parts) == 2:
+                    commands.append({"name": parts[0], "description": parts[1]})
+            elif started and line.strip() == "":
+                if commands:
+                    break
+        return commands
+
+    @staticmethod
+    def envlist() -> builtins.list[dict[str, str]]:
+        """
+        Parses the output of `qsv --envlist` and returns a list of environment variable objects.
+        """
+        output = _run_qsv_command("", ["--envlist"])
+        env_vars = []
+        for line in output.splitlines():
+            if ":" in line:
+                parts = line.split(":", 1)
+                name = parts[0].strip()
+                value = parts[1].strip().strip('"')
+                env_vars.append({"name": name, "value": value})
+        return env_vars
+
 
 class Apply(QSVCommand):
     """Apply series of transformations to a column."""
 
     def __init__(
         self,
-        column: str,
-        operation: str | None = None,
+        subcommand: str,
+        arg: str | None = None,
+        column: str | None = None,
         replacement: str | None = None,
         formatstr: str | None = None,
         new_column: str | None = None,
@@ -125,8 +185,9 @@ class Apply(QSVCommand):
         progressbar: bool = False,
     ):
         super().__init__("apply")
+        self.subcommand = subcommand
+        self.arg = arg
         self.column = column
-        self.operation = operation
         self.params = {
             "replacement": replacement,
             "formatstr": formatstr,
@@ -141,11 +202,12 @@ class Apply(QSVCommand):
             "progressbar": progressbar,
         }
 
-    def run(self, input_path: str | None = None) -> str:  # type: ignore[override]
-        args = []
-        if self.operation:
-            args.append(self.operation)
-        args.append(self.column)
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        args = [self.subcommand]
+        if self.arg:
+            args.append(self.arg)
+        if self.column:
+            args.append(self.column)
         if input_path:
             args.append(input_path)
         return super().run(*args)
@@ -157,6 +219,14 @@ class Behead(QSVCommand):
     def __init__(self, flexible: bool = False, output: str | None = None):
         super().__init__("behead")
         self.params = {"flexible": flexible, "output": output}
+
+
+class Blake3(QSVCommand):
+    """Compute BLAKE3 cryptographic hashes of files."""
+
+    def __init__(self, output: str | None = None, no_headers: bool = False, delimiter: str | None = None):
+        super().__init__("blake3")
+        self.params = {"output": output, "no_headers": no_headers, "delimiter": delimiter}
 
 
 class Cat(QSVCommand):
@@ -189,6 +259,22 @@ class Cat(QSVCommand):
         return super().run(self.subcommand, *input_paths)
 
 
+class Clipboard(QSVCommand):
+    """Provide input from clipboard or output to clipboard."""
+
+    def __init__(self, output: bool = False, input: bool = False):
+        super().__init__("clipboard")
+        self.params = {"output": output, "input": input}
+
+
+class Color(QSVCommand):
+    """Print a pretty, colorized table."""
+
+    def __init__(self, output: str | None = None, no_headers: bool = False, delimiter: str | None = None):
+        super().__init__("color")
+        self.params = {"output": output, "no_headers": no_headers, "delimiter": delimiter}
+
+
 class Count(QSVCommand):
     """Returns a count of the number of records in the CSV data."""
 
@@ -216,6 +302,44 @@ class Count(QSVCommand):
             "no_headers": no_headers,
             "delimiter": delimiter,
         }
+
+
+class Datefmt(QSVCommand):
+    """Format date/datetime strings."""
+
+    def __init__(
+        self,
+        column: str,
+        formatstr: str | None = None,
+        prefer_dmy: bool = False,
+        keep_invalid: bool = False,
+        new_column: str | None = None,
+        rename: str | None = None,
+        jobs: int | None = None,
+        batch: int = 50000,
+        output: str | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+        progressbar: bool = False,
+    ):
+        super().__init__("datefmt")
+        self.column = column
+        self.params = {
+            "formatstr": formatstr,
+            "prefer-dmy": prefer_dmy,
+            "keep-invalid": keep_invalid,
+            "new-column": new_column,
+            "rename": rename,
+            "jobs": jobs,
+            "batch": batch if batch != 50000 else None,
+            "output": output,
+            "no-headers": no_headers,
+            "delimiter": delimiter,
+            "progressbar": progressbar,
+        }
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        return super().run(self.column, input_path)
 
 
 class Dedup(QSVCommand):
@@ -348,6 +472,45 @@ class DescribeGPT(QSVCommand):
         }
 
 
+class Diff(QSVCommand):
+    """Find the difference between two CSVs."""
+
+    def __init__(
+        self,
+        key: str | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+        output: str | None = None,
+    ):
+        super().__init__("diff")
+        self.params = {"key": key, "no-headers": no_headers, "delimiter": delimiter, "output": output}
+
+    def run(self, input1: str | None = None, input2: str | None = None, *_args: str | None) -> str:
+        return super().run(input1, input2)
+
+
+class Edit(QSVCommand):
+    """Replace a cell's value specified by row and column."""
+
+    def __init__(
+        self,
+        row: int,
+        column: str,
+        value: str,
+        output: str | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+    ):
+        super().__init__("edit")
+        self.row = row
+        self.column = column
+        self.value = value
+        self.params = {"output": output, "no-headers": no_headers, "delimiter": delimiter}
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        return super().run(str(self.row), self.column, self.value, input_path)
+
+
 class Enum(QSVCommand):
     """Add a new column enumerating CSV lines."""
 
@@ -373,6 +536,48 @@ class Enum(QSVCommand):
         }
 
 
+class Excel(QSVCommand):
+    """Exports an Excel sheet to a CSV."""
+
+    def __init__(
+        self,
+        sheet: str | None = None,
+        list_sheets: bool = False,
+        output: str | None = None,
+        delimiter: str | None = None,
+    ):
+        super().__init__("excel")
+        self.params = {"sheet": sheet, "list-sheets": list_sheets, "output": output, "delimiter": delimiter}
+
+
+class Exclude(QSVCommand):
+    """Excludes the records in one CSV from another."""
+
+    def __init__(
+        self,
+        columns1: str,
+        columns2: str,
+        ignore_case: bool = False,
+        invert: bool = False,
+        output: str | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+    ):
+        super().__init__("exclude")
+        self.columns1 = columns1
+        self.columns2 = columns2
+        self.params = {
+            "ignore-case": ignore_case,
+            "invert": invert,
+            "output": output,
+            "no-headers": no_headers,
+            "delimiter": delimiter,
+        }
+
+    def run(self, input1: str | None = None, input2: str | None = None, *_args: str | None) -> str:
+        return super().run(self.columns1, input1, self.columns2, input2)
+
+
 class Explode(QSVCommand):
     """Explode rows based on some column separator."""
 
@@ -395,8 +600,168 @@ class Explode(QSVCommand):
             "delimiter": delimiter,
         }
 
-    def run(self, input_path: str | None = None) -> str:  # type: ignore[override]
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
         return super().run(self.column, input_path)
+
+
+class ExtDedup(QSVCommand):
+    """Remove duplicate rows from an arbitrarily large CSV/text file."""
+
+    def __init__(
+        self,
+        select: str | None = None,
+        no_output: bool = False,
+        dupes_output: str | None = None,
+        human_readable: bool = False,
+        memory_limit: int = 10,
+        temp_dir: str | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+        quiet: bool = False,
+    ):
+        super().__init__("extdedup")
+        self.params = {
+            "select": select,
+            "no-output": no_output,
+            "dupes-output": dupes_output,
+            "human-readable": human_readable,
+            "memory-limit": memory_limit if memory_limit != 10 else None,
+            "temp-dir": temp_dir,
+            "no-headers": no_headers,
+            "delimiter": delimiter,
+            "quiet": quiet,
+        }
+
+
+class ExtSort(QSVCommand):
+    """Sort an arbitrarily large CSV/text file."""
+
+    def __init__(
+        self,
+        select: str | None = None,
+        reverse: bool = False,
+        memory_limit: int = 20,
+        tmp_dir: str = "./",
+        jobs: int | None = None,
+        delimiter: str | None = None,
+        no_headers: bool = False,
+    ):
+        super().__init__("extsort")
+        self.params = {
+            "select": select,
+            "reverse": reverse,
+            "memory-limit": memory_limit if memory_limit != 20 else None,
+            "tmp-dir": tmp_dir if tmp_dir != "./" else None,
+            "jobs": jobs,
+            "delimiter": delimiter,
+            "no-headers": no_headers,
+        }
+
+
+class Fetch(QSVCommand):
+    """Fetches data from web services for every row using HTTP Get."""
+
+    def __init__(
+        self,
+        url_template: str,
+        column: str | None = None,
+        new_column: str | None = None,
+        header: list[str] | None = None,
+        user_agent: str | None = None,
+        timeout: int = 30,
+        max_retries: int = 5,
+        jql: str | None = None,
+        http_filter: str | None = None,
+        dry_run: bool = False,
+        jobs: int | None = None,
+        batch: int = 1000,
+        rate_limit: int = 0,
+        cache_dir: str | None = None,
+        flush_cache: bool = False,
+        output: str | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+        progressbar: bool = False,
+    ):
+        super().__init__("fetch")
+        self.url_template = url_template
+        self.params = {
+            "column": column,
+            "new-column": new_column,
+            "header": header,
+            "user-agent": user_agent,
+            "timeout": timeout if timeout != 30 else None,
+            "max-retries": max_retries if max_retries != 5 else None,
+            "jql": jql,
+            "http-filter": http_filter,
+            "dry-run": dry_run,
+            "jobs": jobs,
+            "batch": batch if batch != 1000 else None,
+            "rate-limit": rate_limit if rate_limit != 0 else None,
+            "cache-dir": cache_dir,
+            "flush-cache": flush_cache,
+            "output": output,
+            "no-headers": no_headers,
+            "delimiter": delimiter,
+            "progressbar": progressbar,
+        }
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        return super().run(self.url_template, input_path)
+
+
+class FetchPost(QSVCommand):
+    """Fetches data from web services for every row using HTTP Post."""
+
+    def __init__(
+        self,
+        url_template: str,
+        body_template: str,
+        column: str | None = None,
+        new_column: str | None = None,
+        header: list[str] | None = None,
+        user_agent: str | None = None,
+        timeout: int = 30,
+        max_retries: int = 5,
+        jql: str | None = None,
+        http_filter: str | None = None,
+        dry_run: bool = False,
+        jobs: int | None = None,
+        batch: int = 1000,
+        rate_limit: int = 0,
+        cache_dir: str | None = None,
+        flush_cache: bool = False,
+        output: str | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+        progressbar: bool = False,
+    ):
+        super().__init__("fetchpost")
+        self.url_template = url_template
+        self.body_template = body_template
+        self.params = {
+            "column": column,
+            "new-column": new_column,
+            "header": header,
+            "user-agent": user_agent,
+            "timeout": timeout if timeout != 30 else None,
+            "max-retries": max_retries if max_retries != 5 else None,
+            "jql": jql,
+            "http-filter": http_filter,
+            "dry-run": dry_run,
+            "jobs": jobs,
+            "batch": batch if batch != 1000 else None,
+            "rate-limit": rate_limit if rate_limit != 0 else None,
+            "cache-dir": cache_dir,
+            "flush-cache": flush_cache,
+            "output": output,
+            "no-headers": no_headers,
+            "delimiter": delimiter,
+            "progressbar": progressbar,
+        }
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        return super().run(self.url_template, self.body_template, input_path)
 
 
 class Fill(QSVCommand):
@@ -446,9 +811,9 @@ class Flatten(QSVCommand):
         super().__init__("flatten")
         self.params = {
             "condense": condense,
-            "field_separator": field_separator,
+            "field-separator": field_separator,
             "separator": separator if separator != "#" else None,
-            "no_headers": no_headers,
+            "no-headers": no_headers,
             "delimiter": delimiter,
         }
 
@@ -471,17 +836,49 @@ class Fmt(QSVCommand):
     ):
         super().__init__("fmt")
         self.params = {
-            "out_delimiter": out_delimiter if out_delimiter != "," else None,
+            "out-delimiter": out_delimiter if out_delimiter != "," else None,
             "crlf": crlf,
             "ascii": ascii,
             "quote": quote if quote != '"' else None,
-            "quote_always": quote_always,
-            "quote_never": quote_never,
+            "quote-always": quote_always,
+            "quote-never": quote_never,
             "escape": escape,
-            "no_final_newline": no_final_newline,
+            "no-final-newline": no_final_newline,
             "output": output,
             "delimiter": delimiter,
         }
+
+
+class Foreach(QSVCommand):
+    """Loop over a CSV file to execute bash commands."""
+
+    def __init__(
+        self,
+        column: str,
+        command_template: str,
+        new_column: str | None = None,
+        unquoted: bool = False,
+        jobs: int | None = None,
+        batch: int = 1,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+        progressbar: bool = False,
+    ):
+        super().__init__("foreach")
+        self.column = column
+        self.command_template = command_template
+        self.params = {
+            "new-column": new_column,
+            "unquoted": unquoted,
+            "jobs": jobs,
+            "batch": batch if batch != 1 else None,
+            "no-headers": no_headers,
+            "delimiter": delimiter,
+            "progressbar": progressbar,
+        }
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        return super().run(self.column, self.command_template, input_path)
 
 
 class Frequency(QSVCommand):
@@ -519,30 +916,102 @@ class Frequency(QSVCommand):
         self.params = {
             "select": select,
             "limit": limit if limit != 10 else None,
-            "unq_limit": unq_limit if unq_limit != 10 else None,
-            "lmt_threshold": lmt_threshold if lmt_threshold != 0 else None,
-            "rank_strategy": rank_strategy if rank_strategy != "dense" else None,
-            "pct_dec_places": pct_dec_places if pct_dec_places != -5 else None,
-            "other_sorted": other_sorted,
-            "other_text": other_text if other_text != "Other" else None,
+            "unq-limit": unq_limit if unq_limit != 10 else None,
+            "lmt-threshold": lmt_threshold if lmt_threshold != 0 else None,
+            "rank-strategy": rank_strategy if rank_strategy != "dense" else None,
+            "pct-dec-places": pct_dec_places if pct_dec_places != -5 else None,
+            "other-sorted": other_sorted,
+            "other-text": other_text if other_text != "Other" else None,
             "asc": asc,
-            "no_trim": no_trim,
-            "null_text": null_text if null_text != "(NULL)" else None,
-            "no_nulls": no_nulls,
-            "ignore_case": ignore_case,
-            "all_unique_text": all_unique_text if all_unique_text != "<ALL_UNIQUE>" else None,
-            "vis_whitespace": vis_whitespace,
+            "no-trim": no_trim,
+            "null-text": null_text if null_text != "(NULL)" else None,
+            "no-nulls": no_nulls,
+            "ignore-case": ignore_case,
+            "all-unique-text": all_unique_text if all_unique_text != "<ALL_UNIQUE>" else None,
+            "vis-whitespace": vis_whitespace,
             "jobs": jobs,
             "json": json,
-            "pretty_json": pretty_json,
-            "no_stats": no_stats,
+            "pretty-json": pretty_json,
+            "no-stats": no_stats,
             "output": output,
-            "no_headers": no_headers,
+            "no-headers": no_headers,
             "delimiter": delimiter,
             "memcheck": memcheck,
             "toon": toon,
             "weight": weight,
         }
+
+
+class Geocode(QSVCommand):
+    """Geocodes a location against the Geonames cities database."""
+
+    def __init__(
+        self,
+        column: str,
+        new_column: str | None = None,
+        country: str | None = None,
+        language: str | None = None,
+        min_score: int = 50,
+        admin1: bool = False,
+        admin2: bool = False,
+        timezone: bool = False,
+        population: bool = False,
+        jobs: int | None = None,
+        batch: int = 1000,
+        cache_dir: str | None = None,
+        flush_cache: bool = False,
+        output: str | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+        progressbar: bool = False,
+    ):
+        super().__init__("geocode")
+        self.column = column
+        self.params = {
+            "new-column": new_column,
+            "country": country,
+            "language": language,
+            "min-score": min_score if min_score != 50 else None,
+            "admin1": admin1,
+            "admin2": admin2,
+            "timezone": timezone,
+            "population": population,
+            "jobs": jobs,
+            "batch": batch if batch != 1000 else None,
+            "cache-dir": cache_dir,
+            "flush-cache": flush_cache,
+            "output": output,
+            "no-headers": no_headers,
+            "delimiter": delimiter,
+            "progressbar": progressbar,
+        }
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        return super().run(self.column, input_path)
+
+
+class GeoConvert(QSVCommand):
+    """Convert between spatial formats & CSV."""
+
+    def __init__(
+        self,
+        column: str,
+        format: str = "geojson",
+        output: str | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+    ):
+        super().__init__("geoconvert")
+        self.column = column
+        self.params = {
+            "format": format if format != "geojson" else None,
+            "output": output,
+            "no-headers": no_headers,
+            "delimiter": delimiter,
+        }
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        return super().run(self.column, input_path)
 
 
 class Headers(QSVCommand):
@@ -553,12 +1022,82 @@ class Headers(QSVCommand):
         self.params = {"justify": justify, "delimiter": delimiter, "no_headers": no_headers}
 
 
+class Help(QSVCommand):
+    """Show usage message."""
+
+    def __init__(self, command: str | None = None):
+        super().__init__("help")
+        self.command_arg = command
+
+    def run(self, *_args: str | None) -> str:
+        if self.command_arg:
+            return super().run(self.command_arg)
+        return super().run()
+
+
+class Implode(QSVCommand):
+    """Implode rows by grouping on key(s) and joining a value column."""
+
+    def __init__(
+        self,
+        column: str,
+        separator: str = ",",
+        rename: str | None = None,
+        output: str | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+    ):
+        super().__init__("implode")
+        self.column = column
+        self.params = {
+            "separator": separator if separator != "," else None,
+            "rename": rename,
+            "output": output,
+            "no-headers": no_headers,
+            "delimiter": delimiter,
+        }
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        return super().run(self.column, input_path)
+
+
 class Index(QSVCommand):
     """Creates an index of the given CSV data."""
 
     def __init__(self, output: str | None = None):
         super().__init__("index")
         self.params = {"output": output}
+
+
+class Input(QSVCommand):
+    """Read CSVs w/ special quoting, skipping, trimming & transcoding rules."""
+
+    def __init__(
+        self,
+        quote: str = '"',
+        escape: str | None = None,
+        no_quoting: bool = False,
+        skip_lines: int = 0,
+        trim_headers: bool = False,
+        trim_fields: bool = False,
+        comment: str | None = None,
+        encoding: str = "utf-8",
+        output: str | None = None,
+        delimiter: str | None = None,
+    ):
+        super().__init__("input")
+        self.params = {
+            "quote": quote if quote != '"' else None,
+            "escape": escape,
+            "no-quoting": no_quoting,
+            "skip-lines": skip_lines if skip_lines != 0 else None,
+            "trim-headers": trim_headers,
+            "trim-fields": trim_fields,
+            "comment": comment,
+            "encoding": encoding if encoding != "utf-8" else None,
+            "output": output,
+            "delimiter": delimiter,
+        }
 
 
 class Join(QSVCommand):
@@ -589,24 +1128,154 @@ class Join(QSVCommand):
         self.columns2 = columns2
         self.params = {
             "left": left,
-            "left_anti": left_anti,
-            "left_semi": left_semi,
+            "left-anti": left_anti,
+            "left-semi": left_semi,
             "right": right,
-            "right_anti": right_anti,
-            "right_semi": right_semi,
+            "right-anti": right_anti,
+            "right-semi": right_semi,
             "full": full,
             "cross": cross,
             "nulls": nulls,
-            "keys_output": keys_output,
-            "ignore_case": ignore_case,
-            "ignore_leading_zeros": ignore_leading_zeros,
+            "keys-output": keys_output,
+            "ignore-case": ignore_case,
+            "ignore-leading-zeros": ignore_leading_zeros,
             "output": output,
-            "no_headers": no_headers,
+            "no-headers": no_headers,
             "delimiter": delimiter,
         }
 
-    def run(self, input1: str, input2: str) -> str:  # type: ignore[override]
+    def run(self, input1: str | None = None, input2: str | None = None, *_args: str | None) -> str:
         return super().run(self.columns1, input1, self.columns2, input2)
+
+
+class Joinp(QSVCommand):
+    """Join CSV files using the Pola.rs engine."""
+
+    def __init__(
+        self,
+        columns1: str,
+        columns2: str,
+        left: bool = False,
+        left_anti: bool = False,
+        left_semi: bool = False,
+        right: bool = False,
+        right_anti: bool = False,
+        right_semi: bool = False,
+        full: bool = False,
+        cross: bool = False,
+        nulls: bool = False,
+        ignore_case: bool = False,
+        ignore_leading_zeros: bool = False,
+        output: str | None = None,
+        delimiter: str | None = None,
+        quiet: bool = False,
+    ):
+        super().__init__("joinp")
+        self.columns1 = columns1
+        self.columns2 = columns2
+        self.params = {
+            "left": left,
+            "left-anti": left_anti,
+            "left-semi": left_semi,
+            "right": right,
+            "right-anti": right_anti,
+            "right-semi": right_semi,
+            "full": full,
+            "cross": cross,
+            "nulls": nulls,
+            "ignore-case": ignore_case,
+            "ignore-leading-zeros": ignore_leading_zeros,
+            "output": output,
+            "delimiter": delimiter,
+            "quiet": quiet,
+        }
+
+    def run(self, input1: str | None = None, input2: str | None = None, *_args: str | None) -> str:
+        return super().run(self.columns1, input1, self.columns2, input2)
+
+
+class Json(QSVCommand):
+    """Convert JSON to CSV."""
+
+    def __init__(self, jaq: str | None = None, select: str | None = None, output: str | None = None):
+        super().__init__("json")
+        self.params = {"jaq": jaq, "select": select, "output": output}
+
+
+class Jsonl(QSVCommand):
+    """Convert newline-delimited JSON (JSONL/NDJSON) to CSV."""
+
+    def __init__(
+        self,
+        ignore_errors: bool = False,
+        jobs: int | None = None,
+        batch: int = 50000,
+        output: str | None = None,
+        delimiter: str | None = None,
+    ):
+        super().__init__("jsonl")
+        self.params = {
+            "ignore-errors": ignore_errors,
+            "jobs": jobs,
+            "batch": batch if batch != 50000 else None,
+            "output": output,
+            "delimiter": delimiter,
+        }
+
+
+class Lens(QSVCommand):
+    """View a CSV file interactively."""
+
+    def __init__(self, delimiter: str | None = None):
+        super().__init__("lens")
+        self.params = {"delimiter": delimiter}
+
+
+class Log(QSVCommand):
+    """Log MCP tool invocations to qsvmcp.log."""
+
+    def __init__(self, msg: str):
+        super().__init__("log")
+        self.msg = msg
+
+    def run(self, *_args: str | None) -> str:
+        return super().run(self.msg)
+
+
+class Luau(QSVCommand):
+    """Execute Luau script on CSV data."""
+
+    def __init__(
+        self,
+        script: str,
+        new_column: str | None = None,
+        max_errors: int = 100,
+        no_globals: bool = False,
+        remap: bool = False,
+        jobs: int | None = None,
+        batch: int = 50000,
+        output: str | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+        progressbar: bool = False,
+    ):
+        super().__init__("luau")
+        self.script = script
+        self.params = {
+            "new-column": new_column,
+            "max-errors": max_errors if max_errors != 100 else None,
+            "no-globals": no_globals,
+            "remap": remap,
+            "jobs": jobs,
+            "batch": batch if batch != 50000 else None,
+            "output": output,
+            "no-headers": no_headers,
+            "delimiter": delimiter,
+            "progressbar": progressbar,
+        }
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        return super().run(self.script, input_path)
 
 
 class MoarStats(QSVCommand):
@@ -637,6 +1306,146 @@ class MoarStats(QSVCommand):
         }
 
 
+class Partition(QSVCommand):
+    """Partition CSV data based on a column value."""
+
+    def __init__(
+        self,
+        column: str,
+        out_dir: str,
+        filename_template: str = "{}.csv",
+        no_headers: bool = False,
+        delimiter: str | None = None,
+    ):
+        super().__init__("partition")
+        self.column = column
+        self.out_dir = out_dir
+        self.params = {
+            "filename-template": filename_template if filename_template != "{}.csv" else None,
+            "no-headers": no_headers,
+            "delimiter": delimiter,
+        }
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        return super().run(self.column, self.out_dir, input_path)
+
+
+class Pivotp(QSVCommand):
+    """Pivots CSV files using the Pola.rs engine."""
+
+    def __init__(
+        self,
+        index: str,
+        on: str,
+        values: str,
+        aggregate: str = "first",
+        output: str | None = None,
+        delimiter: str | None = None,
+    ):
+        super().__init__("pivotp")
+        self.index = index
+        self.on = on
+        self.values = values
+        self.params = {
+            "aggregate": aggregate if aggregate != "first" else None,
+            "output": output,
+            "delimiter": delimiter,
+        }
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        return super().run(self.index, self.on, self.values, input_path)
+
+
+class PragmaStat(QSVCommand):
+    """Pragmatic statistical toolkit."""
+
+    def __init__(
+        self,
+        operation: str,
+        column: str | None = None,
+        output: str | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+    ):
+        super().__init__("pragmastat")
+        self.operation = operation
+        self.column = column
+        self.params = {"output": output, "no-headers": no_headers, "delimiter": delimiter}
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        args = [self.operation]
+        if self.column:
+            args.append(self.column)
+        if input_path:
+            args.append(input_path)
+        return super().run(*args)
+
+
+class Pro(QSVCommand):
+    """Interact with the qsv pro API."""
+
+    def __init__(self, subcommand: str, args: list[str] | None = None):
+        super().__init__("pro")
+        self.subcommand = subcommand
+        self.args = args or []
+
+    def run(self, *_args: str | None) -> str:
+        return super().run(self.subcommand, *self.args)
+
+
+class Prompt(QSVCommand):
+    """Open a file dialog to pick a file."""
+
+    def __init__(
+        self,
+        filter: str | None = None,
+        msg: str | None = None,
+        dir: str | None = None,
+        save: bool = False,
+        fd_output: bool = False,
+        output: str | None = None,
+        quiet: bool = False,
+    ):
+        super().__init__("prompt")
+        self.params = {
+            "filter": filter,
+            "msg": msg,
+            "dir": dir,
+            "save": save,
+            "fd-output": fd_output,
+            "output": output,
+            "quiet": quiet,
+        }
+
+
+class Pseudo(QSVCommand):
+    """Pseudonymise the values of a column."""
+
+    def __init__(
+        self,
+        column: str,
+        start: int = 0,
+        increment: int = 1,
+        formatstr: str = "{}",
+        output: str | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+    ):
+        super().__init__("pseudo")
+        self.column = column
+        self.params = {
+            "start": start if start != 0 else None,
+            "increment": increment if increment != 1 else None,
+            "formatstr": formatstr if formatstr != "{}" else None,
+            "output": output,
+            "no-headers": no_headers,
+            "delimiter": delimiter,
+        }
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        return super().run(self.column, input_path)
+
+
 class Py(QSVCommand):
     """Evaluate a Python expression on CSV data."""
 
@@ -652,7 +1461,7 @@ class Py(QSVCommand):
         self.script = script
         self.params = {"new_column": new_column, "output": output, "no_headers": no_headers, "delimiter": delimiter}
 
-    def run(self, input_path: str | None = None) -> str:  # type: ignore[override]
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
         return super().run(self.script, input_path)
 
 
@@ -664,7 +1473,7 @@ class Rename(QSVCommand):
         self.names = names
         self.params = {"output": output, "no_headers": no_headers, "delimiter": delimiter}
 
-    def run(self, input_path: str) -> str:  # type: ignore[override]
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
         return super().run(self.names, input_path)
 
 
@@ -710,7 +1519,7 @@ class Replace(QSVCommand):
             "quiet": quiet,
         }
 
-    def run(self, input_path: str | None = None) -> str:  # type: ignore[override]
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
         return super().run(self.pattern, self.replacement, input_path)
 
 
@@ -722,6 +1531,27 @@ class Reverse(QSVCommand):
     ):
         super().__init__("reverse")
         self.params = {"output": output, "no_headers": no_headers, "delimiter": delimiter, "memcheck": memcheck}
+
+
+class SafeNames(QSVCommand):
+    """Modify a CSV's header names to db-safe names."""
+
+    def __init__(
+        self,
+        mode: str = "Always",
+        reserved: str = "_id",
+        prefix: str = "unsafe_",
+        output: str | None = None,
+        delimiter: str | None = None,
+    ):
+        super().__init__("safenames")
+        self.params = {
+            "mode": mode if mode != "Always" else None,
+            "reserved": reserved if reserved != "_id" else None,
+            "prefix": prefix if prefix != "unsafe_" else None,
+            "output": output,
+            "delimiter": delimiter,
+        }
 
 
 class Sample(QSVCommand):
@@ -739,7 +1569,7 @@ class Sample(QSVCommand):
         self.size_arg = size
         self.params = {"seed": seed, "output": output, "no_headers": no_headers, "delimiter": delimiter}
 
-    def run(self, input_path: str) -> str:  # type: ignore[override]
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
         return super().run(str(self.size_arg), input_path)
 
 
@@ -782,6 +1612,18 @@ class Schema(QSVCommand):
             "delimiter": delimiter,
             "memcheck": memcheck,
         }
+
+
+class ScoreSql(QSVCommand):
+    """Score a SQL query against CSV caches for performance analysis."""
+
+    def __init__(self, query: str, delimiter: str | None = None):
+        super().__init__("scoresql")
+        self.query = query
+        self.params = {"delimiter": delimiter}
+
+    def run(self, *_args: str | None) -> str:
+        return super().run(self.query)
 
 
 class Search(QSVCommand):
@@ -830,7 +1672,7 @@ class Search(QSVCommand):
             "quiet": quiet,
         }
 
-    def run(self, input_path: str | None = None) -> str:  # type: ignore[override]
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
         return super().run(self.pattern, input_path)
 
 
@@ -888,7 +1730,7 @@ class SearchSet(QSVCommand):
             "quiet": quiet,
         }
 
-    def run(self, input_path: str | None = None) -> str:  # type: ignore[override]
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
         return super().run(self.regexset_file, input_path)
 
 
@@ -916,7 +1758,7 @@ class Select(QSVCommand):
             "delimiter": delimiter,
         }
 
-    def run(self, input_path: str) -> str:  # type: ignore[override]
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
         return super().run(self.selection, input_path)
 
 
@@ -941,6 +1783,14 @@ class Slice(QSVCommand):
             "no_headers": no_headers,
             "delimiter": delimiter,
         }
+
+
+class Snappy(QSVCommand):
+    """Compress/decompress data using the Snappy algorithm."""
+
+    def __init__(self, decompress: bool = False, jobs: int | None = None, output: str | None = None):
+        super().__init__("snappy")
+        self.params = {"decompress": decompress, "jobs": jobs, "output": output}
 
 
 class Sniff(QSVCommand):
@@ -1007,6 +1857,65 @@ class Sort(QSVCommand):
         }
 
 
+class SortCheck(QSVCommand):
+    """Check if a CSV is sorted."""
+
+    def __init__(
+        self,
+        select: str | None = None,
+        numeric: bool = False,
+        natural: bool = False,
+        reverse: bool = False,
+        ignore_case: bool = False,
+        all_: bool = False,
+        json: bool = False,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+    ):
+        super().__init__("sortcheck")
+        self.params = {
+            "select": select,
+            "numeric": numeric,
+            "natural": natural,
+            "reverse": reverse,
+            "ignore-case": ignore_case,
+            "all": all_,
+            "json": json,
+            "no-headers": no_headers,
+            "delimiter": delimiter,
+        }
+
+
+class Split(QSVCommand):
+    """Split CSV data into many files."""
+
+    def __init__(
+        self,
+        out_dir: str,
+        size: int = 500,
+        chunks: int | None = None,
+        buf_size: int = 8192,
+        filename_template: str = "{}.csv",
+        jobs: int | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+    ):
+        super().__init__("split")
+        self.out_dir = out_dir
+        self.params = {
+            "size": size if size != 500 else None,
+            "chunks": chunks,
+            "buf-size": buf_size if buf_size != 8192 else None,
+            "filename-template": filename_template if filename_template != "{}.csv" else None,
+            "jobs": jobs,
+            "no-headers": no_headers,
+            "delimiter": delimiter,
+        }
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        return super().run(self.out_dir, input_path)
+
+
 class Sqlp(QSVCommand):
     """Run a SQL query against several CSVs using the Pola.rs engine."""
 
@@ -1059,7 +1968,7 @@ class Stats(QSVCommand):
         round_places: int = 4,
         nulls: bool = False,
         infer_dates: bool = False,
-        dates_whitelist: str = "date,time,due,open,close,created",
+        dates_whitelist: str = "sniff",
         prefer_dmy: bool = False,
         force: bool = False,
         jobs: int | None = None,
@@ -1078,31 +1987,155 @@ class Stats(QSVCommand):
             "select": select,
             "everything": everything,
             "typesonly": typesonly,
-            "infer_boolean": infer_boolean,
-            "boolean_patterns": boolean_patterns if boolean_patterns != "1:0,t*:f*,y*:n*" else None,
+            "infer-boolean": infer_boolean,
+            "boolean-patterns": boolean_patterns if boolean_patterns != "1:0,t*:f*,y*:n*" else None,
             "mode": mode,
             "cardinality": cardinality,
             "median": median,
             "mad": mad,
             "quartiles": quartiles,
             "percentiles": percentiles,
-            "percentile_list": percentile_list if percentile_list != "5,10,40,60,90,95" else None,
+            "percentile-list": percentile_list if percentile_list != "5,10,40,60,90,95" else None,
             "round_places": round_places,
             "nulls": nulls,
-            "infer_dates": infer_dates,
-            "dates_whitelist": dates_whitelist if dates_whitelist != "date,time,due,open,close,created" else None,
-            "prefer_dmy": prefer_dmy,
+            "infer-dates": infer_dates,
+            "dates-whitelist": dates_whitelist if dates_whitelist != "sniff" else None,
+            "prefer-dmy": prefer_dmy,
             "force": force,
             "jobs": jobs,
-            "stats_jsonl": stats_jsonl,
-            "cache_threshold": cache_threshold if cache_threshold != 5000 else None,
-            "vis_whitespace": vis_whitespace,
-            "dataset_stats": dataset_stats,
+            "stats-jsonl": stats_jsonl,
+            "cache-threshold": cache_threshold if cache_threshold != 5000 else None,
+            "vis-whitespace": vis_whitespace,
+            "dataset-stats": dataset_stats,
             "output": output,
-            "no_headers": no_headers,
+            "no-headers": no_headers,
             "delimiter": delimiter,
             "memcheck": memcheck,
             "weight": weight,
+        }
+
+
+class Table(QSVCommand):
+    """Align CSV data into columns."""
+
+    def __init__(
+        self,
+        width: int = 100,
+        pad: int = 2,
+        align: str = "left",
+        output: str | None = None,
+        delimiter: str | None = None,
+    ):
+        super().__init__("table")
+        self.params = {
+            "width": width if width != 100 else None,
+            "pad": pad if pad != 2 else None,
+            "align": align if align != "left" else None,
+            "output": output,
+            "delimiter": delimiter,
+        }
+
+
+class Template(QSVCommand):
+    """Render templates using CSV data."""
+
+    def __init__(
+        self,
+        template: str,
+        out_dir: str | None = None,
+        no_headers: bool = False,
+        delimiter: str | None = None,
+    ):
+        super().__init__("template")
+        self.template = template
+        self.params = {"out-dir": out_dir, "no-headers": no_headers, "delimiter": delimiter}
+
+    def run(self, input_path: str | None = None, *_args: str | None) -> str:
+        return super().run(self.template, input_path)
+
+
+class ToJsonl(QSVCommand):
+    """Convert CSV to newline-delimited JSON."""
+
+    def __init__(self, output: str | None = None, no_headers: bool = False, delimiter: str | None = None):
+        super().__init__("tojsonl")
+        self.params = {"output": output, "no-headers": no_headers, "delimiter": delimiter}
+
+
+class To(QSVCommand):
+    """Convert CSVs to Parquet/PostgreSQL/XLSX/SQLite/Data Package."""
+
+    def __init__(
+        self,
+        subcommand: str,
+        destination: str,
+        print_package: bool = False,
+        dump: bool = False,
+        stats: bool = False,
+        stats_csv: str | None = None,
+        quiet: bool = False,
+        schema: str | None = None,
+        infer_len: int | None = None,
+        try_parse_dates: bool = False,
+        drop: bool = False,
+        evolve: bool = False,
+        pipe: bool = False,
+        table: str | None = None,
+        separator: str = " ",
+        compression: str = "zstd",
+        compress_level: int | None = None,
+        all_strings: bool = False,
+        jobs: int | None = None,
+        delimiter: str | None = None,
+    ):
+        super().__init__("to")
+        self.subcommand = subcommand
+        self.destination = destination
+        self.params = {
+            "print-package": print_package,
+            "dump": dump,
+            "stats": stats,
+            "stats-csv": stats_csv,
+            "quiet": quiet,
+            "schema": schema,
+            "infer-len": infer_len,
+            "try-parse-dates": try_parse_dates,
+            "drop": drop,
+            "evolve": evolve,
+            "pipe": pipe,
+            "table": table,
+            "separator": separator if separator != " " else None,
+            "compression": compression if compression != "zstd" else None,
+            "compress-level": compress_level,
+            "all-strings": all_strings,
+            "jobs": jobs,
+            "delimiter": delimiter,
+        }
+
+    def run(self, *input_paths: str | None) -> str:
+        return super().run(self.subcommand, self.destination, *input_paths)
+
+
+class Transpose(QSVCommand):
+    """Transpose rows/columns of CSV data."""
+
+    def __init__(
+        self,
+        multipass: bool = False,
+        select: str | None = None,
+        long: str | None = None,
+        output: str | None = None,
+        delimiter: str | None = None,
+        memcheck: bool = False,
+    ):
+        super().__init__("transpose")
+        self.params = {
+            "multipass": multipass,
+            "select": select,
+            "long": long,
+            "output": output,
+            "delimiter": delimiter,
+            "memcheck": memcheck,
         }
 
 
@@ -1130,13 +2163,13 @@ class Validate(QSVCommand):
         self.json_schema = json_schema
         self.params = {
             "trim": trim,
-            "no_format_validation": no_format_validation,
-            "fail_fast": fail_fast,
+            "no-format-validation": no_format_validation,
+            "fail-fast": fail_fast,
             "valid": valid_suffix if valid_suffix != "valid" else None,
             "invalid": invalid_suffix if invalid_suffix != "invalid" else None,
             "json": json,
-            "pretty_json": pretty_json,
-            "valid_output": valid_output,
+            "pretty-json": pretty_json,
+            "valid-output": valid_output,
             "jobs": jobs,
             "batch": batch if batch != 50000 else None,
             "delimiter": delimiter,

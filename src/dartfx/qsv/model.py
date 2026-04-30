@@ -64,12 +64,13 @@ class QsvStatsDataModel(BaseModel):
 
     field: str
     type: str = Field(alias="type")
-    is_ascii: bool = False
+    is_ascii: bool | None = None
     sum: float | None = None
     min: str | None = None
     max: str | None = None
     range: float | None = None
     sort_order: str | None = None
+    sortiness: float | None = None
     min_length: int | None = None
     max_length: int | None = None
     sum_length: int | None = None
@@ -79,10 +80,15 @@ class QsvStatsDataModel(BaseModel):
     cv_length: float | None = None
     mean: float | None = None
     sem: float | None = None
+    geometric_mean: float | None = None
+    harmonic_mean: float | None = None
     stddev: float | None = None
     variance: float | None = None
     cv: float | None = None
     nullcount: int
+    n_negative: int | None = None
+    n_zero: int | None = None
+    n_positive: int | None = None
     max_precision: int | None = None
     sparsity: float | None = None
     mad: float | None = None
@@ -103,6 +109,7 @@ class QsvStatsDataModel(BaseModel):
     antimode: str | None = None
     antimode_count: int | None = None
     antimode_occurrences: int | None = None
+    percentiles: str | None = None
 
     model_config = {
         "populate_by_name": True,  # Allow using both field name and alias
