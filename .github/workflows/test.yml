@@ -47,6 +47,29 @@ jobs:
       - name: Install dependencies (dev)
         run: uv sync --group dev
 
+      - name: Install qsv
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Fetch latest release tag from GitHub API
+          QSV_VERSION=$(curl -fsSL https://api.github.com/repos/dathere/qsv/releases/latest | grep '"tag_name"' | sed 's/.*"tag_name": *"//;s/".*//')
+          echo "Installing qsv ${QSV_VERSION}"
+
+          case "${{ runner.os }}" in
+            Linux)   ASSET="qsv-${QSV_VERSION}-x86_64-unknown-linux-gnu.zip" ;;
+            macOS)   ASSET="qsv-${QSV_VERSION}-aarch64-apple-darwin.zip"     ;;
+            Windows) ASSET="qsv-${QSV_VERSION}-x86_64-pc-windows-msvc.zip"   ;;
+          esac
+
+          curl -fsSL "https://github.com/dathere/qsv/releases/download/${QSV_VERSION}/${ASSET}" -o qsv.zip
+          unzip -o qsv.zip -d qsv-bin
+          # Add to PATH
+          echo "${{ github.workspace }}/qsv-bin" >> "$GITHUB_PATH"
+
+      - name: Verify qsv
+        shell: bash
+        run: qsv --version
+
       - name: Run tests
         run: uv run pytest -q tests
 
