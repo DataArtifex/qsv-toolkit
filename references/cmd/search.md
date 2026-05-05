@@ -1,6 +1,7 @@
 # qsv search
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Filters CSV data by whether the given regex matches a row.
 

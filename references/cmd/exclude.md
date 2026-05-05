@@ -1,6 +1,7 @@
 # qsv exclude
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Removes a set of CSV data from another set based on the specified columns.
 

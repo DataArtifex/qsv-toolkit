@@ -1,6 +1,7 @@
 # qsv table
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Outputs CSV data as a table with columns in alignment.
 

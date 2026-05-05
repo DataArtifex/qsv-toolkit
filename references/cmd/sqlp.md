@@ -1,6 +1,7 @@
 # qsv sqlp
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Run blazing-fast Polars SQL queries against several CSVs - replete with joins, aggregations,
 grouping, table functions, sorting, and more - working on larger than memory CSV files directly,

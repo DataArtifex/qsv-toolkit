@@ -1,6 +1,7 @@
 # qsv partition
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Partitions the given CSV data into chunks based on the value of a column.
 

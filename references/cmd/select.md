@@ -1,6 +1,7 @@
 # qsv select
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Select columns from CSV data efficiently.
 

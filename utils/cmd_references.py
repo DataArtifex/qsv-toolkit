@@ -48,7 +48,7 @@ def main(args: argparse.Namespace) -> None:
     for cmd_name, help_txt in cmd_help.items():
         cmd_filename = os.path.join(args.output, f"{cmd_name}.md")
         md = f"# qsv {cmd_name}\n\n"
-        md += f"<small>{qsv_version}</small>\n"
+        md += f"<small>v{qsv_version}</small>\n\n"
         md += "```text\n"
         md += help_txt
         md += "```\n"
@@ -58,7 +58,7 @@ def main(args: argparse.Namespace) -> None:
     # write all help outputs to a single file
     print(f"Writing all help outputs to a single file: {os.path.join(args.output, 'ALL.md')}")
     all_in_one_md = "# QSV Commands\n\n"
-    all_in_one_md += f"<small>{qsv_version}</small>\n"
+    all_in_one_md += f"<small>v{qsv_version}</small>\n\n"
     for cmd_name, help_txt in cmd_help.items():
         all_in_one_md += f"## qsv {cmd_name}\n\n"
         all_in_one_md += "```text\n"

@@ -1,6 +1,7 @@
 # qsv template
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Renders a template using CSV data with the MiniJinja template engine.
 https://docs.rs/minijinja/latest/minijinja/

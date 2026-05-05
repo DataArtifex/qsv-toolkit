@@ -1,6 +1,7 @@
 # qsv fetchpost
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Fetchpost sends/fetches data to/from web services for every row using HTTP Post.
 As opposed to fetch, which uses HTTP Get.

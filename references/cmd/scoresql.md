@@ -1,6 +1,7 @@
 # qsv scoresql
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Analyze a SQL query against CSV file caches (stats, moarstats, frequency) to produce a
 performance score with actionable optimization suggestions BEFORE running the query.

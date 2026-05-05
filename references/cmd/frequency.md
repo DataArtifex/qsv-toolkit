@@ -1,6 +1,7 @@
 # qsv frequency
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Compute a frequency distribution table on input data. It has CSV and JSON output modes.
 https://en.wikipedia.org/wiki/Frequency_(statistics)#Frequency_distribution_table

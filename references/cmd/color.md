@@ -1,6 +1,7 @@
 # qsv color
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Outputs tabular data as a pretty, colorized table that always fits into the
 terminal.

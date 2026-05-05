@@ -1,6 +1,7 @@
 # qsv py
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Create a new computed column or filter rows by evaluating a Python expression on
 every row of a CSV file.

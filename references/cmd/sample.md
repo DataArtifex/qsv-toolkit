@@ -1,6 +1,7 @@
 # qsv sample
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Randomly samples CSV data.
 

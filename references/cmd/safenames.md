@@ -1,6 +1,7 @@
 # qsv safenames
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Modify headers of a CSV to only have "safe" names - guaranteed "database-ready" names
 (optimized specifically for PostgreSQL column identifiers).

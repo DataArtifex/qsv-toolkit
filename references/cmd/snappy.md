@@ -1,6 +1,7 @@
 # qsv snappy
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Does streaming compression/decompression of the input using the Snappy framing format.
 https://github.com/google/snappy/blob/main/framing_format.txt

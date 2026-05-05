@@ -1,6 +1,7 @@
 # qsv describegpt
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Create a "neuro-procedural" Data Dictionary and/or infer Description & Tags about a Dataset
 using an OpenAI API-compatible Large Language Model (LLM).

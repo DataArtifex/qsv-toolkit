@@ -1,6 +1,7 @@
 # qsv fixlengths
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Transforms CSV data so that all records have the same length. The length is
 the length of the longest record in the data (not counting trailing empty fields,

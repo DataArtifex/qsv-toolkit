@@ -1,6 +1,7 @@
 # qsv enum
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Add a new column enumerating the lines of a CSV file. This can be useful to keep
 track of a specific line order, give a unique identifier to each line or even

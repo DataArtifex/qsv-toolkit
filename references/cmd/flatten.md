@@ -1,6 +1,7 @@
 # qsv flatten
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Prints flattened records such that fields are labeled separated by a new line.
 This mode is particularly useful for viewing one record at a time. Each

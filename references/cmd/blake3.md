@@ -1,6 +1,7 @@
 # qsv blake3
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Compute cryptographic hashes of files using blake3.
 

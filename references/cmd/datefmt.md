@@ -1,6 +1,7 @@
 # qsv datefmt
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Formats recognized date fields (19 formats recognized) to a specified date format
 using strftime date format specifiers.

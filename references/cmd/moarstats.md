@@ -1,6 +1,7 @@
 # qsv moarstats
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Add dozens of additional statistics, including extended outlier, robust & bivariate
 statistics to an existing stats CSV file. It also maps the field type to the most specific

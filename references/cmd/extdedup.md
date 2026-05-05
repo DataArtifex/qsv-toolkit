@@ -1,6 +1,7 @@
 # qsv extdedup
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Remove duplicate rows from an arbitrarily large CSV/text file using a memory-mapped,
 on-disk hash table.

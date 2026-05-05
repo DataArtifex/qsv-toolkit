@@ -1,6 +1,7 @@
 # qsv diff
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Find the difference between two CSVs with ludicrous speed.
 

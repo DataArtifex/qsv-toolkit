@@ -1,6 +1,7 @@
 # qsv pseudo
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Pseudonymise the value of a given column by replacing it with an
 incremental identifier. See https://en.wikipedia.org/wiki/Pseudonymization

@@ -1,6 +1,7 @@
 # qsv excel
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Exports a specified Excel/ODS sheet to a CSV file.
 The first non-empty row of a sheet is assumed to be the header row.

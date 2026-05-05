@@ -1,6 +1,7 @@
 # qsv joinp
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Joins two sets of CSV data on the specified columns using the Polars engine.
 

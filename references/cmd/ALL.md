@@ -1,6 +1,7 @@
 # QSV Commands
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ## qsv apply
 
 ```text

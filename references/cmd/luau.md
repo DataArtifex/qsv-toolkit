@@ -1,6 +1,7 @@
 # qsv luau
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Create multiple new computed columns, filter rows or compute aggregations by
 executing a Luau 0.716 script for every row (SEQUENTIAL MODE) or for

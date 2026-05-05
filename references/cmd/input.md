@@ -1,6 +1,7 @@
 # qsv input
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Read CSV data with special commenting, quoting, trimming, line-skipping &
 non UTF-8 encoding rules and transforms it to a "normalized", UTF-8 encoded CSV.

@@ -1,6 +1,7 @@
 # qsv headers
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Prints the fields of the first row in the CSV data.
 

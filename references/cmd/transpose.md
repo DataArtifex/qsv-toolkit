@@ -1,6 +1,7 @@
 # qsv transpose
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Transpose the rows/columns of CSV data.
 

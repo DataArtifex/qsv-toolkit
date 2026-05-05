@@ -1,6 +1,7 @@
 # qsv sortcheck
 
-<small>19.1.0</small>
+<small>v19.1.0</small>
+
 ```text
 Check if a CSV is sorted. The check is done on a streaming basis (i.e. constant memory).
 With the --json options, also retrieve record count, sort breaks & duplicate count.
