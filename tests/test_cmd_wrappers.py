@@ -1,7 +1,15 @@
 import re
+import shutil
 from unittest.mock import patch
 
+import pytest
+
 from dartfx.qsv.cmd import QSV, Apply, Count, Stats
+
+requires_qsv = pytest.mark.skipif(
+    shutil.which("qsv") is None,
+    reason="qsv CLI not installed",
+)
 
 
 def test_qsv_commands_list():
@@ -12,6 +20,7 @@ def test_qsv_commands_list():
     assert any(cmd.__name__ == "Blake3" for cmd in commands)
 
 
+@requires_qsv
 def test_qsv_list():
     commands = QSV.list()
     assert len(commands) >= 71
@@ -28,6 +37,7 @@ def test_qsv_list():
         assert isinstance(cmd["description"], str)
 
 
+@requires_qsv
 def test_env_list():
     env_vars = QSV.envlist()
     # There should at least be QSV_DESCRIBEGPT_DB_ENGINE in the user's environment
@@ -40,12 +50,14 @@ def test_env_list():
         assert isinstance(var["value"], str)
 
 
+@requires_qsv
 def test_qsv_version():
     v = QSV.version()
     assert "qsv" in v.lower()
     assert any(ch.isdigit() for ch in v)
 
 
+@requires_qsv
 def test_qsv_version_number():
     vn = QSV.version_number()
     # Should be something like 19.1.0
