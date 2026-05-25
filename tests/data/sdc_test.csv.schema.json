@@ -1,0 +1,294 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "JSON Schema for sdc_test.csv",
+  "description": "Inferred JSON Schema with `qsv schema tests/data/sdc_test.csv`",
+  "type": "object",
+  "properties": {
+    "urbrur": {
+      "description": "urbrur column from sdc_test.csv",
+      "minimum": 1,
+      "maximum": 2,
+      "type": [
+        "integer"
+      ],
+      "enum": [
+        1,
+        2
+      ]
+    },
+    "roof": {
+      "description": "roof column from sdc_test.csv",
+      "minimum": 2,
+      "maximum": 9,
+      "type": [
+        "integer"
+      ],
+      "enum": [
+        2,
+        4,
+        5,
+        6,
+        9
+      ]
+    },
+    "walls": {
+      "description": "walls column from sdc_test.csv",
+      "minimum": 2,
+      "maximum": 9,
+      "type": [
+        "integer"
+      ],
+      "enum": [
+        2,
+        3,
+        9
+      ]
+    },
+    "water": {
+      "description": "water column from sdc_test.csv",
+      "minimum": 1,
+      "maximum": 9,
+      "type": [
+        "integer"
+      ],
+      "enum": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9
+      ]
+    },
+    "electcon": {
+      "description": "electcon column from sdc_test.csv",
+      "minimum": 1,
+      "maximum": 4,
+      "type": [
+        "integer"
+      ],
+      "enum": [
+        1,
+        2,
+        4
+      ]
+    },
+    "relat": {
+      "description": "relat column from sdc_test.csv",
+      "minimum": 1,
+      "maximum": 9,
+      "type": [
+        "integer"
+      ],
+      "enum": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    "sex": {
+      "description": "sex column from sdc_test.csv",
+      "minLength": 1,
+      "maxLength": 1,
+      "type": [
+        "string"
+      ],
+      "enum": [
+        "F",
+        "M"
+      ]
+    },
+    "age": {
+      "description": "age column from sdc_test.csv",
+      "minimum": 0,
+      "maximum": 95,
+      "type": [
+        "integer"
+      ]
+    },
+    "hhcivil": {
+      "description": "hhcivil column from sdc_test.csv",
+      "minimum": 1,
+      "maximum": 4,
+      "type": [
+        "integer"
+      ],
+      "enum": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "expend": {
+      "description": "expend column from sdc_test.csv",
+      "minimum": 3377,
+      "maximum": 99962044,
+      "type": [
+        "integer"
+      ]
+    },
+    "income": {
+      "description": "income column from sdc_test.csv",
+      "minimum": 2897.484,
+      "maximum": 100000000.0,
+      "type": [
+        "number"
+      ]
+    },
+    "savings": {
+      "description": "savings column from sdc_test.csv",
+      "minimum": 2974.644,
+      "maximum": 9997808.0,
+      "type": [
+        "number"
+      ]
+    },
+    "ori_hid": {
+      "description": "ori_hid column from sdc_test.csv",
+      "minimum": 1,
+      "maximum": 1000,
+      "type": [
+        "integer"
+      ]
+    },
+    "sampling_weight": {
+      "description": "sampling_weight column from sdc_test.csv",
+      "minimum": 100,
+      "maximum": 100,
+      "type": [
+        "integer"
+      ]
+    },
+    "household_weights": {
+      "description": "household_weights column from sdc_test.csv",
+      "minimum": 8.33333333333333,
+      "maximum": 100.0,
+      "type": [
+        "number"
+      ]
+    },
+    "age_5yr": {
+      "description": "age_5yr column from sdc_test.csv",
+      "minimum": 0,
+      "maximum": 95,
+      "type": [
+        "integer"
+      ],
+      "enum": [
+        0,
+        5,
+        10,
+        15,
+        20,
+        25,
+        30,
+        35,
+        40,
+        45,
+        50,
+        55,
+        60,
+        65,
+        70,
+        75,
+        80,
+        85,
+        90,
+        95
+      ]
+    },
+    "age_10yr": {
+      "description": "age_10yr column from sdc_test.csv",
+      "minimum": 0,
+      "maximum": 90,
+      "type": [
+        "integer"
+      ],
+      "enum": [
+        0,
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        80,
+        90
+      ]
+    },
+    "expend_grp": {
+      "description": "expend_grp column from sdc_test.csv",
+      "minimum": 1,
+      "maximum": 4,
+      "type": [
+        "integer"
+      ],
+      "enum": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "income_grp": {
+      "description": "income_grp column from sdc_test.csv",
+      "minimum": 1,
+      "maximum": 4,
+      "type": [
+        "integer"
+      ],
+      "enum": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "savings_grp": {
+      "description": "savings_grp column from sdc_test.csv",
+      "minimum": 1,
+      "maximum": 4,
+      "type": [
+        "integer"
+      ],
+      "enum": [
+        1,
+        2,
+        3,
+        4
+      ]
+    }
+  },
+  "required": [
+    "urbrur",
+    "roof",
+    "walls",
+    "water",
+    "electcon",
+    "relat",
+    "sex",
+    "age",
+    "hhcivil",
+    "expend",
+    "income",
+    "savings",
+    "ori_hid",
+    "sampling_weight",
+    "household_weights",
+    "age_5yr",
+    "age_10yr",
+    "expend_grp",
+    "income_grp",
+    "savings_grp"
+  ]
+}
