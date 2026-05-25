@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from dartfx.qsv.cmd import QSV, Apply, Count, Stats
+from dartfx.qsv.cmd import QSV, Apply, Count, Profile, Stats, Synthesize
 
 requires_qsv = pytest.mark.skipif(
     shutil.which("qsv") is None,
@@ -102,3 +102,21 @@ def test_apply_run_args():
         assert args[1] == "upper"
         assert args[2] == "name"
         assert args[3] == "test.csv"
+
+
+def test_new_commands():
+    assert Profile.name() == "profile"
+    assert Synthesize.name() == "synthesize"
+
+    cmd_profile = Profile(spec="dataset.yaml", no_dcat=True)
+    args = cmd_profile._get_args()
+    assert "--spec" in args
+    assert "dataset.yaml" in args
+    assert "--no-dcat" in args
+
+    cmd_synthesize = Synthesize(rows=500, seed=42)
+    args = cmd_synthesize._get_args()
+    assert "--rows" in args
+    assert "500" in args
+    assert "--seed" in args
+    assert "42" in args
