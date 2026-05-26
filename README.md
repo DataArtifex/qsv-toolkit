@@ -79,6 +79,54 @@ cmd.index("data.csv")
 json_output = cmd.stats("data.csv", everything=True)
 ```
 
+### 📊 DDI-Codebook Generation (CLI & API)
+
+The toolkit features a DDI-Codebook XML generation utility that transforms a CSV file and its associated QSV statistics/frequency data into a valid DDI-Codebook (version 2.5 or 2.6) XML document.
+
+#### CLI Usage
+
+After installing the package, the `dartfx-qsv` executable is registered. You can use the `toddic` command to generate DDI XML:
+
+```bash
+# Generate DDI 2.6 Codebook to stdout
+dartfx-qsv toddic path/to/data.csv
+
+# Save DDI 2.6 Codebook to an XML file
+dartfx-qsv toddic path/to/data.csv -o metadata.xml
+
+# Generate DDI 2.5 Codebook with custom categorical columns
+dartfx-qsv toddic path/to/data.csv -v 2.5 -c status,gender,country
+
+# Speed up generation by providing pre-computed stats/schema files from QSV
+dartfx-qsv toddic path/to/data.csv --stats-data stats.json --schema-data schema.json
+```
+
+**Available Options for `toddic`:**
+
+* `CSV_PATH` (Required argument): Path to the source CSV file.
+* `-o, --output PATH`: Path to write the generated DDI XML. Defaults to stdout.
+* `-v, --ddi-version TEXT`: DDI-Codebook version (`2.5` or `2.6`). Defaults to `2.6`.
+* `-t, --categorical-threshold INTEGER`: Threshold for auto-detecting categorical variables. Defaults to `20`.
+* `-c, --categorical-column TEXT`: Explicit categorical column name(s). Can be specified multiple times, or comma-separated.
+* `--stats-data PATH`: Path to pre-computed stats data file (JSON, JSONL, or CSV).
+* `--schema-data PATH`: Path to pre-computed schema data file (JSON).
+* `--frequency-data PATH`: Path to pre-computed frequency data file (JSON).
+
+#### Python API Usage
+
+You can also use this feature programmatically in Python code:
+
+```python
+from dartfx.qsv.utils import generate_ddi_codebook
+
+# Generate a DDI 2.6 Codebook XML string
+xml_string = generate_ddi_codebook(
+    csv_path="data.csv",
+    version="2.6",
+    categorical_threshold=20
+)
+```
+
 ## 🛠 Supported Commands
 
 The toolkit currently wraps over 30 QSV commands, providing access to a wide range of data wrangling operations:
