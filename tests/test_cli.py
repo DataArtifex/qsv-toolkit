@@ -93,6 +93,8 @@ def test_cli_toddic_precomputed(tmp_path: str) -> None:
     assert vf is not None
     assert vf.attrib["type"] in ("numeric", "character")
     assert vf.attrib["schema"] == "other"
+    assert vf.attrib["otherSchema"] == "qsv"
+    assert "formatname" in vf.attrib
 
 
 @requires_qsv

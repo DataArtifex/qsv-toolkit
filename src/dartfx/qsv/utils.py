@@ -4,6 +4,7 @@ import csv
 import io
 import json
 import os
+import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Any
@@ -192,6 +193,7 @@ def generate_ddi_codebook(
     ET.register_namespace("xsi", "http://www.w3.org/2001/XMLSchema-instance")
 
     root_attrs = {
+        "ID": f"_{uuid.uuid4()}",
         "version": version,
         "{http://www.w3.org/XML/1998/namespace}lang": "en",
         "{http://www.w3.org/2001/XMLSchema-instance}schemaLocation": (
@@ -221,20 +223,26 @@ def generate_ddi_codebook(
     citation = ET.SubElement(docDscr, f"{{{ns}}}citation")
     titlStmt = ET.SubElement(citation, f"{{{ns}}}titlStmt")
     titl = ET.SubElement(titlStmt, f"{{{ns}}}titl")
-    titl.text = f"Metadata for {filename}"
+    titl.text = f"{filename}"
     prodStmt = ET.SubElement(citation, f"{{{ns}}}prodStmt")
     current_date = datetime.now().strftime("%Y-%m-%d")
     prodDate = ET.SubElement(prodStmt, f"{{{ns}}}prodDate", {"date": current_date})
     prodDate.text = current_date
-    software = ET.SubElement(prodStmt, f"{{{ns}}}software", {"version": qsv_version})
-    software.text = "qsv"
+    try:
+        from dartfx.qsv.__about__ import __version__ as toolkit_version
+    except ImportError:
+        toolkit_version = "unknown"
+    software_toolkit = ET.SubElement(prodStmt, f"{{{ns}}}software", {"version": toolkit_version})
+    software_toolkit.text = "Data Artifex QSV Toolkit"
+    software_qsv = ET.SubElement(prodStmt, f"{{{ns}}}software", {"version": qsv_version})
+    software_qsv.text = "QSV"
 
     # <stdyDscr>
     stdyDscr = ET.SubElement(root, f"{{{ns}}}stdyDscr")
     citation_stdy = ET.SubElement(stdyDscr, f"{{{ns}}}citation")
     titlStmt_stdy = ET.SubElement(citation_stdy, f"{{{ns}}}titlStmt")
     titl_stdy = ET.SubElement(titlStmt_stdy, f"{{{ns}}}titl")
-    titl_stdy.text = f"Study description for {filename}"
+    titl_stdy.text = f"{filename}"
 
     # Row/Var dimensions
     rowcount = None
@@ -263,17 +271,18 @@ def generate_ddi_codebook(
     fileTxt = ET.SubElement(fileDscr, f"{{{ns}}}fileTxt")
     fileName = ET.SubElement(fileTxt, f"{{{ns}}}fileName")
     fileName.text = filename
-    fileType = ET.SubElement(fileTxt, f"{{{ns}}}fileType")
-    fileType.text = "Comma-delimited CSV file"
 
     if rowcount is not None or fieldcount is not None:
         dimensns = ET.SubElement(fileTxt, f"{{{ns}}}dimensns")
         if rowcount is not None:
-            caseCnt = ET.SubElement(dimensns, f"{{{ns}}}caseCnt")
-            caseCnt.text = str(rowcount)
+            caseQnty = ET.SubElement(dimensns, f"{{{ns}}}caseQnty")
+            caseQnty.text = str(rowcount)
         if fieldcount is not None:
-            varCnt = ET.SubElement(dimensns, f"{{{ns}}}varCnt")
-            varCnt.text = str(fieldcount)
+            varQnty = ET.SubElement(dimensns, f"{{{ns}}}varQnty")
+            varQnty.text = str(fieldcount)
+
+    fileType = ET.SubElement(fileTxt, f"{{{ns}}}fileType")
+    fileType.text = "Comma-delimited CSV file"
 
     # <dataDscr>
     dataDscr = ET.SubElement(root, f"{{{ns}}}dataDscr")
@@ -285,17 +294,20 @@ def generate_ddi_codebook(
     freq_fields = parsed_frequency.get("fields", []) if isinstance(parsed_frequency, dict) else []
     freq_dict = {f["field"]: f for f in freq_fields if "field" in f}
 
-    for col in columns:
+    for idx, col in enumerate(columns, start=1):
         prop = properties.get(col, {})
         stats_row = stats_dict.get(col, {})
 
         is_cat = col in detected_categorical
-        intrvl_val = "discrete" if is_cat else "contin"
 
         qsv_type = stats_row.get("type") or prop.get("type", ["String"])
         if isinstance(qsv_type, list):
             qsv_type = qsv_type[0] if qsv_type else "String"
         qsv_type_str = str(qsv_type).lower()
+
+        is_numeric = qsv_type_str in ("integer", "float", "number")
+        is_contin_type = qsv_type_str in ("float", "number")
+        intrvl_val = "contin" if (is_contin_type and not is_cat) else "discrete"
 
         if is_cat:
             rep_type = "coded"
@@ -303,13 +315,13 @@ def generate_ddi_codebook(
             rep_type = "datetime"
         elif "boolean" in qsv_type_str:
             rep_type = "boolean"
-        elif qsv_type_str in ("integer", "float", "number"):
+        elif is_numeric:
             rep_type = "numeric"
         else:
             rep_type = "text"
 
         var_attrs = {
-            "ID": f"var_{col}",
+            "ID": f"V{idx}",
             "name": col,
             "files": file_id,
             "intrvl": intrvl_val,
@@ -325,10 +337,8 @@ def generate_ddi_codebook(
 
         var_elem = ET.SubElement(dataDscr, f"{{{ns}}}var", var_attrs)
 
-        description = prop.get("description")
-        if description:
-            labl_elem = ET.SubElement(var_elem, f"{{{ns}}}labl")
-            labl_elem.text = description
+        labl_elem = ET.SubElement(var_elem, f"{{{ns}}}labl")
+        labl_elem.text = col
 
         # Add summary statistics
         def add_sum_stat(stat_type: str, val: Any, other_type: str | None = None, var_elem=var_elem) -> None:
@@ -351,11 +361,11 @@ def generate_ddi_codebook(
         if nullcount is not None and nullcount != "":
             try:
                 nullcount_int = int(nullcount)
-                add_sum_stat("invld", nullcount_int)
+                add_sum_stat("invd", nullcount_int)
                 if rowcount is not None:
                     add_sum_stat("vald", max(0, int(rowcount) - nullcount_int))
             except ValueError:
-                add_sum_stat("invld", nullcount)
+                add_sum_stat("invd", nullcount)
 
         add_sum_stat("other", stats_row.get("sum"), "sum")
         add_sum_stat("other", stats_row.get("range"), "range")
@@ -375,8 +385,8 @@ def generate_ddi_codebook(
 
             catgry = ET.SubElement(var_elem, f"{{{ns}}}catgry")
 
-            catVal = ET.SubElement(catgry, f"{{{ns}}}catVal")
-            catVal.text = str(cat_val)
+            catValu = ET.SubElement(catgry, f"{{{ns}}}catValu")
+            catValu.text = str(cat_val)
 
             labl = ET.SubElement(catgry, f"{{{ns}}}labl")
             labl.text = str(cat_val)
@@ -395,6 +405,8 @@ def generate_ddi_codebook(
         vf_attrs = {
             "type": "numeric" if qsv_type_str in ("integer", "float", "number") else "character",
             "schema": "other",
+            "otherSchema": "qsv",
+            "formatname": qsv_type,
         }
         if "date" in qsv_type_str or "time" in qsv_type_str or rep_type == "datetime":
             vf_attrs["category"] = "date"

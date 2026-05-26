@@ -100,19 +100,26 @@ def test_generate_ddi_codebook_static_dict():
     assert 'version="2.5"' in xml_str
 
     root = ET.fromstring(xml_str)
+    assert "ID" in root.attrib
+    assert root.attrib["ID"].startswith("_")
     ns = {"ddi": "ddi:codebook:2_5"}
 
-    # Check docDscr and stdyDscr
-    assert root.find(".//ddi:docDscr", ns) is not None
+    doc_dscr = root.find(".//ddi:docDscr", ns)
+    assert doc_dscr is not None
+    softwares = doc_dscr.findall(".//ddi:software", ns)
+    assert len(softwares) == 2
+    software_names = [sw.text for sw in softwares]
+    assert "QSV" in software_names
+    assert "Data Artifex QSV Toolkit" in software_names
     assert root.find(".//ddi:stdyDscr", ns) is not None
 
     # Check fileDscr dimensions
-    case_cnt = root.find(".//ddi:fileDscr/ddi:fileTxt/ddi:dimensns/ddi:caseCnt", ns)
-    assert case_cnt is not None
-    assert case_cnt.text == "4580"
-    var_cnt = root.find(".//ddi:fileDscr/ddi:fileTxt/ddi:dimensns/ddi:varCnt", ns)
-    assert var_cnt is not None
-    assert var_cnt.text == "2"
+    case_qnty = root.find(".//ddi:fileDscr/ddi:fileTxt/ddi:dimensns/ddi:caseQnty", ns)
+    assert case_qnty is not None
+    assert case_qnty.text == "4580"
+    var_qnty = root.find(".//ddi:fileDscr/ddi:fileTxt/ddi:dimensns/ddi:varQnty", ns)
+    assert var_qnty is not None
+    assert var_qnty.text == "2"
 
     # Check variable details
     vars_list = root.findall(".//ddi:dataDscr/ddi:var", ns)
@@ -128,23 +135,25 @@ def test_generate_ddi_codebook_static_dict():
     # Labl
     labl = urbrur_var.find("ddi:labl", ns)
     assert labl is not None
-    assert labl.text == "Urban or rural classification"
+    assert labl.text == "urbrur"
 
     # varFormat
     vf = urbrur_var.find("ddi:varFormat", ns)
     assert vf is not None
     assert vf.attrib["type"] == "numeric"
     assert vf.attrib["schema"] == "other"
+    assert vf.attrib["otherSchema"] == "qsv"
+    assert vf.attrib["formatname"] == "Integer"
 
     # Sum stats
     mean_stat = urbrur_var.find("ddi:sumStat[@type='mean']", ns)
     assert mean_stat is not None
     assert mean_stat.text == "1.859"
 
-    # invld (0) and vald (4580)
-    invld_stat = urbrur_var.find("ddi:sumStat[@type='invld']", ns)
-    assert invld_stat is not None
-    assert invld_stat.text == "0"
+    # invd (0) and vald (4580)
+    invd_stat = urbrur_var.find("ddi:sumStat[@type='invd']", ns)
+    assert invd_stat is not None
+    assert invd_stat.text == "0"
     vald_stat = urbrur_var.find("ddi:sumStat[@type='vald']", ns)
     assert vald_stat is not None
     assert vald_stat.text == "4580"
@@ -153,7 +162,7 @@ def test_generate_ddi_codebook_static_dict():
     catgrys = urbrur_var.findall("ddi:catgry", ns)
     assert len(catgrys) == 2
 
-    val_node0 = catgrys[0].find("ddi:catVal", ns)
+    val_node0 = catgrys[0].find("ddi:catValu", ns)
     assert val_node0 is not None
     assert val_node0.text == "2"
 
@@ -176,11 +185,13 @@ def test_generate_ddi_codebook_static_dict():
     assert vf_income is not None
     assert vf_income.attrib["type"] == "numeric"
     assert vf_income.attrib["schema"] == "other"
+    assert vf_income.attrib["otherSchema"] == "qsv"
+    assert vf_income.attrib["formatname"] == "Float"
 
-    # invld (10) and vald (4570)
-    invld_income = income_var.find("ddi:sumStat[@type='invld']", ns)
-    assert invld_income is not None
-    assert invld_income.text == "10"
+    # invd (10) and vald (4570)
+    invd_income = income_var.find("ddi:sumStat[@type='invd']", ns)
+    assert invd_income is not None
+    assert invd_income.text == "10"
     vald_income = income_var.find("ddi:sumStat[@type='vald']", ns)
     assert vald_income is not None
     assert vald_income.text == "4570"
@@ -249,15 +260,15 @@ def test_generate_ddi_codebook_dynamic_qsv():
     assert file_name_node.text == "sdc_test.csv"
 
     # Verify cases and variables
-    case_cnt = root.find(".//ddi:fileDscr/ddi:fileTxt/ddi:dimensns/ddi:caseCnt", ns)
-    assert case_cnt is not None
-    assert case_cnt.text is not None
-    assert int(case_cnt.text) == 4580
+    case_qnty = root.find(".//ddi:fileDscr/ddi:fileTxt/ddi:dimensns/ddi:caseQnty", ns)
+    assert case_qnty is not None
+    assert case_qnty.text is not None
+    assert int(case_qnty.text) == 4580
 
-    var_cnt = root.find(".//ddi:fileDscr/ddi:fileTxt/ddi:dimensns/ddi:varCnt", ns)
-    assert var_cnt is not None
-    assert var_cnt.text is not None
-    assert int(var_cnt.text) == 20
+    var_qnty = root.find(".//ddi:fileDscr/ddi:fileTxt/ddi:dimensns/ddi:varQnty", ns)
+    assert var_qnty is not None
+    assert var_qnty.text is not None
+    assert int(var_qnty.text) == 20
 
     # sex should be categorical (cardinality 2 <= 5) and coded
     sex_var = root.find(".//ddi:dataDscr/ddi:var[@name='sex']", ns)
@@ -266,10 +277,10 @@ def test_generate_ddi_codebook_dynamic_qsv():
     assert sex_var.attrib["representationType"] == "coded"
     assert len(sex_var.findall("ddi:catgry", ns)) == 2
 
-    # age should be continuous (cardinality 96 > 5) and numeric
+    # age should be discrete (since it is an integer) and numeric
     age_var = root.find(".//ddi:dataDscr/ddi:var[@name='age']", ns)
     assert age_var is not None
-    assert age_var.attrib["intrvl"] == "contin"
+    assert age_var.attrib["intrvl"] == "discrete"
     assert age_var.attrib["representationType"] == "numeric"
     assert len(age_var.findall("ddi:catgry", ns)) == 0  # No frequencies generated
 
