@@ -1,6 +1,6 @@
 # qsv fill
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Fill empty fields in selected columns of a CSV.

@@ -1,6 +1,6 @@
 # qsv cat
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Concatenate CSV files by row or by column.

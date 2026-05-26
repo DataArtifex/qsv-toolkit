@@ -1,6 +1,6 @@
 # qsv validate
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Validates CSV data using two main modes:

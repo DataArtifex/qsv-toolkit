@@ -1,6 +1,6 @@
 # qsv apply
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Apply a series of transformation functions to given CSV column/s. This can be used to

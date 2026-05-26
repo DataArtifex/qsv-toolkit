@@ -1,6 +1,6 @@
 # qsv geocode
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Geocodes a location in CSV data against an updatable local copy of the Geonames cities index
@@ -22,7 +22,7 @@ By default, the prebuilt index uses the Geonames Gazeteer cities15000.zip file u
 English names. It contains cities with populations > 15,000 (about ~26k cities).
 See https://download.geonames.org/export/dump/ for more information.
 
-It has seven major subcommands:
+It has twelve major subcommands:
  * suggest        - given a partial City name, return the closest City's location metadata
                     per the local Geonames cities index (Jaro-Winkler distance)
  * suggestnow     - same as suggest, but using a partial City name from the command line,
@@ -40,8 +40,15 @@ It has seven major subcommands:
                     per the local Maxmind GeoLite2 City database.
  * iplookupnow    - same as iplookup, but using an IP address or URL from the command line,
                     instead of CSV data.
+ * opencage       - ONLINE forward/reverse geocoding using the OpenCage API.
+                    Forward-geocodes a free-form address, or reverse-geocodes a
+                    "lat, long" coordinate. Requires an OpenCage API key.
+ * opencagenow    - same as opencage, but using an address/coordinate from the
+                    command line, instead of CSV data.
  * index-*        - operations to update the local Geonames cities index.
                     (index-check, index-update, index-load & index-reset)
+ * cache-*        - operations to manage the persistent on-disk OpenCage result cache.
+                    (cache-clear, cache-prune & cache-info)
 
 SUGGEST
 Suggest a Geonames city based on a partial city name. It returns the closest Geonames
@@ -151,6 +158,65 @@ Accepts the same options as iplookup, but does not require an input file.
   $ qsv geocode iplookupnow --formatstr "%json" 140.174.222.253
   $ qsv geocode iplookupnow -f "%cityrecord" 140.174.222.253
 
+OPENCAGE
+Online forward or reverse geocoding using the OpenCage Geocoding API
+(https://opencagedata.com). Unlike the suggest/reverse subcommands which use the
+local Geonames index, opencage geocodes real street addresses online.
+
+Requires an OpenCage API key. Set it with --api-key or the QSV_OPENCAGE_API_KEY
+environment variable (the --api-key flag takes precedence). Get a free key at
+https://opencagedata.com/users/sign_up.
+
+The <column> may contain either a free-form address (forward geocoding) or a
+"lat, long" / "(lat, long)" WGS-84 coordinate (reverse geocoding). The mode is
+auto-detected per row; pass --reverse to force reverse geocoding.
+
+OpenCage's Terms of Service explicitly allow caching, so results are cached in a
+persistent on-disk cache (see --cache-ttl & --no-cache). Re-runs and duplicate
+queries do NOT re-hit the API. The free tier allows 2,500 requests/day at 1
+request/second; rows are processed sequentially and rate-limited (see --rate-limit).
+
+The --country option, if set, restricts results to the given ISO 3166-1 alpha-2
+country code(s). The --timeout, --language, --invalid-result, --new-column, --rename
+and --output options behave as they do for the other subcommands.
+
+The --formatstr option supports these OpenCage-specific formats:
+  * '%+' | '%formatted'   - the OpenCage formatted address (default)
+  * '%lat-long'           - <latitude>, <longitude>
+  * '%location'           - (<latitude>, <longitude>)
+  * '%city'               - the city/town/village
+  * '%state' | '%admin1'  - the state/province
+  * '%county' | '%admin2' - the county
+  * '%country'            - the ISO 3166-1 alpha-2 country code
+  * '%country_name'       - the country name
+  * '%postcode'           - the postal code
+  * '%confidence'         - the OpenCage confidence score (0-10)
+  * '%json'               - the first OpenCage result as JSON
+  * '%pretty-json'        - the first OpenCage result as pretty JSON
+Dynamic formatting is also supported, using dotted keys, e.g.
+  "{components.city}, {components.country}" or "{annotations.timezone.name}".
+Available keys: formatted, lat, lng, confidence, components.<name> and
+annotations.<dotted.path>.
+
+The special "%dyncols:" format is also supported, adding multiple columns to the
+output CSV. Set --formatstr to "%dyncols:" followed by a comma-delimited list of
+"{col_name:key}" pairs, where key is one of the dynamic keys above, e.g.
+  "%dyncols: {city:components.city}, {tz:annotations.timezone.name}"
+Like the other subcommands, "%dyncols:" cannot be combined with --new-column.
+
+  $ qsv geocode opencage address --api-key YOURKEY file.csv
+  $ qsv geocode opencage address --country us -f '%json' file.csv
+  $ qsv geocode opencage coord_col --reverse -c city file.csv
+  $ qsv geocode opencage address -f '{components.city}, {components.country}' file.csv
+  $ qsv geocode opencage address -f '%dyncols: {city:components.city}, {pc:components.postcode}' file.csv
+
+OPENCAGENOW
+Accepts the same options as opencage, but does not require an input file.
+
+  $ qsv geocode opencagenow --api-key YOURKEY "Brooklyn, NY"
+  $ qsv geocode opencagenow "40.71427, -74.00597"
+  $ qsv geocode opencagenow -f '%pretty-json' "Eiffel Tower, Paris"
+
 INDEX-<operation>
 Manage the local Geonames cities index used by the geocode command.
 
@@ -165,8 +231,8 @@ It has four operations:
  * reset  - resets the local Geonames index to the default prebuilt, English-only Geonames cities
             index (cities15000) - downloading it from the qsv GitHub repo for the current qsv version.
  * load   - load a Geonames cities index from a file, making it the default index going forward.
-            If set to 500, 1000, 5000 or 15000, it will download the corresponding English-only
-            Geonames index rkyv file from the qsv GitHub repo for the current qsv version.
+            If set to 15000, it will download the prebuilt English-only cities15000 Geonames
+            index rkyv file from the qsv GitHub repo for the current qsv version.
 
 Update the Geonames cities index with the latest changes.
 
@@ -179,6 +245,36 @@ Rebuild the index using the latest Geonames data w/ English, French, German & Sp
 Load an alternative Geonames cities index from a file, making it the default index going forward.
 
   $ qsv geocode index-load my_geonames_index.rkyv
+
+CACHE-<operation>
+Manage the persistent on-disk OpenCage result cache used by the opencage subcommands.
+This cache is separate from the Geonames cities index and is only populated by the
+opencage/opencagenow subcommands. It lives in {cache-dir}/geocode-opencage_v1.
+
+It has three operations:
+ * clear  - wipe the entire OpenCage disk cache, removing all cached results.
+ * prune  - delete cache entries older than the --older-than value. The value is either
+            an absolute date/datetime (e.g. 2025-01-31, "2025-01-31 12:00:00") or a
+            relative age with a unit suffix - s(econds), m(inutes), h(ours), d(ays) or
+            w(eeks). e.g. 30d, 2w, 48h, 90m, 3600s.
+ * info   - report the cache directory, entry count, on-disk size and the oldest/newest
+            cached entry timestamps. Emits a JSON summary to stdout.
+
+Wipe the entire OpenCage cache.
+
+  $ qsv geocode cache-clear
+
+Delete cached entries older than 30 days.
+
+  $ qsv geocode cache-prune --older-than 30d
+
+Delete cached entries created before a specific date.
+
+  $ qsv geocode cache-prune --older-than 2025-01-01
+
+Show cache statistics.
+
+  $ qsv geocode cache-info
 
 Examples:
 
@@ -205,10 +301,15 @@ qsv geocode countryinfo [options] <column> [<input>]
 qsv geocode countryinfonow [options] <location>
 qsv geocode iplookup [options] <column> [<input>]
 qsv geocode iplookupnow [options] <location>
+qsv geocode opencage [--formatstr=<string>] [options] <column> [<input>]
+qsv geocode opencagenow [options] <location>
 qsv geocode index-load <index-file>
 qsv geocode index-check
 qsv geocode index-update [--languages=<lang>] [--cities-url=<url>] [--force] [--timeout=<seconds>]
 qsv geocode index-reset
+qsv geocode cache-clear [options]
+qsv geocode cache-prune --older-than=<val> [options]
+qsv geocode cache-info [options]
 qsv geocode --help
 
 geocode arguments:
@@ -221,6 +322,7 @@ geocode arguments:
                                 "lat, long" or "(lat, long)" format.
                                 For countryinfo, it must be a column with a ISO 3166-1 alpha-2 country code.
                                 For iplookup, it must be a column with an IP address or a URL.
+                                For opencage, it may be a free-form address OR a WGS 84 coordinate.
                                 Note that you can use column selector syntax to select the column, but only
                                 the first column will be used. See `select --help` for more information.
 
@@ -230,10 +332,11 @@ geocode arguments:
                                   For reversenow, it must be a WGS 84 coordinate.
                                   For countryinfonow, it must be a ISO 3166-1 alpha-2 code.
                                   For iplookupnow, it must be an IP address or a URL.
+                                  For opencagenow, it must be an address OR a WGS 84 coordinate.
 
     <index-file>                The alternate geonames index file to use. It must be a .rkyv file.
-                                For convenience, if this is set to 500, 1000, 5000 or 15000, it will download
-                                the corresponding English-only Geonames index rkyv file from the qsv GitHub repo
+                                For convenience, if this is set to 15000, it will download the prebuilt
+                                English-only cities15000 Geonames index rkyv file from the qsv GitHub repo
                                 for the current qsv version and use it. Only used by the index-load subcommand.
 
 geocode options:
@@ -283,6 +386,24 @@ geocode options:
                                 Larger values will favor more populated cities.
                                 If not set (default), the population is not used and the
                                 nearest city is returned.
+
+                                OPENCAGE only options:
+    --api-key <key>             The OpenCage API key for the opencage/opencagenow subcommands.
+                                If set, it takes precedence over the QSV_OPENCAGE_API_KEY
+                                environment variable. Get a free key at
+                                https://opencagedata.com/users/sign_up.
+    --rate-limit <qps>          Maximum number of OpenCage API requests per second.
+                                The free tier allows 1 request/second (2,500/day).
+                                [default: 1]
+    --reverse                   Force reverse geocoding for opencage/opencagenow (treat the
+                                query as a "lat, long" WGS-84 coordinate). If not set, forward
+                                and reverse mode is auto-detected per row.
+    --no-annotations            Omit OpenCage annotations (timezone, currency, etc.) from the
+                                result and from %json output.
+    --cache-ttl <seconds>       Time-to-live for the persistent on-disk OpenCage result cache.
+                                [default: 1209600]
+    --no-cache                  Disable the persistent on-disk OpenCage cache. Duplicate
+                                queries within a run are still de-duplicated.
 
     -f, --formatstr=<string>    The place format to use. It has three options:
                                 1. Use one of the predefined formats.
@@ -381,10 +502,18 @@ geocode options:
                                 [default: 50000]
     --timeout <seconds>         Timeout for downloading Geonames cities index.
                                 [default: 120]
-    --cache-dir <dir>           The directory to use for caching the Geonames cities index.
+    --cache-dir <dir>           The directory to use for caching the Geonames cities index
+                                and the persistent on-disk OpenCage result cache.
                                 If the directory does not exist, qsv will attempt to create it.
                                 If the QSV_CACHE_DIR envvar is set, it will be used instead.
                                 [default: ~/.qsv-cache]
+
+                                CACHE-PRUNE only option:
+    --older-than <val>          Delete OpenCage cache entries older than this value.
+                                Accepts an absolute date/datetime (e.g. 2025-01-31) or a
+                                relative age with a unit suffix (s/m/h/d/w = seconds,
+                                minutes, hours, days or weeks; e.g. 30d, 2w, 48h).
+                                Required by the cache-prune subcommand.
 
                                 INDEX-UPDATE only options:
     --languages <lang-list>     The comma-delimited, case-insensitive list of languages to use when building

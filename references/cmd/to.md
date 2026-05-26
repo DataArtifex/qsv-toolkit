@@ -1,6 +1,6 @@
 # qsv to
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Convert CSV files to Parquet, PostgreSQL, SQLite, Excel XLSX, ODS and Data Package.

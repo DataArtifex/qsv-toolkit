@@ -1,6 +1,6 @@
 # qsv lens
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Explore tabular data files interactively using the csvlens (https://github.com/YS-L/csvlens) engine.

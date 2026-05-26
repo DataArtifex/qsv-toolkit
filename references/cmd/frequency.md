@@ -1,6 +1,6 @@
 # qsv frequency
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Compute a frequency distribution table on input data. It has CSV and JSON output modes.
@@ -91,6 +91,35 @@ frequency options:
                             e.g. --limit -2 will only return values with an
                             occurrence count >= 2.
                             [default: 10]
+    --sketch-method <m>     Algorithm used to compute the frequency table.
+                            Choices: 'exact' (default) tracks every distinct value
+                            in a HashMap; 'frequent_items' uses the Apache
+                            DataSketches Frequent Items (Misra-Gries) sketch to
+                            track top-K heavy hitters with bounded error and
+                            constant memory. The frequent_items mode rejects
+                            asc, weight, ignore-case, no-trim, other-sorted,
+                            null-sorted, frequency-jsonl, stats-filter, and
+                            json/pretty-json/toon output; the frequency cache is
+                            bypassed. Counts are estimates. The flags
+                            rank-strategy, lmt-threshold, and unq-limit are
+                            silently ignored under this mode (the sketch's
+                            natural ordering is top-K by estimate descending;
+                            tied counts use the sketch's hash-table iteration
+                            order). The 'Other' row format diverges from exact:
+                            label is the bare other-text (no unique-count suffix
+                            since the sketch cannot recover the true count of
+                            items not in the top-K); rank is 0 to match the
+                            exact convention.
+                            Note: 'frequent_items' requires a little-endian
+                            target. Apache DataSketches does not support
+                            big-endian platforms (e.g., s390x); on those
+                            builds, this choice is rejected.
+                            [default: exact]
+    --sketch-map-size <n>   Maximum map size for the Frequent Items sketch.
+                            Must be a power of two and at least 8. Larger values
+                            tighten error bounds at the cost of more memory.
+                            Only used when sketch-method is frequent_items.
+                            [default: 4096]
     -u, --unq-limit <arg>   If a column has all unique values, limit the
                             frequency table to a sample of N unique items.
                             Set to '0' to disable a unique_limit.
@@ -239,6 +268,23 @@ Common options:
                            names.
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
-    --memcheck             Check if there is enough memory to load the entire
-                           CSV into memory using CONSERVATIVE heuristics.
+    --memcheck             Use CONSERVATIVE heuristics for the in-memory load
+                           check (file size vs. available + free_swap × platform
+                           factor − headroom), instead of the default NORMAL
+                           check (file size vs. total memory − headroom). The
+                           CONSERVATIVE check is stricter and trips OOM far
+                           more readily. (See also: QSV_MEMORY_CHECK env var,
+                           equivalent to passing --memcheck.)
+                           Independently of this flag, the in-memory load
+                           check runs whenever frequency takes the
+                           non-parallel path. On OOM (in either NORMAL or
+                           CONSERVATIVE mode), qsv auto-creates an index when
+                           no index exists (skipped for stdin) AND switches
+                           to the Frequent Items sketch (Apache DataSketches
+                           Misra-Gries, equivalent to `--sketch-method
+                           frequent_items`) where compatible. The sketch
+                           fallback can also fire when an index is already
+                           present and the OOM still trips (e.g., when jobs
+                           is pinned to 1 on a pre-indexed file). A wwarn is
+                           emitted when the sketch fallback engages.
 ```

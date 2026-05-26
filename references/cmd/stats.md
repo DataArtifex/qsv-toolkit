@@ -1,6 +1,6 @@
 # qsv stats
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Compute summary statistics & infers data types for each column in a CSV.
@@ -204,6 +204,74 @@ stats options:
                               Special values "deciles" and "quintiles" are automatically expanded
                               to "10,20,30,40,50,60,70,80,90" and "20,40,60,80" respectively.
                               [default: 5,10,40,60,90,95]
+    --quantile-method <m>     Algorithm used to compute the median, quartiles and custom
+                              percentiles. Choices:
+                                exact  - load all values into memory and sort (current behavior).
+                                         O(N) memory per numeric column, exact deterministic
+                                         results.
+                                approx - use t-digest (Apache DataSketches port, based on
+                                         Dunning's MergingDigest). O(K) memory per numeric column
+                                         (K~200 centroids), O(1) quantile reads. Approximate
+                                         (~1% rank error, more accurate at the tails).
+                                         Restrictions:
+                                           * --mad is disabled with a warning under approx.
+                                           * --weight is rejected; the upstream datasketches
+                                             crate does not expose weighted-update.
+                                           * Results may differ slightly across runs with
+                                             different --jobs values.
+                                           * Requires a little-endian target. Apache
+                                             DataSketches does not support big-endian
+                                             platforms (e.g., s390x); on those builds,
+                                             this choice is rejected.
+                              [default: exact]
+    --cardinality-method <m>  Algorithm used to compute the --cardinality column. Choices:
+                                exact  - track every unique value in a HashMap/Unsorted
+                                         (current behavior). O(cardinality) memory per
+                                         column. Subject to --mode-cardinality-cap, which
+                                         emits the ">=<n>" sentinel on overflow.
+                                approx - use HyperLogLog (Apache DataSketches port,
+                                         lg_k=12). O(1) memory per column (~5KB),
+                                         ~1.5% relative standard error.
+                                         Notes:
+                                           * --mode-cardinality-cap no longer affects the
+                                             cardinality column under approx; the ">=<n>"
+                                             sentinel is never emitted.
+                                           * The cap STILL governs mode/antimode tracking
+                                             (mode columns still emit "*HIGH_CARDINALITY"
+                                             on overflow).
+                                           * --infer-boolean forces exact (boolean
+                                             inference needs cardinality == 2 exactness);
+                                             a one-time warning is emitted.
+                                           * Reproducible across --jobs values: the
+                                             HLL union used at merge time is associative
+                                             and order-invariant, so chunk completion
+                                             order does not affect the final estimate.
+                                           * Requires a little-endian target. Apache
+                                             DataSketches does not support big-endian
+                                             platforms (e.g., s390x); on those builds,
+                                             this choice is rejected.
+                              [default: exact]
+    --mode-cardinality-cap <n>  Bound mode-tracking memory on high-cardinality columns.
+                              When > 0, if a column's mode tracker grows past <n>, qsv
+                              drops it and emits sentinel values instead of exact modes
+                              and cardinality. The cap measures:
+                                * unweighted: total samples added (~ row count, since
+                                  every cell is pushed onto the underlying Vec).
+                                * weighted (--weight): number of unique values seen (the
+                                  HashMap's len(), == true cardinality).
+                              Both are direct memory bounds on their respective tracker.
+                              Sentinel output:
+                                * mode columns: "*HIGH_CARDINALITY"
+                                * cardinality column: ">=<n>" (the ">=" prefix DOES break
+                                  downstream parsers expecting a plain integer; cap is
+                                  opt-in only).
+                              Under --cardinality-method approx, the cardinality column
+                              ignores this cap (HLL gives an approximate estimate at
+                              fixed memory, ~1.5% RSE) — only mode/antimode columns
+                              are gated.
+                              Useful on wide tables with many ID/UUID/timestamp columns
+                              where tracking exact cardinality is wasted work.
+                              [default: 0]
 
     --round <decimal_places>  Round statistics to <decimal_places>. Rounding is done following
                               Midpoint Nearest Even (aka "Bankers Rounding") rule.
@@ -295,8 +363,24 @@ Common options:
                            in statistics.
     -d, --delimiter <arg>  The field delimiter for READING CSV data.
                            Must be a single character. (default: ,)
-    --memcheck             Check if there is enough memory to load the entire
-                           CSV into memory using CONSERVATIVE heuristics.
-                           This option is ignored when computing default, streaming
-                           statistics, as it is not needed.
+    --memcheck             Use CONSERVATIVE heuristics for the in-memory load
+                           check (file size vs. available + free_swap × platform
+                           factor − headroom), instead of the default NORMAL
+                           check (file size vs. total memory − headroom). The
+                           CONSERVATIVE check is stricter and trips OOM far
+                           more readily. Ignored when computing default,
+                           streaming statistics. (See also: QSV_MEMORY_CHECK
+                           env var, equivalent to passing --memcheck.)
+                           Independently of this flag, the in-memory load
+                           check runs whenever stats takes the non-parallel
+                           path with non-streaming columns. On OOM (in either
+                           NORMAL or CONSERVATIVE mode), qsv auto-creates an
+                           index when no index exists (skipped for stdin) AND
+                           switches to approx quantile + approx cardinality
+                           methods (DataSketches t-digest and HyperLogLog)
+                           where compatible. The sketch fallback can also
+                           fire when an index is already present and the OOM
+                           still trips (e.g., when jobs is pinned to 1 on a
+                           pre-indexed file). A wwarn is emitted listing the
+                           auto-enabled estimators.
 ```

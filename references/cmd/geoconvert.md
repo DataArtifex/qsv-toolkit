@@ -1,6 +1,6 @@
 # qsv geoconvert
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Convert between various spatial formats and CSV/SVG including GeoJSON, SHP, and more.

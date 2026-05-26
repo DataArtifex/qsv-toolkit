@@ -1,6 +1,6 @@
 # qsv implode
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Implodes multiple rows into one by grouping on key column(s) and joining the

@@ -1,6 +1,6 @@
 # qsv tojsonl
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Smartly converts CSV to a newline-delimited JSON (JSONL/NDJSON).

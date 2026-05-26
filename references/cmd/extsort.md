@@ -1,6 +1,6 @@
 # qsv extsort
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Sort an arbitrarily large CSV/text file using a multithreaded external sort algorithm.

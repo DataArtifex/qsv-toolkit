@@ -1,6 +1,6 @@
 # qsv explode
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Explodes a row into multiple ones by splitting a column value based on the

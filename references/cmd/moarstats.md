@@ -1,6 +1,6 @@
 # qsv moarstats
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Add dozens of additional statistics, including extended outlier, robust & bivariate

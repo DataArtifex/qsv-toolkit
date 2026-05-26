@@ -1,6 +1,6 @@
 # qsv sniff
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Quickly sniff the first n rows and infer CSV metadata (delimiter, header row, number of

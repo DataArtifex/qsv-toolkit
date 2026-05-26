@@ -1,6 +1,6 @@
 # qsv split
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Splits the given CSV data into chunks. It has three modes: by size (rowcount),

@@ -1,6 +1,6 @@
 # qsv behead
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Drop a CSV file's header.

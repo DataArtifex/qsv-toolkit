@@ -1,6 +1,6 @@
 # qsv flatten
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Prints flattened records such that fields are labeled separated by a new line.
@@ -22,7 +22,7 @@ flatten options:
                                   specified. If the field is UTF-8 encoded, then
                                   <arg> refers to the number of code points.
                                   Otherwise, it refers to the number of bytes.
-    -f, --field-separator <arg>   A string of character to write between a column name
+    -f, --field-separator <arg>   A string of characters to write between a column name
                                   and its value.
     -s, --separator <arg>         A string of characters to write after each record.
                                   When non-empty, a new line is automatically

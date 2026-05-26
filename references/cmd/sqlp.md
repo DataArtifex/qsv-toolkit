@@ -1,6 +1,6 @@
 # qsv sqlp
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Run blazing-fast Polars SQL queries against several CSVs - replete with joins, aggregations,
@@ -32,7 +32,7 @@ Examples:
   # Use dollar-quoting to avoid escaping reserved characters in literals.
   https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-DOLLAR-QUOTING
   $ qsv sqlp data.csv "SELECT * FROM data WHERE col1 = $$O'Reilly$$"
-  $ qsv sqlp data.csv 'SELECT * FROM data WHERE col1 = $SomeTag$Diane's horse "Twinkle"$SomeTag$'
+  $ qsv sqlp data.csv 'SELECT * FROM data WHERE col1 = $SomeTag$Diane'\''s horse "Twinkle"$SomeTag$'
 
   # Unions and Joins are supported.
   $ qsv sqlp data1.csv data2.csv 'SELECT * FROM data1 UNION ALL BY NAME SELECT * FROM data2'
@@ -47,6 +47,15 @@ Examples:
   $ qsv sqlp data.csv data2.csv 'select * from _t_1 join _t_2 on _t_1.colname = _t_2.colname'
 
   $ qsv sqlp data.csv 'SELECT col1, count(*) AS cnt FROM data GROUP BY col1 ORDER BY cnt DESC, col1 ASC'
+
+  # FILTER clause on aggregates (SQL-standard) — apply a per-aggregate predicate without
+  # filtering the whole group. Useful for computing conditional sums/counts side by side
+  # with the unconditional aggregate in a single GROUP BY query.
+  # See https://github.com/pola-rs/polars/pull/27564.
+  $ qsv sqlp sales.csv "SELECT region, SUM(amount) AS total, \
+       SUM(amount) FILTER (WHERE amount > 100) AS total_over_100, \
+       COUNT(*) FILTER (WHERE status = 'refunded') AS refund_count \
+     FROM sales GROUP BY region ORDER BY region"
 
   $ qsv sqlp data.csv "select lower(col1), substr(col2, 2, 4) from data WHERE starts_with(col1, 'foo')"
 

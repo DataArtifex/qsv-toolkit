@@ -1,6 +1,6 @@
 # qsv py
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Create a new computed column or filter rows by evaluating a Python expression on

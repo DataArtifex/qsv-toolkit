@@ -1,6 +1,6 @@
 # qsv index
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Creates an index of the given CSV data, which can make other operations like

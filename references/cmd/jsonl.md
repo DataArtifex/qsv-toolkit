@@ -1,6 +1,6 @@
 # qsv jsonl
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Convert newline-delimited JSON (JSONL/NDJSON) to CSV.

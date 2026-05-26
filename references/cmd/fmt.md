@@ -1,6 +1,6 @@
 # qsv fmt
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Formats CSV data with a custom delimiter or CRLF line endings.

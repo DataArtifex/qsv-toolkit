@@ -1,6 +1,6 @@
 # qsv scoresql
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Analyze a SQL query against CSV file caches (stats, moarstats, frequency) to produce a

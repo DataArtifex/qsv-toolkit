@@ -1,6 +1,6 @@
 # qsv describegpt
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Create a "neuro-procedural" Data Dictionary and/or infer Description & Tags about a Dataset
@@ -56,8 +56,8 @@ As LLM inferencing takes time and can be expensive, describegpt caches the LLM i
 in a either a disk cache (default) or a Redis cache. It does so by calculating the BLAKE3 hash of the
 input file and using it as the primary cache key along with the prompt type, model and every flag that
 influences the rendered prompt (including prompt-file, language, tag-vocab, num-tags, enum-threshold,
-sample-size, fewshot-examples, the QSV_DUCKDB_PATH toggle and the generated Data Dictionary), so
-changing any of them produces a fresh LLM call rather than stale cached output.
+infer-content-type, sample-size, fewshot-examples, the QSV_DUCKDB_PATH toggle and the generated Data
+Dictionary), so changing any of them produces a fresh LLM call rather than stale cached output.
 
 The default disk cache is stored in the ~/.qsv-cache/describegpt directory with a default TTL of 28 days
 and cache hits NOT refreshing an existing cached value's TTL.
@@ -77,6 +77,10 @@ Examples:
 
   # Generate a Data Dictionary of data.csv using the DeepSeek R1:14b model on a local Ollama instance
   qsv describegpt data.csv -u http://localhost:11434/v1 --model deepseek-r1:14b --dictionary
+
+  # Generate a Data Dictionary that also infers a semantic Content Type for each field
+  # (e.g. email, city, latitude) so the dictionary can later drive synthetic data generation
+  qsv describegpt data.csv --dictionary --infer-content-type
 
   # Ask questions about the sample NYC 311 dataset using LM Studio with the default gpt-oss-20b model.
   # Questions that can be answered using the Summary Statistics & Frequency Distribution of the dataset.
@@ -155,12 +159,33 @@ describegpt options:
                            An ellipsis is appended to the truncated value.
                            If zero, no truncation is performed.
                            [default: 25]
+    --infer-content-type   Also have the LLM classify each field's semantic "Content Type", mapped to a
+                           curated, documented vocabulary (e.g. email, city, category, name, credit card, etc.)
+                           see https://github.com/dathere/qsv/blob/master/src/cmd/synthesize/faker_map.rs.
+                           Adds a "Content Type" column/field to the Data Dictionary output.
+                           Fields where cardinality equals the row count (i.e. every row has a distinct
+                           non-null value - primary keys, surrogate keys, sequence numbers) are
+                           deterministically classified as "unique_id", overriding any token the LLM
+                           returned for that field.
+    --two-pass             Run a second LLM call that takes the full first-pass Data Dictionary
+                           as JSON context and refines each field's Label, Description and
+                           (when --infer-content-type is set) Content Type using cross-field
+                           awareness. The LLM can then relate fields that belong together
+                           (e.g. street_no + street_name + city + state + zip describing a single
+                           mailing address; first_name + last_name naming a single person;
+                           lat + lng forming a coordinate pair). The refined dictionary becomes the
+                           emitted output and is also what downstream Description, Tags and Prompt
+                           inference phases see as dictionary context.
+                           Roughly doubles dictionary LLM cost and latency, so opt-in.
+                           Most useful when combined with --infer-content-type.
+                           Allowed with the --dictionary, --all and --prompt inference flags.
+                           Mutually exclusive with --prepare-context and --process-response
+                           (MCP sampling is single-turn per inference phase).
     --addl-cols            Add additional columns to the dictionary from the Summary Statistics.
   --addl-cols-list <list>  A comma-separated list of additional stats columns to add to the dictionary.
                            The columns must be present in the Summary Statistics.
                            If the columns are not present in the Summary Statistics or already in the
                            dictionary, they will be ignored.
-                           CONVENIENCE VALUES:
                            These values are case-insensitive and automatically set the --addl-cols option to true.
                            "everything" can be used to add all 45 "available" statistics columns.
                            You can adjust the available columns with --stats-options.
@@ -205,6 +230,9 @@ describegpt options:
                            If it starts with "file:" prefix, the frequency data is read from the
                            specified CSV file instead of running the frequency command.
                            e.g. "file:my_custom_frequency.csv"
+                           A "file:"-backed CSV is assumed to use frequency's default "(NULL)"
+                           null text; a custom --null-text in a file-supplied CSV is not
+                           recognized when validating inferred date/datetime formats.
                            [default: --rank-strategy dense]
     --enum-threshold <n>   The threshold for compiling Enumerations with the frequency command
                            before bucketing other unique values into the "Other" category.
@@ -233,6 +261,20 @@ describegpt options:
                            If no file is provided, default prompts will be used.
                            The prompt file uses the Mini Jinja template engine (https://docs.rs/minijinja)
                            See https://github.com/dathere/qsv/blob/master/resources/describegpt_defaults.toml
+    --markdown-template <file>  TOML file with Mini Jinja templates for Markdown output. The TOML
+                           contains four wrapper templates - one per inference kind:
+                           dictionary_md_template, description_md_template, tags_md_template
+                           and custom_prompt_md_template - plus a dictionary_md_body_template
+                           that drives the per-field dictionary table that fills the
+                           dictionary wrapper's {{ llm_response }}.
+                           All template fields are optional; any omitted field falls back to
+                           the embedded default, so a minimal TOML can override just the
+                           templates you want to change.
+                           Custom Mini Jinja filters (pipe_escape, br_replace, human_count,
+                           dict_cell, humanize_examples) and template variables are documented
+                           inline in the default TOML referenced below.
+                           If no file is provided, built-in defaults are used (matching legacy output).
+                           See https://github.com/dathere/qsv/blob/master/resources/describegpt_md_defaults.toml
     --sample-size <n>      The number of rows to randomly sample from the input file for the sample data.
                            Uses the INDEXED sampling method with the qsv sample command.
                            [default: 100]
@@ -270,15 +312,17 @@ describegpt options:
                              Ollama: http://localhost:11434/v1
                              Jan: https://localhost:1337/v1
                              LM Studio: http://localhost:1234/v1
-                           NOTE: If set, takes precedence over the QSV_LLM_BASE_URL environment variable
-                           and the base URL specified in the prompt file.
-                           [default: http://localhost:1234/v1]
+                           Precedence: explicit CLI flag > QSV_LLM_BASE_URL env var > prompt file
+                           base_url > built-in default (http://localhost:1234/v1).
+                           NOTE: no docopt default — the absence of an explicit flag is what
+                           lets the env var and the prompt file actually take effect.
     -m, --model <model>    The model to use for inferencing. This model must be compatible with OpenAI API spec.
                            Works with both cloud LLM providers and local LLMs.
-                           If set, takes precedence over the QSV_LLM_MODEL environment variable.
                            Tested open weights models include OpenAI's gpt-oss-20b and gpt-oss-120b;
                            Google's Gemma family of open models; and Mistral's Magistral reasoning models.
-                           [default: openai/gpt-oss-20b]
+                           Precedence: explicit CLI flag > QSV_LLM_MODEL env var > prompt file model
+                           > built-in default (openai/gpt-oss-20b). No docopt default — same
+                           rationale as --base-url above.
     --language <lang>      The output language/dialect/tone to use for the response. (e.g., "Spanish", "French",
                            "Hindi", "Mandarin", "Italian", "Castilian", "Franglais", "Taglish", "Pig Latin",
                            "Valley Girl", "Pirate", "Shakespearean English", "Chavacano", "Gen Z", "Yoda", etc.)
@@ -348,10 +392,31 @@ describegpt options:
 
 Common options:
     -h, --help             Display this message
-    --format <format>      Output format: Markdown, TSV, JSON, or TOON.
+    --format <format>      Output format: Markdown, TSV, JSON, TOON, or JSONSchema.
                            TOON is a compact, human-readable encoding of the JSON data model for LLM prompts.
                            See https://toonformat.dev/ for more info.
+                           JSONSchema emits the Data Dictionary as a JSON Schema (draft 2020-12)
+                           document, enriched with LLM-inferred Label, Description and Content Type
+                           (the latter only when the infer-content-type flag is set). qsv- and LLM-
+                           specific metadata not modeled by the JSON Schema spec (cardinality,
+                           null_count, weighted example counts, content_type, addl stats columns)
+                           is preserved via a single x-qsv annotation object per property; unknown
+                           keywords are ignored by validators per the 2020-12 spec.
+                           The JSONSchema format requires the dictionary inference phase
+                           (the dictionary or all flag). The description inference, when also run,
+                           becomes the schema's top-level description; tags, when also run, are
+                           embedded at x-qsv.tags. The prompt inference is not supported.
                            [default: Markdown]
+    --allow-extra-cols     When the format is JSONSchema, emit additionalProperties as true at the
+                           schema root (default is false, strict). Only meaningful with the
+                           JSONSchema format; ignored otherwise.
+    --strict-dates         When the format is JSONSchema, emit format date or date-time for
+                           columns that stats infers as Date or DateTime. Off by default because
+                           qsv's --infer-dates is permissive (accepts strings like
+                           "June 27, 1968") and JSON Schema's date formats require RFC 3339, so
+                           the validate roundtrip would otherwise fail. Set this only when your
+                           source columns are guaranteed to be RFC 3339 full-date / date-time.
+                           Mirrors the same flag on the schema command.
     -o, --output <file>    Write output to <file> instead of stdout. If --format is set to TSV,
                            separate files will be created for each prompt type with the pattern
                            {filestem}.{kind}.tsv (e.g., output.dictionary.tsv, output.tags.tsv).

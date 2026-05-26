@@ -1,6 +1,6 @@
 # QSV Commands
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ## qsv apply
 
@@ -839,8 +839,8 @@ As LLM inferencing takes time and can be expensive, describegpt caches the LLM i
 in a either a disk cache (default) or a Redis cache. It does so by calculating the BLAKE3 hash of the
 input file and using it as the primary cache key along with the prompt type, model and every flag that
 influences the rendered prompt (including prompt-file, language, tag-vocab, num-tags, enum-threshold,
-sample-size, fewshot-examples, the QSV_DUCKDB_PATH toggle and the generated Data Dictionary), so
-changing any of them produces a fresh LLM call rather than stale cached output.
+infer-content-type, sample-size, fewshot-examples, the QSV_DUCKDB_PATH toggle and the generated Data
+Dictionary), so changing any of them produces a fresh LLM call rather than stale cached output.
 
 The default disk cache is stored in the ~/.qsv-cache/describegpt directory with a default TTL of 28 days
 and cache hits NOT refreshing an existing cached value's TTL.
@@ -860,6 +860,10 @@ Examples:
 
   # Generate a Data Dictionary of data.csv using the DeepSeek R1:14b model on a local Ollama instance
   qsv describegpt data.csv -u http://localhost:11434/v1 --model deepseek-r1:14b --dictionary
+
+  # Generate a Data Dictionary that also infers a semantic Content Type for each field
+  # (e.g. email, city, latitude) so the dictionary can later drive synthetic data generation
+  qsv describegpt data.csv --dictionary --infer-content-type
 
   # Ask questions about the sample NYC 311 dataset using LM Studio with the default gpt-oss-20b model.
   # Questions that can be answered using the Summary Statistics & Frequency Distribution of the dataset.
@@ -938,12 +942,33 @@ describegpt options:
                            An ellipsis is appended to the truncated value.
                            If zero, no truncation is performed.
                            [default: 25]
+    --infer-content-type   Also have the LLM classify each field's semantic "Content Type", mapped to a
+                           curated, documented vocabulary (e.g. email, city, category, name, credit card, etc.)
+                           see https://github.com/dathere/qsv/blob/master/src/cmd/synthesize/faker_map.rs.
+                           Adds a "Content Type" column/field to the Data Dictionary output.
+                           Fields where cardinality equals the row count (i.e. every row has a distinct
+                           non-null value - primary keys, surrogate keys, sequence numbers) are
+                           deterministically classified as "unique_id", overriding any token the LLM
+                           returned for that field.
+    --two-pass             Run a second LLM call that takes the full first-pass Data Dictionary
+                           as JSON context and refines each field's Label, Description and
+                           (when --infer-content-type is set) Content Type using cross-field
+                           awareness. The LLM can then relate fields that belong together
+                           (e.g. street_no + street_name + city + state + zip describing a single
+                           mailing address; first_name + last_name naming a single person;
+                           lat + lng forming a coordinate pair). The refined dictionary becomes the
+                           emitted output and is also what downstream Description, Tags and Prompt
+                           inference phases see as dictionary context.
+                           Roughly doubles dictionary LLM cost and latency, so opt-in.
+                           Most useful when combined with --infer-content-type.
+                           Allowed with the --dictionary, --all and --prompt inference flags.
+                           Mutually exclusive with --prepare-context and --process-response
+                           (MCP sampling is single-turn per inference phase).
     --addl-cols            Add additional columns to the dictionary from the Summary Statistics.
   --addl-cols-list <list>  A comma-separated list of additional stats columns to add to the dictionary.
                            The columns must be present in the Summary Statistics.
                            If the columns are not present in the Summary Statistics or already in the
                            dictionary, they will be ignored.
-                           CONVENIENCE VALUES:
                            These values are case-insensitive and automatically set the --addl-cols option to true.
                            "everything" can be used to add all 45 "available" statistics columns.
                            You can adjust the available columns with --stats-options.
@@ -988,6 +1013,9 @@ describegpt options:
                            If it starts with "file:" prefix, the frequency data is read from the
                            specified CSV file instead of running the frequency command.
                            e.g. "file:my_custom_frequency.csv"
+                           A "file:"-backed CSV is assumed to use frequency's default "(NULL)"
+                           null text; a custom --null-text in a file-supplied CSV is not
+                           recognized when validating inferred date/datetime formats.
                            [default: --rank-strategy dense]
     --enum-threshold <n>   The threshold for compiling Enumerations with the frequency command
                            before bucketing other unique values into the "Other" category.
@@ -1016,6 +1044,20 @@ describegpt options:
                            If no file is provided, default prompts will be used.
                            The prompt file uses the Mini Jinja template engine (https://docs.rs/minijinja)
                            See https://github.com/dathere/qsv/blob/master/resources/describegpt_defaults.toml
+    --markdown-template <file>  TOML file with Mini Jinja templates for Markdown output. The TOML
+                           contains four wrapper templates - one per inference kind:
+                           dictionary_md_template, description_md_template, tags_md_template
+                           and custom_prompt_md_template - plus a dictionary_md_body_template
+                           that drives the per-field dictionary table that fills the
+                           dictionary wrapper's {{ llm_response }}.
+                           All template fields are optional; any omitted field falls back to
+                           the embedded default, so a minimal TOML can override just the
+                           templates you want to change.
+                           Custom Mini Jinja filters (pipe_escape, br_replace, human_count,
+                           dict_cell, humanize_examples) and template variables are documented
+                           inline in the default TOML referenced below.
+                           If no file is provided, built-in defaults are used (matching legacy output).
+                           See https://github.com/dathere/qsv/blob/master/resources/describegpt_md_defaults.toml
     --sample-size <n>      The number of rows to randomly sample from the input file for the sample data.
                            Uses the INDEXED sampling method with the qsv sample command.
                            [default: 100]
@@ -1053,15 +1095,17 @@ describegpt options:
                              Ollama: http://localhost:11434/v1
                              Jan: https://localhost:1337/v1
                              LM Studio: http://localhost:1234/v1
-                           NOTE: If set, takes precedence over the QSV_LLM_BASE_URL environment variable
-                           and the base URL specified in the prompt file.
-                           [default: http://localhost:1234/v1]
+                           Precedence: explicit CLI flag > QSV_LLM_BASE_URL env var > prompt file
+                           base_url > built-in default (http://localhost:1234/v1).
+                           NOTE: no docopt default — the absence of an explicit flag is what
+                           lets the env var and the prompt file actually take effect.
     -m, --model <model>    The model to use for inferencing. This model must be compatible with OpenAI API spec.
                            Works with both cloud LLM providers and local LLMs.
-                           If set, takes precedence over the QSV_LLM_MODEL environment variable.
                            Tested open weights models include OpenAI's gpt-oss-20b and gpt-oss-120b;
                            Google's Gemma family of open models; and Mistral's Magistral reasoning models.
-                           [default: openai/gpt-oss-20b]
+                           Precedence: explicit CLI flag > QSV_LLM_MODEL env var > prompt file model
+                           > built-in default (openai/gpt-oss-20b). No docopt default — same
+                           rationale as --base-url above.
     --language <lang>      The output language/dialect/tone to use for the response. (e.g., "Spanish", "French",
                            "Hindi", "Mandarin", "Italian", "Castilian", "Franglais", "Taglish", "Pig Latin",
                            "Valley Girl", "Pirate", "Shakespearean English", "Chavacano", "Gen Z", "Yoda", etc.)
@@ -1131,10 +1175,31 @@ describegpt options:
 
 Common options:
     -h, --help             Display this message
-    --format <format>      Output format: Markdown, TSV, JSON, or TOON.
+    --format <format>      Output format: Markdown, TSV, JSON, TOON, or JSONSchema.
                            TOON is a compact, human-readable encoding of the JSON data model for LLM prompts.
                            See https://toonformat.dev/ for more info.
+                           JSONSchema emits the Data Dictionary as a JSON Schema (draft 2020-12)
+                           document, enriched with LLM-inferred Label, Description and Content Type
+                           (the latter only when the infer-content-type flag is set). qsv- and LLM-
+                           specific metadata not modeled by the JSON Schema spec (cardinality,
+                           null_count, weighted example counts, content_type, addl stats columns)
+                           is preserved via a single x-qsv annotation object per property; unknown
+                           keywords are ignored by validators per the 2020-12 spec.
+                           The JSONSchema format requires the dictionary inference phase
+                           (the dictionary or all flag). The description inference, when also run,
+                           becomes the schema's top-level description; tags, when also run, are
+                           embedded at x-qsv.tags. The prompt inference is not supported.
                            [default: Markdown]
+    --allow-extra-cols     When the format is JSONSchema, emit additionalProperties as true at the
+                           schema root (default is false, strict). Only meaningful with the
+                           JSONSchema format; ignored otherwise.
+    --strict-dates         When the format is JSONSchema, emit format date or date-time for
+                           columns that stats infers as Date or DateTime. Off by default because
+                           qsv's --infer-dates is permissive (accepts strings like
+                           "June 27, 1968") and JSON Schema's date formats require RFC 3339, so
+                           the validate roundtrip would otherwise fail. Set this only when your
+                           source columns are guaranteed to be RFC 3339 full-date / date-time.
+                           Mirrors the same flag on the schema command.
     -o, --output <file>    Write output to <file> instead of stdout. If --format is set to TSV,
                            separate files will be created for each prompt type with the pattern
                            {filestem}.{kind}.tsv (e.g., output.dictionary.tsv, output.tags.tsv).
@@ -2454,7 +2519,7 @@ flatten options:
                                   specified. If the field is UTF-8 encoded, then
                                   <arg> refers to the number of code points.
                                   Otherwise, it refers to the number of bytes.
-    -f, --field-separator <arg>   A string of character to write between a column name
+    -f, --field-separator <arg>   A string of characters to write between a column name
                                   and its value.
     -s, --separator <arg>         A string of characters to write after each record.
                                   When non-empty, a new line is automatically
@@ -2681,6 +2746,35 @@ frequency options:
                             e.g. --limit -2 will only return values with an
                             occurrence count >= 2.
                             [default: 10]
+    --sketch-method <m>     Algorithm used to compute the frequency table.
+                            Choices: 'exact' (default) tracks every distinct value
+                            in a HashMap; 'frequent_items' uses the Apache
+                            DataSketches Frequent Items (Misra-Gries) sketch to
+                            track top-K heavy hitters with bounded error and
+                            constant memory. The frequent_items mode rejects
+                            asc, weight, ignore-case, no-trim, other-sorted,
+                            null-sorted, frequency-jsonl, stats-filter, and
+                            json/pretty-json/toon output; the frequency cache is
+                            bypassed. Counts are estimates. The flags
+                            rank-strategy, lmt-threshold, and unq-limit are
+                            silently ignored under this mode (the sketch's
+                            natural ordering is top-K by estimate descending;
+                            tied counts use the sketch's hash-table iteration
+                            order). The 'Other' row format diverges from exact:
+                            label is the bare other-text (no unique-count suffix
+                            since the sketch cannot recover the true count of
+                            items not in the top-K); rank is 0 to match the
+                            exact convention.
+                            Note: 'frequent_items' requires a little-endian
+                            target. Apache DataSketches does not support
+                            big-endian platforms (e.g., s390x); on those
+                            builds, this choice is rejected.
+                            [default: exact]
+    --sketch-map-size <n>   Maximum map size for the Frequent Items sketch.
+                            Must be a power of two and at least 8. Larger values
+                            tighten error bounds at the cost of more memory.
+                            Only used when sketch-method is frequent_items.
+                            [default: 4096]
     -u, --unq-limit <arg>   If a column has all unique values, limit the
                             frequency table to a sample of N unique items.
                             Set to '0' to disable a unique_limit.
@@ -2829,8 +2923,25 @@ Common options:
                            names.
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
-    --memcheck             Check if there is enough memory to load the entire
-                           CSV into memory using CONSERVATIVE heuristics.
+    --memcheck             Use CONSERVATIVE heuristics for the in-memory load
+                           check (file size vs. available + free_swap × platform
+                           factor − headroom), instead of the default NORMAL
+                           check (file size vs. total memory − headroom). The
+                           CONSERVATIVE check is stricter and trips OOM far
+                           more readily. (See also: QSV_MEMORY_CHECK env var,
+                           equivalent to passing --memcheck.)
+                           Independently of this flag, the in-memory load
+                           check runs whenever frequency takes the
+                           non-parallel path. On OOM (in either NORMAL or
+                           CONSERVATIVE mode), qsv auto-creates an index when
+                           no index exists (skipped for stdin) AND switches
+                           to the Frequent Items sketch (Apache DataSketches
+                           Misra-Gries, equivalent to `--sketch-method
+                           frequent_items`) where compatible. The sketch
+                           fallback can also fire when an index is already
+                           present and the OOM still trips (e.g., when jobs
+                           is pinned to 1 on a pre-indexed file). A wwarn is
+                           emitted when the sketch fallback engages.
 ```
 ## qsv geocode
 
@@ -2854,7 +2965,7 @@ By default, the prebuilt index uses the Geonames Gazeteer cities15000.zip file u
 English names. It contains cities with populations > 15,000 (about ~26k cities).
 See https://download.geonames.org/export/dump/ for more information.
 
-It has seven major subcommands:
+It has twelve major subcommands:
  * suggest        - given a partial City name, return the closest City's location metadata
                     per the local Geonames cities index (Jaro-Winkler distance)
  * suggestnow     - same as suggest, but using a partial City name from the command line,
@@ -2872,8 +2983,15 @@ It has seven major subcommands:
                     per the local Maxmind GeoLite2 City database.
  * iplookupnow    - same as iplookup, but using an IP address or URL from the command line,
                     instead of CSV data.
+ * opencage       - ONLINE forward/reverse geocoding using the OpenCage API.
+                    Forward-geocodes a free-form address, or reverse-geocodes a
+                    "lat, long" coordinate. Requires an OpenCage API key.
+ * opencagenow    - same as opencage, but using an address/coordinate from the
+                    command line, instead of CSV data.
  * index-*        - operations to update the local Geonames cities index.
                     (index-check, index-update, index-load & index-reset)
+ * cache-*        - operations to manage the persistent on-disk OpenCage result cache.
+                    (cache-clear, cache-prune & cache-info)
 
 SUGGEST
 Suggest a Geonames city based on a partial city name. It returns the closest Geonames
@@ -2983,6 +3101,65 @@ Accepts the same options as iplookup, but does not require an input file.
   $ qsv geocode iplookupnow --formatstr "%json" 140.174.222.253
   $ qsv geocode iplookupnow -f "%cityrecord" 140.174.222.253
 
+OPENCAGE
+Online forward or reverse geocoding using the OpenCage Geocoding API
+(https://opencagedata.com). Unlike the suggest/reverse subcommands which use the
+local Geonames index, opencage geocodes real street addresses online.
+
+Requires an OpenCage API key. Set it with --api-key or the QSV_OPENCAGE_API_KEY
+environment variable (the --api-key flag takes precedence). Get a free key at
+https://opencagedata.com/users/sign_up.
+
+The <column> may contain either a free-form address (forward geocoding) or a
+"lat, long" / "(lat, long)" WGS-84 coordinate (reverse geocoding). The mode is
+auto-detected per row; pass --reverse to force reverse geocoding.
+
+OpenCage's Terms of Service explicitly allow caching, so results are cached in a
+persistent on-disk cache (see --cache-ttl & --no-cache). Re-runs and duplicate
+queries do NOT re-hit the API. The free tier allows 2,500 requests/day at 1
+request/second; rows are processed sequentially and rate-limited (see --rate-limit).
+
+The --country option, if set, restricts results to the given ISO 3166-1 alpha-2
+country code(s). The --timeout, --language, --invalid-result, --new-column, --rename
+and --output options behave as they do for the other subcommands.
+
+The --formatstr option supports these OpenCage-specific formats:
+  * '%+' | '%formatted'   - the OpenCage formatted address (default)
+  * '%lat-long'           - <latitude>, <longitude>
+  * '%location'           - (<latitude>, <longitude>)
+  * '%city'               - the city/town/village
+  * '%state' | '%admin1'  - the state/province
+  * '%county' | '%admin2' - the county
+  * '%country'            - the ISO 3166-1 alpha-2 country code
+  * '%country_name'       - the country name
+  * '%postcode'           - the postal code
+  * '%confidence'         - the OpenCage confidence score (0-10)
+  * '%json'               - the first OpenCage result as JSON
+  * '%pretty-json'        - the first OpenCage result as pretty JSON
+Dynamic formatting is also supported, using dotted keys, e.g.
+  "{components.city}, {components.country}" or "{annotations.timezone.name}".
+Available keys: formatted, lat, lng, confidence, components.<name> and
+annotations.<dotted.path>.
+
+The special "%dyncols:" format is also supported, adding multiple columns to the
+output CSV. Set --formatstr to "%dyncols:" followed by a comma-delimited list of
+"{col_name:key}" pairs, where key is one of the dynamic keys above, e.g.
+  "%dyncols: {city:components.city}, {tz:annotations.timezone.name}"
+Like the other subcommands, "%dyncols:" cannot be combined with --new-column.
+
+  $ qsv geocode opencage address --api-key YOURKEY file.csv
+  $ qsv geocode opencage address --country us -f '%json' file.csv
+  $ qsv geocode opencage coord_col --reverse -c city file.csv
+  $ qsv geocode opencage address -f '{components.city}, {components.country}' file.csv
+  $ qsv geocode opencage address -f '%dyncols: {city:components.city}, {pc:components.postcode}' file.csv
+
+OPENCAGENOW
+Accepts the same options as opencage, but does not require an input file.
+
+  $ qsv geocode opencagenow --api-key YOURKEY "Brooklyn, NY"
+  $ qsv geocode opencagenow "40.71427, -74.00597"
+  $ qsv geocode opencagenow -f '%pretty-json' "Eiffel Tower, Paris"
+
 INDEX-<operation>
 Manage the local Geonames cities index used by the geocode command.
 
@@ -2997,8 +3174,8 @@ It has four operations:
  * reset  - resets the local Geonames index to the default prebuilt, English-only Geonames cities
             index (cities15000) - downloading it from the qsv GitHub repo for the current qsv version.
  * load   - load a Geonames cities index from a file, making it the default index going forward.
-            If set to 500, 1000, 5000 or 15000, it will download the corresponding English-only
-            Geonames index rkyv file from the qsv GitHub repo for the current qsv version.
+            If set to 15000, it will download the prebuilt English-only cities15000 Geonames
+            index rkyv file from the qsv GitHub repo for the current qsv version.
 
 Update the Geonames cities index with the latest changes.
 
@@ -3011,6 +3188,36 @@ Rebuild the index using the latest Geonames data w/ English, French, German & Sp
 Load an alternative Geonames cities index from a file, making it the default index going forward.
 
   $ qsv geocode index-load my_geonames_index.rkyv
+
+CACHE-<operation>
+Manage the persistent on-disk OpenCage result cache used by the opencage subcommands.
+This cache is separate from the Geonames cities index and is only populated by the
+opencage/opencagenow subcommands. It lives in {cache-dir}/geocode-opencage_v1.
+
+It has three operations:
+ * clear  - wipe the entire OpenCage disk cache, removing all cached results.
+ * prune  - delete cache entries older than the --older-than value. The value is either
+            an absolute date/datetime (e.g. 2025-01-31, "2025-01-31 12:00:00") or a
+            relative age with a unit suffix - s(econds), m(inutes), h(ours), d(ays) or
+            w(eeks). e.g. 30d, 2w, 48h, 90m, 3600s.
+ * info   - report the cache directory, entry count, on-disk size and the oldest/newest
+            cached entry timestamps. Emits a JSON summary to stdout.
+
+Wipe the entire OpenCage cache.
+
+  $ qsv geocode cache-clear
+
+Delete cached entries older than 30 days.
+
+  $ qsv geocode cache-prune --older-than 30d
+
+Delete cached entries created before a specific date.
+
+  $ qsv geocode cache-prune --older-than 2025-01-01
+
+Show cache statistics.
+
+  $ qsv geocode cache-info
 
 Examples:
 
@@ -3037,10 +3244,15 @@ qsv geocode countryinfo [options] <column> [<input>]
 qsv geocode countryinfonow [options] <location>
 qsv geocode iplookup [options] <column> [<input>]
 qsv geocode iplookupnow [options] <location>
+qsv geocode opencage [--formatstr=<string>] [options] <column> [<input>]
+qsv geocode opencagenow [options] <location>
 qsv geocode index-load <index-file>
 qsv geocode index-check
 qsv geocode index-update [--languages=<lang>] [--cities-url=<url>] [--force] [--timeout=<seconds>]
 qsv geocode index-reset
+qsv geocode cache-clear [options]
+qsv geocode cache-prune --older-than=<val> [options]
+qsv geocode cache-info [options]
 qsv geocode --help
 
 geocode arguments:
@@ -3053,6 +3265,7 @@ geocode arguments:
                                 "lat, long" or "(lat, long)" format.
                                 For countryinfo, it must be a column with a ISO 3166-1 alpha-2 country code.
                                 For iplookup, it must be a column with an IP address or a URL.
+                                For opencage, it may be a free-form address OR a WGS 84 coordinate.
                                 Note that you can use column selector syntax to select the column, but only
                                 the first column will be used. See `select --help` for more information.
 
@@ -3062,10 +3275,11 @@ geocode arguments:
                                   For reversenow, it must be a WGS 84 coordinate.
                                   For countryinfonow, it must be a ISO 3166-1 alpha-2 code.
                                   For iplookupnow, it must be an IP address or a URL.
+                                  For opencagenow, it must be an address OR a WGS 84 coordinate.
 
     <index-file>                The alternate geonames index file to use. It must be a .rkyv file.
-                                For convenience, if this is set to 500, 1000, 5000 or 15000, it will download
-                                the corresponding English-only Geonames index rkyv file from the qsv GitHub repo
+                                For convenience, if this is set to 15000, it will download the prebuilt
+                                English-only cities15000 Geonames index rkyv file from the qsv GitHub repo
                                 for the current qsv version and use it. Only used by the index-load subcommand.
 
 geocode options:
@@ -3115,6 +3329,24 @@ geocode options:
                                 Larger values will favor more populated cities.
                                 If not set (default), the population is not used and the
                                 nearest city is returned.
+
+                                OPENCAGE only options:
+    --api-key <key>             The OpenCage API key for the opencage/opencagenow subcommands.
+                                If set, it takes precedence over the QSV_OPENCAGE_API_KEY
+                                environment variable. Get a free key at
+                                https://opencagedata.com/users/sign_up.
+    --rate-limit <qps>          Maximum number of OpenCage API requests per second.
+                                The free tier allows 1 request/second (2,500/day).
+                                [default: 1]
+    --reverse                   Force reverse geocoding for opencage/opencagenow (treat the
+                                query as a "lat, long" WGS-84 coordinate). If not set, forward
+                                and reverse mode is auto-detected per row.
+    --no-annotations            Omit OpenCage annotations (timezone, currency, etc.) from the
+                                result and from %json output.
+    --cache-ttl <seconds>       Time-to-live for the persistent on-disk OpenCage result cache.
+                                [default: 1209600]
+    --no-cache                  Disable the persistent on-disk OpenCage cache. Duplicate
+                                queries within a run are still de-duplicated.
 
     -f, --formatstr=<string>    The place format to use. It has three options:
                                 1. Use one of the predefined formats.
@@ -3213,10 +3445,18 @@ geocode options:
                                 [default: 50000]
     --timeout <seconds>         Timeout for downloading Geonames cities index.
                                 [default: 120]
-    --cache-dir <dir>           The directory to use for caching the Geonames cities index.
+    --cache-dir <dir>           The directory to use for caching the Geonames cities index
+                                and the persistent on-disk OpenCage result cache.
                                 If the directory does not exist, qsv will attempt to create it.
                                 If the QSV_CACHE_DIR envvar is set, it will be used instead.
                                 [default: ~/.qsv-cache]
+
+                                CACHE-PRUNE only option:
+    --older-than <val>          Delete OpenCage cache entries older than this value.
+                                Accepts an absolute date/datetime (e.g. 2025-01-31) or a
+                                relative age with a unit suffix (s/m/h/d/w = seconds,
+                                minutes, hours, days or weeks; e.g. 30d, 2w, 48h).
+                                Required by the cache-prune subcommand.
 
                                 INDEX-UPDATE only options:
     --languages <lang-list>     The comma-delimited, case-insensitive list of languages to use when building
@@ -3989,7 +4229,12 @@ price,fruit
 2.5,apple
 3.0,banana
 
-Note: Trailing zeroes in decimal numbers after the decimal are truncated (2.50 becomes 2.5).
+Note: Trailing zeroes in decimal numbers from the input data are truncated (2.50 becomes 2.5)
+because JSON decimals (numbers with a fractional part or exponent) round-trip through f64.
+Plain integer tokens are preserved exactly (serde_json parses them as i64/u64). With --jaq,
+integers that don't fit i64/u64 are emitted verbatim as strings to avoid silent precision
+loss, and decimal literals written inside the --jaq filter expression itself are passed
+through verbatim (2.50 stays 2.50, scientific notation is kept as written).
 
 If the JSON data was provided using stdin then either use - or do not provide a file path.
 For example you may copy the JSON data above to your clipboard then run:
@@ -4182,7 +4427,7 @@ Common options:
 
 ```text
 Create multiple new computed columns, filter rows or compute aggregations by
-executing a Luau 0.716 script for every row (SEQUENTIAL MODE) or for
+executing a Luau 0.720 script for every row (SEQUENTIAL MODE) or for
 specified rows (RANDOM ACCESS MODE) of a CSV file.
 
 Luau is not just another qsv command. It is qsv's Domain-Specific Language (DSL)
@@ -4931,6 +5176,9 @@ pivotp options:
                               max - Maximum value
                               mean - Average value
                               median - Median value
+                              quantile@<p> - Quantile at probability p in [0, 1] using linear interpolation.
+                                             Alias: q@<p>. Examples: quantile@0.95, q@0.5
+                                             (q@0.5 is equivalent to median for even-length groups).
                               len - Count of values
                               item - Get single value from group. Raises error if there are multiple values.
                               smart - use value column data type & statistics to pick an aggregation.
@@ -5031,6 +5279,9 @@ TWO-SAMPLE OUTPUT (--twosample, per unordered column pair)
 When values are blank
   * Column has no numeric data (n=0).
   * Positivity required: ratio, ratio_* need all values > 0.
+  * Date/DateTime pairs: ratio is suppressed for --twosample and --compare2
+    because it depends on the arbitrary 1970 epoch origin and isn't meaningful
+    for dates. shift, disparity, and their bounds remain populated.
   * Sparity required: spread/spread_*/disparity/disparity_* need real variability (not tie-dominant).
   * Bounds require enough data for requested misrate; try higher misrate or more data.
 
@@ -5101,7 +5352,7 @@ Examples:
   qsv pragmastat --standalone --subsample 10000 --no-bounds data.csv
 
 Full Pragmastat manual:
-  https://github.com/AndreyAkinshin/pragmastat/releases/download/v12.0.0/pragmastat-v12.0.0.pdf
+  https://github.com/AndreyAkinshin/pragmastat/releases/download/v12.1.0/pragmastat-v12.1.0.pdf
   https://pragmastat.dev/ (latest version)
 
 Usage:
@@ -5178,6 +5429,66 @@ pro arguments:
 
 Common options:
     -h, --help            Display this message
+```
+## qsv profile
+
+```text
+Extract and infer DCAT-3 / Croissant metadata from a CSV, optionally driven by a
+CKAN scheming YAML spec.
+
+This is the non-interactive, qsv-native counterpart to what datapusher-plus (DP+)
+does in CKAN: run statistical + frequency analysis on the input, build a Jinja2
+context (`package`, `resource`, `dpps`, `dppf`, `dpp`), then evaluate every
+`formula` / `suggestion_formula` field declared in the scheming YAML. The
+resulting `.metadata.json` carries both a CKAN-shaped block and a best-effort
+DCAT-US v3 projection, ready for qsv pro and DP+ to prepopulate CKAN packages.
+
+Helpers and filters are reused from DP+'s `jinja2_helpers.py` via an embedded
+Python interpreter (qsv's `python` feature). A working `python3` with the
+`jinja2` package installed is required at runtime.
+
+For an example spec file, see:
+  https://github.com/dathere/datapusher-plus/blob/main/ckanext/datapusher_plus/dataset-druf.yaml
+
+For more extensive examples, see https://github.com/dathere/qsv/blob/master/tests/test_profile.rs.
+
+Usage:
+    qsv profile [options] [<input>]
+    qsv profile --help
+
+profile options:
+    --spec <yaml>             CKAN scheming YAML spec file. If omitted, only the
+                              inferred `dpp` block (lat/lon/date columns, dataset
+                              stats) is emitted; no formulas are evaluated.
+    --package-meta <json>     Optional JSON file with seed package fields (title,
+                              owner_org, etc.) merged into the formula context
+                              before evaluation.
+    --resource-meta <json>    Same, for the resource dict.
+    --no-dcat                 Skip the DCAT-US v3 projection block.
+    --no-ckan                 Skip the CKAN-shape block.
+    --ddi-c <file>            Optional output path for DDI-Codebook XML.
+    --ddi-catgry-limit <arg>  DDI category limit policy. Accepts either:
+                              1) number (global default cap),
+                              2) JSON object string (per-variable caps), or
+                              3) path to a JSON file containing that object.
+    --force                   Force recomputing cardinality and unique values
+                              even if a stats cache file exists.
+    -j, --jobs <arg>          The number of jobs to run in parallel for the
+                              underlying stats/frequency passes. When not set,
+                              the number of jobs is set to the number of CPUs
+                              detected.
+    -o, --output <file>       Output JSON path. Default: <input>.metadata.json.
+
+Common options:
+    -h, --help                Display this message
+    -n, --no-headers          When set, the first row will not be interpreted
+                              as headers. Namely, it will be processed with the
+                              rest of the rows. Otherwise, the first row will
+                              always appear as the header row in the output.
+    -d, --delimiter <arg>     The field delimiter for reading CSV data.
+                              Must be a single character.
+    --memcheck                Check if there is enough memory to load the entire
+                              CSV into memory using CONSERVATIVE heuristics.
 ```
 ## qsv prompt
 
@@ -5706,7 +6017,7 @@ Common options:
 ```text
 Randomly samples CSV data.
 
-It supports eight sampling methods:
+It supports ten sampling methods:
 * RESERVOIR: the default sampling method when NO INDEX is present and no sampling method
   is specified. Visits every CSV record exactly once, using MEMORY PROPORTIONAL to the
   sample size (k) - O(k).
@@ -5756,6 +6067,32 @@ It supports eight sampling methods:
   Specify the desired sample size with <sample-size>. Uses MEMORY PROPORTIONAL to the
   sample size (k) - O(k).
   "Weighted random sampling with a reservoir" https://doi.org/10.1016/j.ipl.2005.11.003
+
+* VAROPT: the sampling method when the --varopt option is specified.
+  Variance-bounded weighted reservoir sampling using the A-ExpJ keying scheme of
+  Efraimidis and Spirakis (2006). For each record, computes a key u^(1/w) and
+  retains the <sample-size> items with the largest keys. Unlike the --weighted
+  method, it does NOT require a stats cache, runs in a single pass, and supports
+  merge across partitions through the --sketch-out and --sketch-in options.
+  Suitable for heavy-tailed weight distributions where bounded-variance
+  estimators are needed. Uses MEMORY PROPORTIONAL to the sample size (k) - O(k).
+  This is a native Rust implementation written from the original paper; the
+  analogous VarOpt sketches in the Apache DataSketches library use the same
+  family of algorithms but are NOT used here.
+  Algorithm: "Weighted random sampling with a reservoir"
+  doi 10.1016/j.ipl.2005.11.003
+
+* MERGEABLE-RESERVOIR: the sampling method when the --mergeable-reservoir flag is set.
+  Uniform reservoir sample using Vitter's Algorithm R. Same statistical
+  distribution as the default RESERVOIR method, but the sampler state is
+  mergeable: a sketch written by one run can be combined with sketches from
+  other runs via the --sketch-out and --sketch-in options, producing a uniform
+  sample of the combined stream WITHOUT re-reading the input files. Useful
+  for sharded or incremental sampling pipelines. Uses MEMORY PROPORTIONAL to
+  the sample size (k) - O(k). Native Rust implementation; the analogous
+  ReservoirItemsSketch in the Apache DataSketches library implements the same
+  algorithm but is NOT used here.
+  See en.wikipedia.org/wiki/Reservoir_sampling
 
 * CLUSTER: the sampling method when the --cluster option is specified.
   Samples entire groups of records together based on a cluster identifier column.
@@ -5821,6 +6158,17 @@ Examples:
   # are included in the sample.
   qsv sample --cluster Neighborhood 10 data.csv
 
+  # Take a sample using VAROPT (A-ExpJ weighted reservoir) sampling, weighted by
+  # the 'Revenue' column, for a sample size of 1000 records. Unlike --weighted,
+  # this does NOT require a stats cache.
+  qsv sample --varopt Revenue 1000 data.csv
+
+  # Sample two shards and merge their sketches into a single uniform sample
+  # without re-reading the inputs.
+  qsv sample --mergeable-reservoir --sketch-out a.sk 1000 shard_a.csv
+  qsv sample --mergeable-reservoir --sketch-out b.sk 1000 shard_b.csv
+  qsv sample --sketch-in a.sk,b.sk 1000 -o merged.csv
+
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_sample.rs.
 
 Usage:
@@ -5877,6 +6225,16 @@ sample options:
                            The column will be parsed as a number. Records with non-number weights
                            will be skipped.
                            Uses MEMORY PROPORTIONAL to the sample size (k) - O(k).
+    --varopt <col>         Use VAROPT weighted reservoir sampling (A-ExpJ keying).
+                           The weight column is specified by <col> (column name or 0-based index).
+                           Variance-bounded, single-pass, no stats-cache required, mergeable
+                           via --sketch-out / --sketch-in. Records with non-positive or
+                           non-numeric weights are silently skipped.
+                           Uses MEMORY PROPORTIONAL to the sample size (k) - O(k).
+    --mergeable-reservoir  Use a mergeable Algorithm-R reservoir sampler. Distribution is
+                           identical to the default RESERVOIR method, but the resulting sketch
+                           is mergeable via --sketch-out / --sketch-in. Cannot be combined
+                           with another sampling-method flag.
     --cluster <col>        Use cluster sampling. The cluster column is specified by <col>.
                            Can be either a column name or 0-based column index.
                            Uses MEMORY PROPORTIONAL to the number of clusters (c) - O(c).
@@ -5906,6 +6264,18 @@ sample options:
     --ts-input-tz <tz>     Timezone for parsing input timestamps. Can be an IANA timezone name or "local" for the local timezone.
                            [default: UTC]
     --ts-prefer-dmy        Prefer to parse dates in dmy format. Otherwise, use mdy format.
+
+                           SKETCH OPTIONS:
+    --sketch-out <file>    After sampling, also write a binary sketch describing the internal
+                           sampler state to <file>. The blob can later be merged into another
+                           run via --sketch-in. Only valid with --varopt or --mergeable-reservoir.
+                           The format is qsv-specific and is not interoperable with serialized
+                           sketches from other tools.
+    --sketch-in <files>    Comma-separated list of sketch files produced by --sketch-out.
+                           CSV input is NOT read; the listed sketches (which must all be of
+                           the same sampler kind) are merged and the resulting sample is
+                           emitted as CSV. <sample-size> may be used to cap the merged sample
+                           below the sketches' own k.
 
                            REMOTE FILE OPTIONS:
     --user-agent <agent>   Specify custom user agent to use when the input is a URL.
@@ -7041,7 +7411,7 @@ Examples:
   # Use dollar-quoting to avoid escaping reserved characters in literals.
   https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-DOLLAR-QUOTING
   $ qsv sqlp data.csv "SELECT * FROM data WHERE col1 = $$O'Reilly$$"
-  $ qsv sqlp data.csv 'SELECT * FROM data WHERE col1 = $SomeTag$Diane's horse "Twinkle"$SomeTag$'
+  $ qsv sqlp data.csv 'SELECT * FROM data WHERE col1 = $SomeTag$Diane'\''s horse "Twinkle"$SomeTag$'
 
   # Unions and Joins are supported.
   $ qsv sqlp data1.csv data2.csv 'SELECT * FROM data1 UNION ALL BY NAME SELECT * FROM data2'
@@ -7056,6 +7426,15 @@ Examples:
   $ qsv sqlp data.csv data2.csv 'select * from _t_1 join _t_2 on _t_1.colname = _t_2.colname'
 
   $ qsv sqlp data.csv 'SELECT col1, count(*) AS cnt FROM data GROUP BY col1 ORDER BY cnt DESC, col1 ASC'
+
+  # FILTER clause on aggregates (SQL-standard) — apply a per-aggregate predicate without
+  # filtering the whole group. Useful for computing conditional sums/counts side by side
+  # with the unconditional aggregate in a single GROUP BY query.
+  # See https://github.com/pola-rs/polars/pull/27564.
+  $ qsv sqlp sales.csv "SELECT region, SUM(amount) AS total, \
+       SUM(amount) FILTER (WHERE amount > 100) AS total_over_100, \
+       COUNT(*) FILTER (WHERE status = 'refunded') AS refund_count \
+     FROM sales GROUP BY region ORDER BY region"
 
   $ qsv sqlp data.csv "select lower(col1), substr(col2, 2, 4) from data WHERE starts_with(col1, 'foo')"
 
@@ -7488,6 +7867,74 @@ stats options:
                               Special values "deciles" and "quintiles" are automatically expanded
                               to "10,20,30,40,50,60,70,80,90" and "20,40,60,80" respectively.
                               [default: 5,10,40,60,90,95]
+    --quantile-method <m>     Algorithm used to compute the median, quartiles and custom
+                              percentiles. Choices:
+                                exact  - load all values into memory and sort (current behavior).
+                                         O(N) memory per numeric column, exact deterministic
+                                         results.
+                                approx - use t-digest (Apache DataSketches port, based on
+                                         Dunning's MergingDigest). O(K) memory per numeric column
+                                         (K~200 centroids), O(1) quantile reads. Approximate
+                                         (~1% rank error, more accurate at the tails).
+                                         Restrictions:
+                                           * --mad is disabled with a warning under approx.
+                                           * --weight is rejected; the upstream datasketches
+                                             crate does not expose weighted-update.
+                                           * Results may differ slightly across runs with
+                                             different --jobs values.
+                                           * Requires a little-endian target. Apache
+                                             DataSketches does not support big-endian
+                                             platforms (e.g., s390x); on those builds,
+                                             this choice is rejected.
+                              [default: exact]
+    --cardinality-method <m>  Algorithm used to compute the --cardinality column. Choices:
+                                exact  - track every unique value in a HashMap/Unsorted
+                                         (current behavior). O(cardinality) memory per
+                                         column. Subject to --mode-cardinality-cap, which
+                                         emits the ">=<n>" sentinel on overflow.
+                                approx - use HyperLogLog (Apache DataSketches port,
+                                         lg_k=12). O(1) memory per column (~5KB),
+                                         ~1.5% relative standard error.
+                                         Notes:
+                                           * --mode-cardinality-cap no longer affects the
+                                             cardinality column under approx; the ">=<n>"
+                                             sentinel is never emitted.
+                                           * The cap STILL governs mode/antimode tracking
+                                             (mode columns still emit "*HIGH_CARDINALITY"
+                                             on overflow).
+                                           * --infer-boolean forces exact (boolean
+                                             inference needs cardinality == 2 exactness);
+                                             a one-time warning is emitted.
+                                           * Reproducible across --jobs values: the
+                                             HLL union used at merge time is associative
+                                             and order-invariant, so chunk completion
+                                             order does not affect the final estimate.
+                                           * Requires a little-endian target. Apache
+                                             DataSketches does not support big-endian
+                                             platforms (e.g., s390x); on those builds,
+                                             this choice is rejected.
+                              [default: exact]
+    --mode-cardinality-cap <n>  Bound mode-tracking memory on high-cardinality columns.
+                              When > 0, if a column's mode tracker grows past <n>, qsv
+                              drops it and emits sentinel values instead of exact modes
+                              and cardinality. The cap measures:
+                                * unweighted: total samples added (~ row count, since
+                                  every cell is pushed onto the underlying Vec).
+                                * weighted (--weight): number of unique values seen (the
+                                  HashMap's len(), == true cardinality).
+                              Both are direct memory bounds on their respective tracker.
+                              Sentinel output:
+                                * mode columns: "*HIGH_CARDINALITY"
+                                * cardinality column: ">=<n>" (the ">=" prefix DOES break
+                                  downstream parsers expecting a plain integer; cap is
+                                  opt-in only).
+                              Under --cardinality-method approx, the cardinality column
+                              ignores this cap (HLL gives an approximate estimate at
+                              fixed memory, ~1.5% RSE) — only mode/antimode columns
+                              are gated.
+                              Useful on wide tables with many ID/UUID/timestamp columns
+                              where tracking exact cardinality is wasted work.
+                              [default: 0]
 
     --round <decimal_places>  Round statistics to <decimal_places>. Rounding is done following
                               Midpoint Nearest Even (aka "Bankers Rounding") rule.
@@ -7579,10 +8026,171 @@ Common options:
                            in statistics.
     -d, --delimiter <arg>  The field delimiter for READING CSV data.
                            Must be a single character. (default: ,)
-    --memcheck             Check if there is enough memory to load the entire
-                           CSV into memory using CONSERVATIVE heuristics.
-                           This option is ignored when computing default, streaming
-                           statistics, as it is not needed.
+    --memcheck             Use CONSERVATIVE heuristics for the in-memory load
+                           check (file size vs. available + free_swap × platform
+                           factor − headroom), instead of the default NORMAL
+                           check (file size vs. total memory − headroom). The
+                           CONSERVATIVE check is stricter and trips OOM far
+                           more readily. Ignored when computing default,
+                           streaming statistics. (See also: QSV_MEMORY_CHECK
+                           env var, equivalent to passing --memcheck.)
+                           Independently of this flag, the in-memory load
+                           check runs whenever stats takes the non-parallel
+                           path with non-streaming columns. On OOM (in either
+                           NORMAL or CONSERVATIVE mode), qsv auto-creates an
+                           index when no index exists (skipped for stdin) AND
+                           switches to approx quantile + approx cardinality
+                           methods (DataSketches t-digest and HyperLogLog)
+                           where compatible. The sketch fallback can also
+                           fire when an index is already present and the OOM
+                           still trips (e.g., when jobs is pinned to 1 on a
+                           pre-indexed file). A wwarn is emitted listing the
+                           auto-enabled estimators.
+```
+## qsv synthesize
+
+```text
+Generates a synthetic CSV that is statistically faithful to a source CSV.
+
+`synthesize` analyzes <input> with `stats` and `frequency`, then emits N rows of
+fake data that reproduce the source's per-column attributes:
+
+  * Categorical / low-cardinality columns are reproduced by frequency-weighted
+    sampling of their *real* value set — cardinality, weights and repetition
+    structure are preserved exactly.
+  * Numeric and date/datetime columns are reproduced with quartile buckets, so
+    the shape of the distribution (not just its [min,max] range) is preserved.
+  * Null ratios are reproduced per column.
+
+When a Data Dictionary is supplied (via --dictionary, or generated on the fly
+with --infer-content-type), each column's semantic Content Type picks a
+realistic faker (names, emails, addresses, UUIDs, etc.) for columns that are
+NOT fully enumerated by `frequency`. For bounded-cardinality faker columns
+(cardinality < requested rows and below an internal cap of 100,000), a fixed
+pool of distinct fake values is pre-generated and sampled from, so the column's
+cardinality is preserved. For very high cardinality columns above this cap, a
+fresh fake value is generated per row instead — distinct count is approximate
+in that case.
+
+When `stats` provides string-length statistics (min_length / max_length /
+avg_length / stddev_length) AND the column is routed to an unstructured text
+generator (lorem_*, free_text, or the no-faker fallback), synthesized values
+are truncated so their character lengths follow Normal(avg_length,
+stddev_length) clamped to [min_length, max_length]. This applies to unstructured
+pooled values as well — a low-cardinality free-text column still gets its
+generated pool entries truncated. Structured semantic fakers (email, name,
+uuid, phone, address parts, etc.) ignore these stats — truncating them would
+corrupt their format, so their pools are reproduced verbatim. Frequency-
+enumerated values are always reproduced verbatim and are never truncated.
+
+When the Data Dictionary declares `relationships`, the named columns are
+generated *jointly* so inter-column structure survives into each output row:
+
+  * joint      — categorical / functional-dependency groups (e.g.
+                 city/state/zip). Whole value-tuples are sampled from the
+                 source by frequency, so only real co-occurring combinations
+                 are emitted.
+  * ordered    — columns that must keep a monotonic order within a row (e.g.
+                 created_date <= closed_date). The anchor column is generated
+                 from its own distribution; each later column is the anchor
+                 plus a non-negative gap drawn from the gap distribution
+                 learned from the source.
+  * correlated — numeric columns whose correlation should be preserved. A
+                 Gaussian copula couples the columns while leaving each
+                 column's own distribution unchanged.
+
+Relationships are read from the dictionary's `relationships` array — inferred
+by `describegpt` or hand-authored. Columns not named by any relationship are
+still generated independently. Pass --no-relationships to disable relationship
+modeling entirely.
+
+With --seed, output is fully reproducible.
+
+Examples:
+
+  # Pure statistical synthesis — no dictionary needed
+  $ qsv synthesize data.csv -n 1000 --seed 42 > synthetic.csv
+
+  # First, generate the Data Dictionary with describegpt
+  $ qsv describegpt data.csv --dictionary --infer-content-type --format JSON -o dict.json
+  # Then layer in semantic fakers from the dictionary
+  $ qsv synthesize data.csv --dictionary dict.json -n 1000 > synthetic.csv
+
+  # Let synthesize build the dictionary itself (needs an LLM API key)
+  $ qsv synthesize data.csv --infer-content-type -n 1000 > synthetic.csv
+
+  # Preserve inter-column relationships declared in the dictionary
+  # (e.g. city/state/zip, created_date <= closed_date)
+  $ qsv synthesize data.csv --dictionary dict.json -n 1000 > synthetic.csv
+
+For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_synthesize.rs.
+
+Usage:
+    qsv synthesize [options] <input>
+    qsv synthesize --help
+
+synthesize options:
+    --dictionary <file>    Data Dictionary JSON file produced by
+                           `describegpt --dictionary --infer-content-type --format JSON`.
+                           Layers semantic Content Types onto generation. If
+                           omitted, generation is purely type/frequency-based.
+    --infer-content-type   Generate the Data Dictionary on the fly by invoking
+                           `describegpt --dictionary --infer-content-type` on
+                           <input>. Requires an LLM API key (QSV_LLM_APIKEY).
+                           Ignored if --dictionary is given.
+    -n, --rows <n>         Number of synthetic rows to generate. [default: 100]
+    --seed <n>             RNG seed for fully reproducible output.
+    --locale <loc>         Locale for faker-backed columns. Case-insensitive.
+                           Supported: en, fr_fr, de_de, it_it, pt_br, pt_pt,
+                           ja_jp, zh_cn, zh_tw, ar_sa, cy_gb, fa_ir, nl_nl,
+                           tr_tr. Sparse locales (those without per-category
+                           data in fake-rs) silently fall back to en data for
+                           the missing categories — e.g. lorem text under a
+                           non-en locale is still English, since only zh_cn
+                           has localized lorem data. [default: en]
+    --freq-limit <n>       Frequency pool depth passed to the internal `frequency`
+                           run as --limit. A column is reproduced via exact
+                           frequency-weighted sampling only when its cardinality
+                           is fully captured within this limit; higher values
+                           reproduce more columns verbatim. 0 means unlimited.
+                           [default: 100]
+    --stats-options <arg>  Extra options appended to the internal `stats` run.
+                           Note: cardinality, quartiles and date inference are
+                           always enabled — do not re-specify them here.
+    --consistent-fakes     For structured-faker columns with bounded cardinality
+                           (cardinality fully captured by `frequency`), build a
+                           stable source-value -> fake-value mapping so the same
+                           source value always produces the same fake in the
+                           output. Preserves the source frequency distribution
+                           and overrides the default "emit real values when
+                           frequency-enumerated" behavior for structured fakers
+                           (names, emails, addresses, etc.). Has no effect on
+                           unstructured columns (lorem_*, free_text, unknown),
+                           all-unique columns, or non-faker columns. Useful for
+                           deidentified synthesis where you want stable joins
+                           on the faked columns.
+    --no-relationships     Disable inter-column relationship modeling. Every
+                           column is generated independently even when the
+                           dictionary declares a `relationships` array.
+    --joint-cardinality-cap <n>  Maximum number of distinct value-tuples a
+                           `joint` relationship may have. A joint group above
+                           this cap falls back to independent generation (or
+                           aborts under --strict-relationships). 0 means
+                           unlimited. [default: 100000]
+    --correlation-threshold <f>  Minimum absolute Spearman correlation for a
+                           pair of columns to stay in a `correlated`
+                           relationship. Weakly-correlated members are dropped.
+                           [default: 0.3]
+    --strict-relationships  Abort instead of warning-and-degrading when a
+                           declared relationship fails validation.
+    -j, --jobs <arg>       Number of jobs to use for the internal `stats` and
+                           `frequency` runs.
+
+Common options:
+    -h, --help             Display this message
+    -o, --output <file>    Write output to <file> instead of stdout.
+    -d, --delimiter <arg>  The field delimiter for reading the input CSV.
+                           Must be a single character. (default: ,)
 ```
 ## qsv table
 
@@ -7613,12 +8221,12 @@ table options:
     -p, --pad <arg>        The minimum number of spaces between each column.
                            [default: 2]
     -a, --align <arg>      How entries should be aligned in a column.
-                           Options: "left", "right", "center". "leftendtab" & "leftfwf"
+                           Options: "left", "right", "center", "leftendtab", "leftfwf".
                            "leftendtab" is a special alignment that similar to "left"
                            but with whitespace padding ending with a tab character.
                            The resulting output still validates as a valid TSV file,
                            while also being more human-readable (aka "aligned" TSV).
-                           "leftfwf" is similar to "left" with Fixed Width Format allgnment.
+                           "leftfwf" is similar to "left" with Fixed Width Format alignment.
                            The first line is a comment (prefixed with "#") that enumerates
                            the position (1-based, comma-separated) of each column.
                            [default: left]

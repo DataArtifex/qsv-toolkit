@@ -1,6 +1,6 @@
 # qsv pro
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Interact with qsv pro API. Learn more about qsv pro at: https://qsvpro.dathere.com.

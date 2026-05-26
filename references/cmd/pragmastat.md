@@ -1,6 +1,6 @@
 # qsv pragmastat
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Pragmatic statistical toolkit.
@@ -56,6 +56,9 @@ TWO-SAMPLE OUTPUT (--twosample, per unordered column pair)
 When values are blank
   * Column has no numeric data (n=0).
   * Positivity required: ratio, ratio_* need all values > 0.
+  * Date/DateTime pairs: ratio is suppressed for --twosample and --compare2
+    because it depends on the arbitrary 1970 epoch origin and isn't meaningful
+    for dates. shift, disparity, and their bounds remain populated.
   * Sparity required: spread/spread_*/disparity/disparity_* need real variability (not tie-dominant).
   * Bounds require enough data for requested misrate; try higher misrate or more data.
 
@@ -126,7 +129,7 @@ Examples:
   qsv pragmastat --standalone --subsample 10000 --no-bounds data.csv
 
 Full Pragmastat manual:
-  https://github.com/AndreyAkinshin/pragmastat/releases/download/v12.0.0/pragmastat-v12.0.0.pdf
+  https://github.com/AndreyAkinshin/pragmastat/releases/download/v12.1.0/pragmastat-v12.1.0.pdf
   https://pragmastat.dev/ (latest version)
 
 Usage:

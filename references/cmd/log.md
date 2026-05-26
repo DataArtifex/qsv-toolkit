@@ -1,6 +1,6 @@
 # qsv log
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Logs an MCP tool invocation entry to qsvmcp.log. Only intended for internal use by the

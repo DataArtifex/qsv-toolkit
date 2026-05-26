@@ -1,6 +1,6 @@
 # qsv count
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Returns a count of the number of records in the CSV data.

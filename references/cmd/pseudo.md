@@ -1,6 +1,6 @@
 # qsv pseudo
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Pseudonymise the value of a given column by replacing it with an

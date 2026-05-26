@@ -1,6 +1,6 @@
 # qsv pivotp
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Pivots or groups CSV data using the Polars engine.
@@ -56,6 +56,9 @@ pivotp options:
                               max - Maximum value
                               mean - Average value
                               median - Median value
+                              quantile@<p> - Quantile at probability p in [0, 1] using linear interpolation.
+                                             Alias: q@<p>. Examples: quantile@0.95, q@0.5
+                                             (q@0.5 is equivalent to median for even-length groups).
                               len - Count of values
                               item - Get single value from group. Raises error if there are multiple values.
                               smart - use value column data type & statistics to pick an aggregation.

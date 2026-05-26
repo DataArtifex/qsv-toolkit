@@ -1,6 +1,6 @@
 # qsv sort
 
-<small>v19.1.0</small>
+<small>v20.1.0</small>
 
 ```text
 Sorts CSV data in lexicographical, natural, numerical, reverse, unique or random order.
