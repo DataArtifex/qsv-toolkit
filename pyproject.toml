@@ -22,7 +22,7 @@ classifiers = [
 dependencies = ["pydantic >= 2.10.0", "typer"]
 
 [project.scripts]
-dartfx-qsv = "dartfx.qsc.cli:app"
+dartfx-qsv = "dartfx.qsv.cli:app"
 
 [project.urls]
 Documentation = "https://github.com/DataArtifex/qsv-toolkit#readme"

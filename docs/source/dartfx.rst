@@ -7,7 +7,6 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   dartfx.qsc
    dartfx.qsv
 
 Module contents

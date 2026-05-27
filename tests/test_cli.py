@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 import pytest
 from typer.testing import CliRunner
 
-from dartfx.qsc.cli import app
+from dartfx.qsv.cli import app
 
 runner = CliRunner()
 

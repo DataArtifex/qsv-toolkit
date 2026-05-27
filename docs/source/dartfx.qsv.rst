@@ -4,6 +4,14 @@ dartfx.qsv package
 Submodules
 ----------
 
+dartfx.qsv.cli module
+---------------------
+
+.. automodule:: dartfx.qsv.cli
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 dartfx.qsv.cmd module
 ---------------------
 
