@@ -127,6 +127,56 @@ xml_string = generate_ddi_codebook(
 )
 ```
 
+### 🗄️ SQL Script Generation (CLI & API)
+
+The toolkit features a SQL script generation utility that translates a CSV file's inferred schema (using `qsv schema` and optional stats/frequency data) into a DDL script to create and load a database table.
+
+#### CLI Usage
+
+Use the `tosql` command to generate the SQL script:
+
+```bash
+# Generate Postgres SQL script to stdout
+dartfx-qsv tosql path/to/data.csv
+
+# Save SQLite SQL script to a file
+dartfx-qsv tosql path/to/data.csv -f sqlite -o schema.sql
+
+# Generate MySQL SQL script for a custom table name and database schema
+dartfx-qsv tosql path/to/data.csv -f mysql -t my_custom_table -s my_db_schema
+
+# Generate script with single or composite primary keys (case-insensitive)
+dartfx-qsv tosql path/to/data.csv -pk id,name
+```
+
+**Available Options for `tosql`:**
+
+* `CSV_PATH` (Required argument): Path to the source CSV file.
+* `-o, --output PATH`: Path to write the generated SQL script. Defaults to stdout.
+* `-f, --flavor TEXT`: Target database flavor (`postgres`, `sqlite`, `mysql`, `mssql`, `oracle`, `clickhouse`, `duckdb`). Defaults to `postgres`.
+* `-t, --table TEXT`: Custom table name. Defaults to `tbl_<csv-filename>`.
+* `-s, --schema TEXT`: Optional database schema name (postgres/mysql only).
+* `-pk, --primary-key TEXT`: Primary key column name(s). For composite keys, use comma-separated names.
+* `--stats-data PATH`: Path to pre-computed stats data file (JSON, JSONL, or CSV).
+* `--schema-data PATH`: Path to pre-computed schema data file (JSON).
+* `--frequency-data PATH`: Path to pre-computed frequency data file (JSON).
+
+#### Python API Usage
+
+You can also generate the SQL script programmatically in Python:
+
+```python
+from dartfx.qsv import generate_sql
+
+# Generate Postgres DDL and copy commands as a string with a primary key
+sql_script = generate_sql(
+    csv_path="data.csv",
+    flavor="postgres",
+    table_name="my_table",
+    primary_key=["id", "name"]
+)
+```
+
 ## 🛠 Supported Commands
 
 The toolkit currently wraps over 30 QSV commands, providing access to a wide range of data wrangling operations:

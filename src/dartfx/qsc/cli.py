@@ -4,7 +4,7 @@ from pathlib import Path
 
 import typer
 
-from dartfx.qsv.utils import generate_ddi_codebook
+from dartfx.qsv.utils import generate_ddi_codebook, generate_sql
 
 app = typer.Typer(help="Dartfx CLI for QSV tools.")
 
@@ -109,6 +109,100 @@ def toddic(
             typer.echo(xml_content)
     except Exception as e:
         typer.echo(f"Error generating DDI codebook: {e}", err=True)
+        raise typer.Exit(code=1) from e
+
+
+@app.command()
+def tosql(
+    csv_path: Path = typer.Argument(
+        ...,
+        help="Path to the source CSV file.",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+    ),
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Path to write the generated SQL script. If not specified, outputs to stdout.",
+        writable=True,
+    ),
+    flavor: str = typer.Option(
+        "postgres",
+        "--flavor",
+        "-f",
+        help=(
+            "Database flavor ('postgres', 'sqlite', 'mysql', 'mssql', 'oracle', "
+            "'clickhouse', 'duckdb', 'snowflake', 'bigquery', 'redshift', 'mariadb')."
+        ),
+    ),
+    table: str | None = typer.Option(
+        None,
+        "--table",
+        "-t",
+        help="Custom table name. Defaults to 'tbl_<csv-filename>'.",
+    ),
+    schema: str | None = typer.Option(
+        None,
+        "--schema",
+        "-s",
+        help="Optional database schema (postgres/mysql only).",
+    ),
+    schema_data: Path | None = typer.Option(
+        None,
+        "--schema-data",
+        help="Path to pre-computed schema data file (JSON).",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+    ),
+    stats_data: Path | None = typer.Option(
+        None,
+        "--stats-data",
+        help="Path to pre-computed stats data file (JSON, JSONL, or CSV).",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+    ),
+    frequency_data: Path | None = typer.Option(
+        None,
+        "--frequency-data",
+        help="Path to pre-computed frequency data file (JSON).",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+    ),
+    primary_key: str | None = typer.Option(
+        None,
+        "--primary-key",
+        "-pk",
+        help="Primary key column name(s). For composite keys, use comma-separated names.",
+    ),
+) -> None:
+    """
+    Generate a SQL script to host a CSV file using QSV schema output.
+    """
+    try:
+        sql_content = generate_sql(
+            csv_path=csv_path,
+            schema_data=schema_data,
+            stats_data=stats_data,
+            frequency_data=frequency_data,
+            flavor=flavor,
+            table_name=table,
+            schema_name=schema,
+            output_sql_path=output,
+            primary_key=primary_key,
+        )
+        if not output:
+            typer.echo(sql_content)
+    except Exception as e:
+        typer.echo(f"Error generating SQL script: {e}", err=True)
         raise typer.Exit(code=1) from e
 
 

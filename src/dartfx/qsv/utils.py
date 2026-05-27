@@ -421,3 +421,470 @@ def generate_ddi_codebook(
             f.write(xml_str)
 
     return xml_str
+
+
+def generate_sql(
+    csv_path: str | os.PathLike[str],
+    schema_data: dict[str, Any] | str | os.PathLike[str] | None = None,
+    stats_data: list[dict[str, Any]] | list[QsvStatsDataModel] | str | os.PathLike[str] | None = None,
+    frequency_data: dict[str, Any] | str | os.PathLike[str] | None = None,
+    flavor: str = "postgres",
+    table_name: str | None = None,
+    schema_name: str | None = None,
+    output_sql_path: str | os.PathLike[str] | None = None,
+    primary_key: list[str] | str | None = None,
+) -> str:
+    """
+    Generates a SQL script to host/load a CSV file, based on the output of
+    qsv schema, and optional stats and frequency data.
+
+    Args:
+        csv_path: Path to the source CSV file. Used for defaulting table name and path in comments.
+        schema_data: Pre-computed schema data (dict, file path, or JSON string).
+        stats_data: Pre-computed stats data (list of dicts, list of Pydantic models, file path, or string).
+        frequency_data: Pre-computed frequency data (dict, file path, or JSON string).
+        flavor: SQL flavor ("postgres", "sqlite", "mysql", "mssql", "oracle", "clickhouse",
+            "duckdb", "snowflake", "bigquery", "redshift", "mariadb"). Default is "postgres".
+        table_name: Custom table name. If not specified, defaults to "tbl_<csv-filename>".
+        schema_name: Optional database schema name (postgres/mysql/mariadb/bigquery only).
+        output_sql_path: Optional path to write the generated SQL script.
+
+    Returns:
+        str: The generated SQL script.
+    """
+    flavor_lower = flavor.lower()
+    if flavor_lower == "postgresql":
+        flavor_lower = "postgres"
+
+    supported_flavors = (
+        "postgres",
+        "sqlite",
+        "mysql",
+        "mssql",
+        "oracle",
+        "clickhouse",
+        "duckdb",
+        "snowflake",
+        "bigquery",
+        "redshift",
+        "mariadb",
+    )
+    if flavor_lower not in supported_flavors:
+        raise ValueError(f"Unsupported flavor '{flavor}'. Supported: {', '.join(supported_flavors)}.")
+
+    # 1. Resolve JSON Schema (reuse existing internal methods)
+    if schema_data is None:
+        from dartfx.qsv.cmd import Schema
+
+        schema_json = Schema(stdout=True).run(str(csv_path))
+        parsed_schema = _load_json_data(schema_json)
+    else:
+        parsed_schema = _load_json_data(schema_data)
+
+    # 2. Resolve Stats Data (optional but resolved if None and csv_path exists)
+    parsed_stats = None
+    if stats_data is None:
+        if csv_path:
+            try:
+                from dartfx.qsv.cmd import Stats
+
+                stats_csv = Stats(infer_dates=True, infer_boolean=True).run(str(csv_path))
+                parsed_stats = _load_stats_data(stats_csv)
+            except Exception:
+                # Fallback to no stats if running stats fails
+                pass
+    else:
+        parsed_stats = _load_stats_data(stats_data)
+
+    # 3. Resolve Frequency Data (optional)
+    if frequency_data is not None:
+        _load_json_data(frequency_data)
+
+    # 4. Resolve table name
+    if not table_name:
+        base = os.path.splitext(os.path.basename(csv_path))[0]
+        import re
+
+        sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", base)
+        table_name = f"tbl_{sanitized}"
+
+    # 5. Resolve quoting rules
+    if flavor_lower in ("mysql", "mariadb", "bigquery"):
+        quote_char = "`"
+    else:
+        quote_char = '"'
+
+    def quote(identifier: str) -> str:
+        if flavor_lower == "mssql":
+            escaped = identifier.replace("]", "]]")
+            return f"[{escaped}]"
+        else:
+            escaped = identifier.replace(quote_char, quote_char + quote_char)
+            return f"{quote_char}{escaped}{quote_char}"
+
+    quoted_table = quote(table_name)
+    if schema_name:
+        quoted_table = f"{quote(schema_name)}.{quoted_table}"
+
+    # Helpers
+    stats_dict = {row["field"]: row for row in parsed_stats} if parsed_stats else {}
+    properties = parsed_schema.get("properties", {})
+
+    # Resolve and validate primary key fields (case-insensitive)
+    resolved_pk_fields = []
+    if primary_key:
+        pk_fields = []
+        if isinstance(primary_key, str):
+            pk_fields = [pk_item.strip() for pk_item in primary_key.split(",") if pk_item.strip()]
+        elif isinstance(primary_key, (list, tuple)):
+            for pk_item in primary_key:
+                if isinstance(pk_item, str) and pk_item.strip():
+                    pk_fields.append(pk_item.strip())
+
+        actual_fields = list(properties.keys())
+        field_name_map = {f.lower(): f for f in actual_fields}
+
+        for pk in pk_fields:
+            pk_lower = pk.lower()
+            if pk_lower not in field_name_map:
+                raise ValueError(
+                    f"Primary key field '{pk}' does not exist in the CSV schema (columns: {', '.join(actual_fields)})."
+                )
+            resolved_pk_fields.append(field_name_map[pk_lower])
+
+    # Helper function to map integer types
+    def get_integer_type(minimum, maximum, flv):
+        if minimum is not None and maximum is not None:
+            try:
+                min_val = int(minimum)
+                max_val = int(maximum)
+                if min_val < -2147483648 or max_val > 2147483647:
+                    return "BIGINT"
+                elif min_val >= -32768 and max_val <= 32767:
+                    return "SMALLINT"
+            except (ValueError, TypeError):
+                pass
+        return "INT" if flv == "mysql" else "INTEGER"
+
+    # Helper function to map ClickHouse integer types
+    def get_clickhouse_integer_type(minimum, maximum):
+        if minimum is not None and maximum is not None:
+            try:
+                min_val = int(minimum)
+                max_val = int(maximum)
+                if min_val >= 0:
+                    if max_val <= 255:
+                        return "UInt8"
+                    elif max_val <= 65535:
+                        return "UInt16"
+                    elif max_val <= 4294967295:
+                        return "UInt32"
+                    else:
+                        return "UInt64"
+                else:
+                    if min_val >= -128 and max_val <= 127:
+                        return "Int8"
+                    elif min_val >= -32768 and max_val <= 32767:
+                        return "Int16"
+                    elif min_val >= -2147483648 and max_val <= 2147483647:
+                        return "Int32"
+                    else:
+                        return "Int64"
+            except (ValueError, TypeError):
+                pass
+        return "Int32"
+
+    # 6. Map columns
+    columns_defs = []
+    for col, prop in properties.items():
+        # Get types
+        json_types = prop.get("type", [])
+        if isinstance(json_types, str):
+            json_types = [json_types]
+        primary_types = [t for t in json_types if t != "null"]
+        primary_type = primary_types[0] if primary_types else "string"
+
+        stats_row = stats_dict.get(col, {})
+        stats_type = stats_row.get("type")  # e.g., "Integer", "Float", "String", "Date", "DateTime", "Boolean"
+        stats_type_str = str(stats_type).lower() if stats_type else ""
+
+        col_type = "TEXT"  # fallback
+
+        # Resolve min/max from stats or schema
+        minimum = None
+        maximum = None
+        if stats_row:
+            minimum = stats_row.get("min")
+            maximum = stats_row.get("max")
+        if minimum is None:
+            minimum = prop.get("minimum")
+        if maximum is None:
+            maximum = prop.get("maximum")
+
+        is_date = "date" in stats_type_str or prop.get("format") == "date"
+        is_datetime = "datetime" in stats_type_str or prop.get("format") == "date-time"
+
+        if flavor_lower == "postgres":
+            if is_date:
+                col_type = "DATE"
+            elif is_datetime:
+                col_type = "TIMESTAMP"
+            elif primary_type == "integer" or stats_type_str == "integer":
+                col_type = get_integer_type(minimum, maximum, "postgres")
+            elif primary_type == "number" or stats_type_str in ("float", "number"):
+                col_type = "DOUBLE PRECISION"
+            elif primary_type == "boolean" or stats_type_str == "boolean":
+                col_type = "BOOLEAN"
+            else:
+                max_len = prop.get("maxLength")
+                col_type = f"VARCHAR({max_len})" if max_len else "TEXT"
+
+        elif flavor_lower == "sqlite":
+            if primary_type == "integer" or stats_type_str == "integer":
+                col_type = "INTEGER"
+            elif primary_type == "number" or stats_type_str in ("float", "number"):
+                col_type = "REAL"
+            elif primary_type == "boolean" or stats_type_str == "boolean":
+                col_type = "INTEGER"
+            else:
+                col_type = "TEXT"
+
+        elif flavor_lower == "mysql":
+            if is_date:
+                col_type = "DATE"
+            elif is_datetime:
+                col_type = "DATETIME"
+            elif primary_type == "integer" or stats_type_str == "integer":
+                col_type = get_integer_type(minimum, maximum, "mysql")
+            elif primary_type == "number" or stats_type_str in ("float", "number"):
+                col_type = "DOUBLE"
+            elif primary_type == "boolean" or stats_type_str == "boolean":
+                col_type = "BOOLEAN"
+            else:
+                max_len = prop.get("maxLength")
+                col_type = f"VARCHAR({max_len})" if max_len else "TEXT"
+
+        elif flavor_lower == "mssql":
+            if is_date:
+                col_type = "DATE"
+            elif is_datetime:
+                col_type = "DATETIME2"
+            elif primary_type == "integer" or stats_type_str == "integer":
+                col_type = get_integer_type(minimum, maximum, "mssql")
+            elif primary_type == "number" or stats_type_str in ("float", "number"):
+                col_type = "FLOAT"
+            elif primary_type == "boolean" or stats_type_str == "boolean":
+                col_type = "BIT"
+            else:
+                max_len = prop.get("maxLength")
+                col_type = f"VARCHAR({max_len})" if max_len else "VARCHAR(MAX)"
+
+        elif flavor_lower == "oracle":
+            if is_date:
+                col_type = "DATE"
+            elif is_datetime:
+                col_type = "TIMESTAMP"
+            elif primary_type == "integer" or stats_type_str == "integer":
+                col_type = "INTEGER"
+            elif primary_type == "number" or stats_type_str in ("float", "number"):
+                col_type = "DOUBLE PRECISION"
+            elif primary_type == "boolean" or stats_type_str == "boolean":
+                col_type = "NUMBER(1)"
+            else:
+                max_len = prop.get("maxLength")
+                col_type = f"VARCHAR2({max_len})" if max_len else "VARCHAR2(4000)"
+
+        elif flavor_lower == "clickhouse":
+            if is_date:
+                col_type = "Date"
+            elif is_datetime:
+                col_type = "DateTime"
+            elif primary_type == "integer" or stats_type_str == "integer":
+                col_type = get_clickhouse_integer_type(minimum, maximum)
+            elif primary_type == "number" or stats_type_str in ("float", "number"):
+                col_type = "Float64"
+            elif primary_type == "boolean" or stats_type_str == "boolean":
+                col_type = "Bool"
+            else:
+                col_type = "String"
+
+        elif flavor_lower == "duckdb":
+            if is_date:
+                col_type = "DATE"
+            elif is_datetime:
+                col_type = "TIMESTAMP"
+            elif primary_type == "integer" or stats_type_str == "integer":
+                col_type = get_integer_type(minimum, maximum, "duckdb")
+            elif primary_type == "number" or stats_type_str in ("float", "number"):
+                col_type = "DOUBLE"
+            elif primary_type == "boolean" or stats_type_str == "boolean":
+                col_type = "BOOLEAN"
+            else:
+                col_type = "VARCHAR"
+
+        elif flavor_lower == "snowflake":
+            if is_date:
+                col_type = "DATE"
+            elif is_datetime:
+                col_type = "TIMESTAMP_NTZ"
+            elif primary_type == "integer" or stats_type_str == "integer":
+                col_type = get_integer_type(minimum, maximum, "snowflake")
+            elif primary_type == "number" or stats_type_str in ("float", "number"):
+                col_type = "DOUBLE"
+            elif primary_type == "boolean" or stats_type_str == "boolean":
+                col_type = "BOOLEAN"
+            else:
+                max_len = prop.get("maxLength")
+                col_type = f"VARCHAR({max_len})" if max_len else "VARCHAR"
+
+        elif flavor_lower == "bigquery":
+            if is_date:
+                col_type = "DATE"
+            elif is_datetime:
+                col_type = "DATETIME"
+            elif primary_type == "integer" or stats_type_str == "integer":
+                col_type = "INT64"
+            elif primary_type == "number" or stats_type_str in ("float", "number"):
+                col_type = "FLOAT64"
+            elif primary_type == "boolean" or stats_type_str == "boolean":
+                col_type = "BOOL"
+            else:
+                col_type = "STRING"
+
+        elif flavor_lower == "redshift":
+            if is_date:
+                col_type = "DATE"
+            elif is_datetime:
+                col_type = "TIMESTAMP"
+            elif primary_type == "integer" or stats_type_str == "integer":
+                col_type = get_integer_type(minimum, maximum, "redshift")
+            elif primary_type == "number" or stats_type_str in ("float", "number"):
+                col_type = "DOUBLE PRECISION"
+            elif primary_type == "boolean" or stats_type_str == "boolean":
+                col_type = "BOOLEAN"
+            else:
+                max_len = prop.get("maxLength")
+                col_type = f"VARCHAR({max_len})" if max_len else "VARCHAR(256)"
+
+        elif flavor_lower == "mariadb":
+            if is_date:
+                col_type = "DATE"
+            elif is_datetime:
+                col_type = "DATETIME"
+            elif primary_type == "integer" or stats_type_str == "integer":
+                col_type = get_integer_type(minimum, maximum, "mariadb")
+            elif primary_type == "number" or stats_type_str in ("float", "number"):
+                col_type = "DOUBLE"
+            elif primary_type == "boolean" or stats_type_str == "boolean":
+                col_type = "BOOLEAN"
+            else:
+                max_len = prop.get("maxLength")
+                col_type = f"VARCHAR({max_len})" if max_len else "TEXT"
+
+        columns_defs.append(f"    {quote(col)} {col_type}")
+
+    if resolved_pk_fields:
+        quoted_pks = [quote(f) for f in resolved_pk_fields]
+        columns_defs.append(f"    PRIMARY KEY ({', '.join(quoted_pks)})")
+
+    try:
+        from dartfx.qsv.__about__ import __version__ as toolkit_version
+    except ImportError:
+        toolkit_version = "unknown"
+
+    # Build CREATE TABLE
+    sql_script = [
+        f"-- Generated by dartfx-qsv tosql {toolkit_version}",
+        f"-- Table: {quoted_table}",
+        f"-- Flavor: {flavor}",
+        f"-- Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        "",
+        f"CREATE TABLE {quoted_table} (",
+        ",\n".join(columns_defs),
+        ");",
+        "",
+    ]
+
+    # Generate load instructions in comments
+    csv_filename = os.path.basename(csv_path)
+    escaped_csv_filename = str(csv_filename).replace("'", "''")
+
+    quoted_cols = [quote(col) for col in properties.keys()]
+    cols_str = ", ".join(quoted_cols)
+
+    if flavor_lower == "postgres":
+        sql_script.append("/*")
+        sql_script.append("To load the CSV data into this table:")
+        sql_script.append(
+            f"COPY {quoted_table} FROM '{escaped_csv_filename}' WITH (FORMAT csv, HEADER true, DELIMITER ',');"
+        )
+        sql_script.append("OR (if the file is local to your client and not on the database server):")
+        sql_script.append(
+            f"\\copy {quoted_table} FROM '{escaped_csv_filename}' WITH (FORMAT csv, HEADER true, DELIMITER ',');"
+        )
+        sql_script.append("*/")
+    else:
+        sql_script.append("-- To load the CSV data into this table:")
+        if flavor_lower == "sqlite":
+            sql_script.append(f"-- .import '{escaped_csv_filename}' {quoted_table} --csv")
+        elif flavor_lower == "mysql":
+            sql_script.append(
+                f"-- LOAD DATA INFILE '{escaped_csv_filename}' INTO TABLE {quoted_table} "
+                f"FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\\n' IGNORE 1 ROWS;"
+            )
+        elif flavor_lower == "mssql":
+            sql_script.append(
+                f"-- BULK INSERT {quoted_table} FROM '{escaped_csv_filename}' "
+                f"WITH (FORMAT = 'CSV', FIRSTROW = 2, FIELDTERMINATOR = ',', ROWTERMINATOR = '\\n');"
+            )
+        elif flavor_lower == "oracle":
+            control_file_lines = [
+                "-- SQL*Loader Control File Syntax:",
+                "-- LOAD DATA",
+                f"-- INFILE '{escaped_csv_filename}'",
+                f"-- INTO TABLE {quoted_table}",
+                "-- FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"'",
+                f"-- ({cols_str})",
+            ]
+            sql_script.extend(control_file_lines)
+        elif flavor_lower == "clickhouse":
+            sql_script.append(
+                f"-- clickhouse-client --query='INSERT INTO {quoted_table} "
+                f"FORMAT CSVWithNames' < '{escaped_csv_filename}'"
+            )
+        elif flavor_lower == "duckdb":
+            sql_script.append(
+                f"-- COPY {quoted_table} FROM '{escaped_csv_filename}' (FORMAT CSV, HEADER TRUE, DELIMITER ',');"
+            )
+            sql_script.append(
+                f"-- OR: INSERT INTO {quoted_table} SELECT * FROM read_csv_auto('{escaped_csv_filename}');"
+            )
+        elif flavor_lower == "snowflake":
+            sql_script.append(f"-- PUT file://{escaped_csv_filename} @%{quoted_table};")
+            sql_script.append(
+                f"-- COPY INTO {quoted_table} FROM @%{quoted_table} "
+                "FILE_FORMAT = (TYPE = CSV, SKIP_HEADER = 1, FIELD_OPTIONALLY_ENCLOSED_BY = '\"');"
+            )
+        elif flavor_lower == "bigquery":
+            sql_script.append(
+                f"-- bq load --source_format=CSV --skip_leading_rows=1 my_dataset.{table_name} '{escaped_csv_filename}'"
+            )
+        elif flavor_lower == "redshift":
+            sql_script.append(
+                f"-- COPY {quoted_table} FROM 's3://my-bucket/{escaped_csv_filename}' "
+                f"IAM_ROLE 'arn:aws:iam::123456789012:role/MyRedshiftRole' "
+                f"FORMAT AS CSV DELIMITER ',' IGNOREHEADER 1;"
+            )
+        elif flavor_lower == "mariadb":
+            sql_script.append(
+                f"-- LOAD DATA INFILE '{escaped_csv_filename}' INTO TABLE {quoted_table} "
+                f"FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\\n' IGNORE 1 ROWS;"
+            )
+
+    full_sql = "\n".join(sql_script) + "\n"
+
+    if output_sql_path:
+        with open(output_sql_path, "w", encoding="utf-8") as sql_file:
+            sql_file.write(full_sql)
+
+    return full_sql
