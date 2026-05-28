@@ -19,12 +19,12 @@ requires_qsv = pytest.mark.skipif(
 
 def test_cli_help() -> None:
     """Test that main command and toddic subcommand help works."""
-    result = runner.invoke(app, ["--help"])
+    result = runner.invoke(app, ["--help"], color=False)
     assert result.exit_code == 0
     assert "toddic" in result.stdout
     assert "Dartfx CLI for QSV tools" in result.stdout
 
-    result = runner.invoke(app, ["toddic", "--help"])
+    result = runner.invoke(app, ["toddic", "--help"], color=False)
     assert result.exit_code == 0
     assert "Generate a DDI-Codebook XML document" in result.stdout
     assert "CSV_PATH" in result.stdout
@@ -152,7 +152,7 @@ def test_cli_toddic_invalid_csv() -> None:
 
 def test_cli_tosql_help() -> None:
     """Test tosql CLI help output."""
-    result = runner.invoke(app, ["tosql", "--help"])
+    result = runner.invoke(app, ["tosql", "--help"], color=False)
     assert result.exit_code == 0
     assert "Generate a SQL script to host a CSV file" in result.stdout
     assert "CSV_PATH" in result.stdout
