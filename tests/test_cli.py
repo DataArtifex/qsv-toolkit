@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import xml.etree.ElementTree as ET
 
@@ -11,6 +12,14 @@ from dartfx.qsv.cli import app
 
 runner = CliRunner()
 
+ANSI_ESCAPE_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape sequences from terminal output for stable assertions."""
+    return ANSI_ESCAPE_RE.sub("", text)
+
+
 requires_qsv = pytest.mark.skipif(
     shutil.which("qsv") is None,
     reason="qsv CLI not installed",
@@ -20,14 +29,16 @@ requires_qsv = pytest.mark.skipif(
 def test_cli_help() -> None:
     """Test that main command and toddic subcommand help works."""
     result = runner.invoke(app, ["--help"], color=False)
+    help_text = _strip_ansi(result.stdout)
     assert result.exit_code == 0
-    assert "toddic" in result.stdout
-    assert "Dartfx CLI for QSV tools" in result.stdout
+    assert "toddic" in help_text
+    assert "Dartfx CLI for QSV tools" in help_text
 
     result = runner.invoke(app, ["toddic", "--help"], color=False)
+    help_text = _strip_ansi(result.stdout)
     assert result.exit_code == 0
-    assert "Generate a DDI-Codebook XML document" in result.stdout
-    assert "CSV_PATH" in result.stdout
+    assert "Generate a DDI-Codebook XML document" in help_text
+    assert "CSV_PATH" in help_text
 
 
 def test_cli_toddic_precomputed(tmp_path: str) -> None:
@@ -153,11 +164,12 @@ def test_cli_toddic_invalid_csv() -> None:
 def test_cli_tosql_help() -> None:
     """Test tosql CLI help output."""
     result = runner.invoke(app, ["tosql", "--help"], color=False)
+    help_text = _strip_ansi(result.stdout)
     assert result.exit_code == 0
-    assert "Generate a SQL script to host a CSV file" in result.stdout
-    assert "CSV_PATH" in result.stdout
-    assert "--flavor" in result.stdout
-    assert "--table" in result.stdout
+    assert "Generate a SQL script to host a CSV file" in help_text
+    assert "CSV_PATH" in help_text
+    assert "--flavor" in help_text
+    assert "--table" in help_text
 
 
 def test_cli_tosql_precomputed(tmp_path: str) -> None:
