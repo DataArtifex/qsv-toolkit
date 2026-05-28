@@ -153,7 +153,7 @@ dartfx-qsv tosql path/to/data.csv -pk id,name
 
 * `CSV_PATH` (Required argument): Path to the source CSV file.
 * `-o, --output PATH`: Path to write the generated SQL script. Defaults to stdout.
-* `-f, --flavor TEXT`: Target database flavor (`postgres`, `sqlite`, `mysql`, `mssql`, `oracle`, `clickhouse`, `duckdb`). Defaults to `postgres`.
+* `-f, --flavor TEXT`: Target database flavor (`postgres`, `sqlite`, `mysql`, `mssql`, `oracle`, `clickhouse`, `duckdb`, `snowflake`, `bigquery`, `redshift`, `mariadb`). Defaults to `postgres`.
 * `-t, --table TEXT`: Custom table name. Defaults to `tbl_<csv-filename>`.
 * `-s, --schema TEXT`: Optional database schema name (postgres/mysql only).
 * `-pk, --primary-key TEXT`: Primary key column name(s). For composite keys, use comma-separated names.
