@@ -888,3 +888,162 @@ def generate_sql(
             sql_file.write(full_sql)
 
     return full_sql
+
+
+def _is_outdated(source_path: str | os.PathLike[str], target_path: str | os.PathLike[str]) -> bool:
+    """Check if the target file does not exist or is older than the source file."""
+    if not os.path.exists(target_path):
+        return True
+    return os.path.getmtime(source_path) > os.path.getmtime(target_path)
+
+
+def metadata_to_dict(meta: Any) -> dict[str, Any]:
+    """Convert a pyreadstat metadata container to a dictionary."""
+    meta_dict = {
+        "column_names": getattr(meta, "column_names", []),
+        "column_labels": getattr(meta, "column_labels", []),
+        "column_names_to_labels": getattr(meta, "column_names_to_labels", {}),
+        "file_label": getattr(meta, "file_label", None),
+        "file_format": getattr(meta, "file_format", None),
+        "number_of_rows": getattr(meta, "number_of_rows", None),
+        "number_of_columns": getattr(meta, "number_of_columns", None),
+        "variable_value_labels": getattr(meta, "variable_value_labels", {}),
+        "value_labels": getattr(meta, "value_labels", {}),
+        "original_variable_types": getattr(meta, "original_variable_types", {}),
+        "readstat_variable_types": getattr(meta, "readstat_variable_types", {}),
+        "table_name": getattr(meta, "table_name", None),
+    }
+
+    def clean_dict(d: Any) -> Any:
+        if isinstance(d, dict):
+            return {str(k): clean_dict(v) for k, v in d.items()}
+        if isinstance(d, list):
+            return [clean_dict(x) for x in d]
+        return d
+
+    return clean_dict(meta_dict)
+
+
+def get_pyreadstat_reader(extension: str) -> Any:
+    """Get the pyreadstat reader function for a given file extension."""
+    import pyreadstat
+
+    ext = extension.lower()
+    if ext == ".sav":
+        return pyreadstat.read_sav
+    elif ext == ".zsav":
+        return pyreadstat.read_zsav
+    elif ext == ".por":
+        return pyreadstat.read_por
+    elif ext == ".dta":
+        return pyreadstat.read_dta
+    elif ext == ".sas7bdat":
+        return pyreadstat.read_sas7bdat
+    elif ext == ".sas7bcat":
+        return pyreadstat.read_sas7bcat
+    elif ext in (".xport", ".xpt"):
+        return pyreadstat.read_xport
+    else:
+        raise ValueError(f"Unsupported file extension: {extension}")
+
+
+def read_stat_metadata(file_path: str | os.PathLike[str]) -> dict[str, Any]:
+    """
+    Reads a SAS, Stata, or SPSS file and extracts its metadata as a dictionary.
+
+    Args:
+        file_path: Path to the statistical data file.
+
+    Returns:
+        A dictionary containing the file metadata.
+    """
+    file_path = os.path.abspath(file_path)
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    _, ext = os.path.splitext(file_path)
+    reader = get_pyreadstat_reader(ext)
+
+    if ext.lower() == ".sas7bcat":
+        meta = reader(file_path)
+    else:
+        _, meta = reader(file_path, metadataonly=True)
+
+    return metadata_to_dict(meta)
+
+
+def convert_stat_file_to_csv(
+    file_path: str | os.PathLike[str],
+    csv_path: str | os.PathLike[str] | None = None,
+    overwrite: bool = False,
+) -> str:
+    """
+    Converts a SAS, Stata, or SPSS file to a CSV file.
+
+    Args:
+        file_path: Path to the input SAS, Stata, or SPSS file.
+        csv_path: Optional path to the output CSV file. Defaults to <input_file_name>.csv.
+        overwrite: If True, forces conversion even if the target file is up-to-date.
+
+    Returns:
+        The path to the generated CSV file.
+    """
+    file_path = os.path.abspath(file_path)
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Source file not found: {file_path}")
+
+    if csv_path is None:
+        csv_path = f"{file_path}.csv"
+    else:
+        csv_path = os.path.abspath(csv_path)
+
+    if overwrite or _is_outdated(file_path, csv_path):
+        _, ext = os.path.splitext(file_path)
+        reader = get_pyreadstat_reader(ext)
+
+        if ext.lower() == ".sas7bcat":
+            import pandas as pd
+
+            df = pd.DataFrame()
+        else:
+            df, _ = reader(file_path)
+
+        os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+        df.to_csv(csv_path, index=False)
+
+    return str(csv_path)
+
+
+def export_stat_metadata_to_json(
+    file_path: str | os.PathLike[str],
+    json_path: str | os.PathLike[str] | None = None,
+    overwrite: bool = False,
+) -> str:
+    """
+    Extracts metadata from a SAS, Stata, or SPSS file and exports it to a JSON file.
+
+    Args:
+        file_path: Path to the input SAS, Stata, or SPSS file.
+        json_path: Optional path to the output JSON file. Defaults to <input_file_name>.json.
+        overwrite: If True, forces export even if the target file is up-to-date.
+
+    Returns:
+        The path to the generated JSON file.
+    """
+    file_path = os.path.abspath(file_path)
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Source file not found: {file_path}")
+
+    if json_path is None:
+        json_path = f"{file_path}.json"
+    else:
+        json_path = os.path.abspath(json_path)
+
+    if overwrite or _is_outdated(file_path, json_path):
+        meta_dict = read_stat_metadata(file_path)
+
+        os.makedirs(os.path.dirname(json_path), exist_ok=True)
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(meta_dict, f, indent=2, ensure_ascii=False)
+
+    return str(json_path)

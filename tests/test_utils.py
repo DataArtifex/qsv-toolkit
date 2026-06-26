@@ -237,7 +237,7 @@ def test_generate_ddi_codebook_pydantic_stats():
 
 @requires_qsv
 def test_generate_ddi_codebook_dynamic_qsv():
-    csv_path = "tests/data/sdc_test.csv"
+    csv_path = "tests/data/sdc/sdc_test.csv"
     assert os.path.exists(csv_path)
 
     # Run dynamically
@@ -285,7 +285,7 @@ def test_generate_ddi_codebook_dynamic_qsv():
     assert len(age_var.findall("ddi:catgry", ns)) == 0  # No frequencies generated
 
     # Verify output file writing
-    output_file = "tests/data/sdc_test_ddi.xml"
+    output_file = "tests/data/sdc/sdc_test_ddi.xml"
     if os.path.exists(output_file):
         os.remove(output_file)
 
@@ -524,7 +524,7 @@ def test_generate_sql_static_new_flavors():
 
 @requires_qsv
 def test_generate_sql_dynamic(tmp_path):
-    csv_path = "tests/data/sdc_test.csv"
+    csv_path = "tests/data/sdc/sdc_test.csv"
     sql = generate_sql(csv_path=csv_path, flavor="postgres")
 
     assert 'CREATE TABLE "tbl_sdc_test"' in sql
@@ -538,3 +538,77 @@ def test_generate_sql_dynamic(tmp_path):
     assert out_file.exists()
     content = out_file.read_text(encoding="utf-8")
     assert 'CREATE TABLE "tbl_sdc_test"' in content
+
+
+def test_stat_file_conversion_and_metadata(tmp_path):
+    import json
+    import os
+
+    import pandas as pd
+    import pyreadstat
+
+    from dartfx.qsv import convert_stat_file_to_csv, export_stat_metadata_to_json, read_stat_metadata
+
+    # 1. Create a dummy dataframe
+    df = pd.DataFrame({"id": [1.0, 2.0, 3.0], "name": ["Alice", "Bob", "Charlie"], "age": [25.0, 30.0, 35.0]})
+
+    # Define labels
+    column_labels = ["Identifier", "Name of person", "Age of person"]
+    variable_value_labels = {"id": {1.0: "First", 2.0: "Second", 3.0: "Third"}}
+
+    # 2. Write to a temporary SPSS (.sav) file
+    sav_file = tmp_path / "test_data.sav"
+    pyreadstat.write_sav(df, str(sav_file), column_labels=column_labels, variable_value_labels=variable_value_labels)
+
+    # Verify SPSS file exists
+    assert sav_file.exists()
+
+    # 3. Test read_stat_metadata
+    meta = read_stat_metadata(sav_file)
+    assert meta["column_names"] == ["id", "name", "age"]
+    assert meta["column_labels"] == column_labels
+    assert "id" in meta["variable_value_labels"]
+
+    # 4. Test convert_stat_file_to_csv and export_stat_metadata_to_json
+    csv_path = convert_stat_file_to_csv(sav_file)
+    json_path = export_stat_metadata_to_json(sav_file)
+
+    assert os.path.exists(csv_path)
+    assert os.path.exists(json_path)
+    assert csv_path == f"{sav_file}.csv"
+    assert json_path == f"{sav_file}.json"
+
+    # Verify CSV content
+    converted_df = pd.read_csv(csv_path)
+    assert list(converted_df.columns) == ["id", "name", "age"]
+    assert list(converted_df["name"]) == ["Alice", "Bob", "Charlie"]
+
+    # Verify JSON content
+    with open(json_path, encoding="utf-8") as f:
+        meta_json = json.load(f)
+    assert meta_json["column_names"] == ["id", "name", "age"]
+    assert meta_json["column_labels"] == column_labels
+
+    # 5. Verify outdated check
+    # Modify CSV to verify it's not overwritten unless overwrite=True or source modified
+    with open(csv_path, "w", encoding="utf-8") as f:
+        f.write("id,name,age\n99,Mock,99\n")
+
+    # If we call convert_stat_file_to_csv now without overwrite, it should NOT overwrite because the CSV is newer
+    convert_stat_file_to_csv(sav_file)
+    with open(csv_path, encoding="utf-8") as f:
+        content = f.read()
+    assert "Mock" in content  # untouched because it wasn't outdated
+
+    # If we call it with overwrite=True, it should overwrite
+    convert_stat_file_to_csv(sav_file, overwrite=True)
+    with open(csv_path, encoding="utf-8") as f:
+        content = f.read()
+    assert "Mock" not in content
+    assert "Alice" in content
+
+    # 6. Verify error on invalid extension
+    bad_file = tmp_path / "test.txt"
+    bad_file.write_text("dummy")
+    with pytest.raises(ValueError, match="Unsupported file extension"):
+        read_stat_metadata(bad_file)

@@ -17,6 +17,8 @@ The toolkit provides high-level Python wrappers and Pydantic models for QSV comm
 
 - **Python 3.12+**
 - **[QSV CLI](https://github.com/dathere/qsv)**: The `qsv` executable must be installed and available in your `PATH`.
+- **[pyreadstat](https://github.com/Roche/pyreadstat)**: Used to read and write SAS, Stata, and SPSS files, and to extract metadata (installed automatically).
+
 
 ## ⚙️ Installation
 
@@ -177,7 +179,18 @@ sql_script = generate_sql(
 )
 ```
 
+### 📂 SAS, Stata, and SPSS File Conversion & Metadata
+
+The toolkit integrates `pyreadstat` to enable seamless data and metadata extraction from proprietary statistical formats:
+
+* **SAS** (`.sas7bdat`, `.sas7bcat`, `.xport`)
+* **Stata** (`.dta`)
+* **SPSS** (`.sav`, `.zsav`, `.por`)
+
+You can convert these files to CSV for processing with QSV commands, or extract metadata (including variable labels and value labels) to feed into the DDI-Codebook XML generation utility.
+
 ## 🛠 Supported Commands
+
 
 The toolkit currently wraps over 30 QSV commands, providing access to a wide range of data wrangling operations:
 

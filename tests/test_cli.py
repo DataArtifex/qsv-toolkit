@@ -43,9 +43,9 @@ def test_cli_help() -> None:
 
 def test_cli_toddic_precomputed(tmp_path: str) -> None:
     """Test toddic using pre-computed files (no QSV CLI dependency required)."""
-    csv_path = "tests/data/sdc_test.csv"
-    stats_path = "tests/data/sdc_test.stats.csv.data.jsonl"
-    schema_path = "tests/data/sdc_test.csv.schema.json"
+    csv_path = "tests/data/sdc/sdc_test.csv"
+    stats_path = "tests/data/sdc/sdc_test.stats.csv.data.jsonl"
+    schema_path = "tests/data/sdc/sdc_test.csv.schema.json"
 
     # Verify input paths exist
     assert os.path.exists(csv_path)
@@ -111,7 +111,7 @@ def test_cli_toddic_precomputed(tmp_path: str) -> None:
 @requires_qsv
 def test_cli_toddic_dynamic(tmp_path: str) -> None:
     """Test toddic with dynamic QSV run."""
-    csv_path = "tests/data/sdc_test.csv"
+    csv_path = "tests/data/sdc/sdc_test.csv"
     assert os.path.exists(csv_path)
 
     # Output to stdout
@@ -174,9 +174,9 @@ def test_cli_tosql_help() -> None:
 
 def test_cli_tosql_precomputed(tmp_path: str) -> None:
     """Test tosql using pre-computed schema/stats files."""
-    csv_path = "tests/data/sdc_test.csv"
-    stats_path = "tests/data/sdc_test.stats.csv.data.jsonl"
-    schema_path = "tests/data/sdc_test.csv.schema.json"
+    csv_path = "tests/data/sdc/sdc_test.csv"
+    stats_path = "tests/data/sdc/sdc_test.stats.csv.data.jsonl"
+    schema_path = "tests/data/sdc/sdc_test.csv.schema.json"
 
     # Test output to stdout
     result = runner.invoke(
@@ -230,7 +230,7 @@ def test_cli_tosql_precomputed(tmp_path: str) -> None:
 @requires_qsv
 def test_cli_tosql_dynamic(tmp_path: str) -> None:
     """Test tosql command with dynamic QSV run."""
-    csv_path = "tests/data/sdc_test.csv"
+    csv_path = "tests/data/sdc/sdc_test.csv"
     assert os.path.exists(csv_path)
 
     # Output to stdout
@@ -270,9 +270,9 @@ def test_cli_tosql_dynamic(tmp_path: str) -> None:
 
 def test_cli_tosql_new_flavors_precomputed() -> None:
     """Test tosql CLI command with new flavors using pre-computed schema/stats files."""
-    csv_path = "tests/data/sdc_test.csv"
-    stats_path = "tests/data/sdc_test.stats.csv.data.jsonl"
-    schema_path = "tests/data/sdc_test.csv.schema.json"
+    csv_path = "tests/data/sdc/sdc_test.csv"
+    stats_path = "tests/data/sdc/sdc_test.stats.csv.data.jsonl"
+    schema_path = "tests/data/sdc/sdc_test.csv.schema.json"
 
     # MSSQL
     result = runner.invoke(
@@ -436,9 +436,9 @@ def test_cli_tosql_new_flavors_precomputed() -> None:
 
 def test_cli_tosql_primary_key() -> None:
     """Test tosql CLI command with primary-key option."""
-    csv_path = "tests/data/sdc_test.csv"
-    stats_path = "tests/data/sdc_test.stats.csv.data.jsonl"
-    schema_path = "tests/data/sdc_test.csv.schema.json"
+    csv_path = "tests/data/sdc/sdc_test.csv"
+    stats_path = "tests/data/sdc/sdc_test.stats.csv.data.jsonl"
+    schema_path = "tests/data/sdc/sdc_test.csv.schema.json"
 
     # Test single PK with case insensitivity
     result = runner.invoke(

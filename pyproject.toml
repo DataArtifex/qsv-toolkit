@@ -19,7 +19,12 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = ["pydantic >= 2.10.0", "typer"]
+dependencies = [
+    "pandas>=3.0.2",
+    "pydantic >= 2.10.0",
+    "pyreadstat>=1.3.3",
+    "typer",
+]
 
 [project.scripts]
 dartfx-qsv = "dartfx.qsv.cli:app"
