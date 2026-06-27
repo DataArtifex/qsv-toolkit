@@ -224,7 +224,9 @@ class Diff(QSVCommand):
     def __init__(self, **kwargs):
         super().__init__("diff", **kwargs)
 
-    def run(self, input1: str | None = None, input2: str | None = None, *_args: str | None) -> str:
+    def run(self, *inputs: str | None) -> str:
+        input1 = inputs[0] if len(inputs) > 0 else None
+        input2 = inputs[1] if len(inputs) > 1 else None
         return super().run(input1, input2)
 
 
@@ -257,7 +259,9 @@ class Exclude(QSVCommand):
         self.columns1 = columns1
         self.columns2 = columns2
 
-    def run(self, input1: str | None = None, input2: str | None = None, *_args: str | None) -> str:
+    def run(self, *inputs: str | None) -> str:
+        input1 = inputs[0] if len(inputs) > 0 else None
+        input2 = inputs[1] if len(inputs) > 1 else None
         return super().run(self.columns1, input1, self.columns2, input2)
 
 
@@ -395,7 +399,9 @@ class Join(QSVCommand):
         self.columns1 = columns1
         self.columns2 = columns2
 
-    def run(self, input1: str | None = None, input2: str | None = None, *_args: str | None) -> str:
+    def run(self, *inputs: str | None) -> str:
+        input1 = inputs[0] if len(inputs) > 0 else None
+        input2 = inputs[1] if len(inputs) > 1 else None
         return super().run(self.columns1, input1, self.columns2, input2)
 
 
@@ -407,7 +413,9 @@ class Joinp(QSVCommand):
         self.columns1 = columns1
         self.columns2 = columns2
 
-    def run(self, input1: str | None = None, input2: str | None = None, *_args: str | None) -> str:
+    def run(self, *inputs: str | None) -> str:
+        input1 = inputs[0] if len(inputs) > 0 else None
+        input2 = inputs[1] if len(inputs) > 1 else None
         return super().run(self.columns1, input1, self.columns2, input2)
 
 

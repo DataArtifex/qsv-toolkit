@@ -363,7 +363,8 @@ def generate_ddi_codebook(
                 nullcount_int = int(nullcount)
                 add_sum_stat("invd", nullcount_int)
                 if rowcount is not None:
-                    add_sum_stat("vald", max(0, int(rowcount) - nullcount_int))
+                    if isinstance(rowcount, (int, str, float)):
+                        add_sum_stat("vald", max(0, int(rowcount) - nullcount_int))
             except ValueError:
                 add_sum_stat("invd", nullcount)
 

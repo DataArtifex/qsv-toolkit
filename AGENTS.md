@@ -39,6 +39,7 @@ Always use `uv` for managing dependencies and environments.
 
 ### 🧪 Testing & Verification
 - **Automated Tests**: Run `pytest` or `hatch run test`.
+- **Type Checking**: Run `pyrefly check src tests` or `hatch run types:check`.
 
 ---
 
