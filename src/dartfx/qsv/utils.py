@@ -932,7 +932,7 @@ def get_pyreadstat_reader(extension: str) -> Any:
     if ext == ".sav":
         return pyreadstat.read_sav
     elif ext == ".zsav":
-        return pyreadstat.read_zsav
+        return pyreadstat.read_sav
     elif ext == ".por":
         return pyreadstat.read_por
     elif ext == ".dta":

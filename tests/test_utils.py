@@ -612,3 +612,22 @@ def test_stat_file_conversion_and_metadata(tmp_path):
     bad_file.write_text("dummy")
     with pytest.raises(ValueError, match="Unsupported file extension"):
         read_stat_metadata(bad_file)
+
+
+def test_get_pyreadstat_reader():
+    import pyreadstat
+    import pytest
+
+    from dartfx.qsv.utils import get_pyreadstat_reader
+
+    assert get_pyreadstat_reader(".sav") == pyreadstat.read_sav
+    assert get_pyreadstat_reader(".zsav") == pyreadstat.read_sav
+    assert get_pyreadstat_reader(".por") == pyreadstat.read_por
+    assert get_pyreadstat_reader(".dta") == pyreadstat.read_dta
+    assert get_pyreadstat_reader(".sas7bdat") == pyreadstat.read_sas7bdat
+    assert get_pyreadstat_reader(".sas7bcat") == pyreadstat.read_sas7bcat
+    assert get_pyreadstat_reader(".xport") == pyreadstat.read_xport
+    assert get_pyreadstat_reader(".xpt") == pyreadstat.read_xport
+
+    with pytest.raises(ValueError, match="Unsupported file extension"):
+        get_pyreadstat_reader(".txt")
