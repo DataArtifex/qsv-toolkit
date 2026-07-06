@@ -134,7 +134,7 @@ class QsvStatsFile(BaseModel):
     """QSV statistics file associated with a data file."""
 
     datafile: DataFile  # The associated data file
-    _data: list[QsvStatsDataModel]
+    _data: list[QsvStatsDataModel] = []
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -145,6 +145,11 @@ class QsvStatsFile(BaseModel):
     @property
     def jsonl_filepath(self) -> str:
         return os.path.join(self.datafile.dirpath, self.jsonl_filename)
+
+    @property
+    def data(self) -> list[QsvStatsDataModel]:
+        """Get the loaded statistics data."""
+        return self._data
 
     def load(self) -> list[QsvStatsDataModel]:
         """
@@ -224,6 +229,11 @@ class QsvFrequencyFile(BaseModel):
     def metadata(self) -> QsvFrequencyMetadata | None:
         """Get the parsed frequency metadata."""
         return self._metadata
+
+    @property
+    def data(self) -> list[QsvFrequencyField]:
+        """Get the loaded frequency data."""
+        return self._data
 
     def load(self) -> list[QsvFrequencyField]:
         """

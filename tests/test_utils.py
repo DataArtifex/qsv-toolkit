@@ -641,6 +641,7 @@ def test_qsv_stats_file_loading():
     stats_file = QsvStatsFile(datafile=datafile)
     data = stats_file.load()
     assert len(data) > 0
+    assert stats_file.data == data
     assert data[0].field == "urbrur"
     assert data[0].zero_padded_numeric is None
     assert data[0].kurtosis is None
@@ -686,6 +687,7 @@ def test_qsv_frequency_file_loading():
         assert os.path.exists(freq_file.jsonl_filepath)
         data = freq_file.load()
         assert len(data) > 0
+        assert freq_file.data == data
         assert freq_file.metadata is not None
         assert freq_file.metadata.qsv_version is not None
         assert freq_file.metadata.record_count == 4580
