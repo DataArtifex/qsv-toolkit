@@ -631,3 +631,125 @@ def test_get_pyreadstat_reader():
 
     with pytest.raises(ValueError, match="Unsupported file extension"):
         get_pyreadstat_reader(".txt")
+
+
+def test_qsv_stats_file_loading():
+    from dartfx.qsv.model import CsvDataFile, QsvStatsDataModel, QsvStatsFile, Repository
+
+    repository = Repository(root="tests/data/sdc")
+    datafile = CsvDataFile(repository=repository, name="sdc_test.csv")
+    stats_file = QsvStatsFile(datafile=datafile)
+    data = stats_file.load()
+    assert len(data) > 0
+    assert data[0].field == "urbrur"
+    assert data[0].zero_padded_numeric is None
+    assert data[0].kurtosis is None
+
+    # Test setting the new fields
+    model = QsvStatsDataModel(
+        field="test",
+        type="Integer",
+        nullcount=0,
+        cardinality=0,
+        zero_padded_numeric=True,
+        kurtosis=1.5,
+        normalized_entropy=0.8,
+    )
+    assert model.zero_padded_numeric is True
+    assert model.kurtosis == 1.5
+    assert model.normalized_entropy == 0.8
+
+
+@requires_qsv
+def test_qsv_frequency_file_loading():
+    import subprocess
+
+    from dartfx.qsv.model import CsvDataFile, QsvFrequencyFile, Repository
+
+    # 1. Generate the frequency file dynamically
+    repository = Repository(root="tests/data/sdc")
+    datafile = CsvDataFile(repository=repository, name="sdc_test.csv")
+    freq_file = QsvFrequencyFile(datafile=datafile)
+
+    # Make sure we clean up any pre-existing cache file
+    if os.path.exists(freq_file.jsonl_filepath):
+        os.remove(freq_file.jsonl_filepath)
+
+    # Run qsv frequency with --frequency-jsonl option
+    subprocess.run(
+        ["qsv", "frequency", "--frequency-jsonl", datafile.filepath],
+        check=True,
+    )
+
+    try:
+        # 2. Load and verify the frequency data
+        assert os.path.exists(freq_file.jsonl_filepath)
+        data = freq_file.load()
+        assert len(data) > 0
+        assert freq_file.metadata is not None
+        assert freq_file.metadata.qsv_version is not None
+        assert freq_file.metadata.record_count == 4580
+
+        assert data[0].field == "urbrur"
+        assert data[0].cardinality == 2
+        assert len(data[0].frequencies) == 2
+        assert data[0].frequencies[0].value == "2"
+        assert data[0].frequencies[0].count == 3934
+    finally:
+        # Cleanup
+        if os.path.exists(freq_file.jsonl_filepath):
+            os.remove(freq_file.jsonl_filepath)
+        # Also clean up the meta json file if created
+        meta_json = freq_file.jsonl_filepath.replace(".data.jsonl", ".json")
+        if os.path.exists(meta_json):
+            os.remove(meta_json)
+
+
+def test_qsv_schema_file_loading():
+    from dartfx.qsv.model import CsvDataFile, QsvSchemaFile, Repository
+
+    repository = Repository(root="tests/data/sdc")
+    datafile = CsvDataFile(repository=repository, name="sdc_test.csv")
+    schema_file = QsvSchemaFile(datafile=datafile)
+
+    assert os.path.exists(schema_file.schema_filepath)
+    schema_file.load()
+
+    assert schema_file.schema_version == "https://json-schema.org/draft/2020-12/schema"
+    assert "urbrur" in schema_file.properties
+    prop = schema_file.properties["urbrur"]
+    assert prop.type == ["integer"]
+    assert prop.minimum == 1
+    assert prop.maximum == 2
+    assert prop.enum == [1, 2]
+
+
+@requires_qsv
+def test_qsv_polars_schema_file_loading():
+    import subprocess
+
+    from dartfx.qsv.model import CsvDataFile, QsvPolarsSchemaFile, Repository
+
+    repository = Repository(root="tests/data/sdc")
+    datafile = CsvDataFile(repository=repository, name="sdc_test.csv")
+    pschema_file = QsvPolarsSchemaFile(datafile=datafile)
+
+    if os.path.exists(pschema_file.pschema_filepath):
+        os.remove(pschema_file.pschema_filepath)
+
+    # Run qsv schema with --polars option
+    subprocess.run(
+        ["qsv", "schema", "--polars", datafile.filepath],
+        check=True,
+    )
+
+    try:
+        assert os.path.exists(pschema_file.pschema_filepath)
+        pschema_file.load()
+        assert "urbrur" in pschema_file.fields
+        assert pschema_file.fields["urbrur"] == "UInt8"
+        assert "sex" in pschema_file.fields
+        assert pschema_file.fields["sex"] == "String"
+    finally:
+        if os.path.exists(pschema_file.pschema_filepath):
+            os.remove(pschema_file.pschema_filepath)

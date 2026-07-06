@@ -176,6 +176,13 @@ class Cat(QSVCommand):
         super().__init__("cat", subcommand, **kwargs)
 
 
+class Clean(QSVCommand):
+    """Removes qsv-generated cache files."""
+
+    def __init__(self, **kwargs):
+        super().__init__("clean", **kwargs)
+
+
 class Clipboard(QSVCommand):
     """Provide input from clipboard or output to clipboard."""
 
@@ -354,6 +361,13 @@ class Geocode(QSVCommand):
 
     def __init__(self, column: str, **kwargs):
         super().__init__("geocode", column, **kwargs)
+
+
+class Get(QSVCommand):
+    """Get tabular data from various sources into a disk cache."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__("get", *args, **kwargs)
 
 
 class Headers(QSVCommand):
@@ -702,6 +716,13 @@ class Validate(QSVCommand):
         return super().run(*args)
 
 
+class Viz(QSVCommand):
+    """Generate charts & dashboards from CSV data using plotly."""
+
+    def __init__(self, subcommand: str | None = None, **kwargs):
+        super().__init__("viz", subcommand, **kwargs)
+
+
 # --- Function Wrappers for Backward Compatibility ---
 
 
@@ -748,3 +769,19 @@ def profile(input_path: str, **kwargs) -> str:
 def synthesize(input_path: str, **kwargs) -> str:
     """Generate a statistically-faithful synthetic CSV from a source CSV."""
     return Synthesize(**kwargs).run(input_path)
+
+
+def clean(input_path: str | None = None, **kwargs) -> str:
+    """Removes qsv-generated cache files."""
+    args = [input_path] if input_path else []
+    return Clean(**kwargs).run(*args)
+
+
+def get(*args, **kwargs) -> str:
+    """Get tabular data from various sources into a disk cache."""
+    return Get(**kwargs).run(*args)
+
+
+def viz(input_path: str, subcommand: str | None = None, **kwargs) -> str:
+    """Generate charts & dashboards from CSV data using plotly."""
+    return Viz(subcommand=subcommand, **kwargs).run(input_path)

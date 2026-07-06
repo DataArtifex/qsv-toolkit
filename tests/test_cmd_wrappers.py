@@ -120,3 +120,27 @@ def test_new_commands():
     assert "500" in args
     assert "--seed" in args
     assert "42" in args
+
+
+def test_clean_get_viz_wrappers():
+    from dartfx.qsv.cmd import Clean, Get, Viz
+
+    assert Clean.name() == "clean"
+    assert Get.name() == "get"
+    assert Viz.name() == "viz"
+
+    cmd_clean = Clean(force=True, stale=True)
+    args = cmd_clean._get_args()
+    assert "--force" in args
+    assert "--stale" in args
+
+    cmd_get = Get("cache-fetch", "data.csv", output="test.csv")
+    args = cmd_get._get_args()
+    assert "--output" in args
+    assert "test.csv" in args
+    assert cmd_get.init_args == ["cache-fetch", "data.csv"]
+
+    cmd_viz = Viz(subcommand="smart", smarter=True)
+    args = cmd_viz._get_args()
+    assert "--smarter" in args
+    assert cmd_viz.init_args == ["smart"]
