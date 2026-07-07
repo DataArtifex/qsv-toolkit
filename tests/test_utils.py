@@ -235,6 +235,104 @@ def test_generate_ddi_codebook_pydantic_stats():
     assert 'otherType="sum">8514.0' in xml_str
 
 
+def test_generate_ddi_codebook_qsv_stats_file():
+    from dartfx.qsv.model import CsvDataFile, QsvStatsFile, Repository
+
+    repository = Repository(root="tests/data/sdc")
+    datafile = CsvDataFile(repository=repository, name="sdc_test.csv")
+    stats_file = QsvStatsFile(datafile=datafile)
+
+    schema_data = {
+        "properties": {
+            "urbrur": {
+                "type": ["integer"],
+            }
+        }
+    }
+    xml_str = generate_ddi_codebook(
+        stats_data=stats_file,
+        schema_data=schema_data,
+        version="2.5",
+    )
+    assert 'name="urbrur"' in xml_str
+    assert 'otherType="sum">8514.0' in xml_str
+
+
+def test_generate_ddi_codebook_qsv_frequency_file():
+    from dartfx.qsv.model import (
+        CsvDataFile,
+        QsvFrequencyField,
+        QsvFrequencyFile,
+        QsvFrequencyItem,
+        QsvFrequencyMetadata,
+        QsvStatsFile,
+        Repository,
+    )
+
+    repository = Repository(root="tests/data/sdc")
+    datafile = CsvDataFile(repository=repository, name="sdc_test.csv")
+
+    freq_file = QsvFrequencyFile(datafile=datafile)
+    freq_file._metadata = QsvFrequencyMetadata(
+        arg_input="sdc_test.csv",
+        record_count=4580,
+        column_count=2,
+    )
+    freq_file._data = [
+        QsvFrequencyField(
+            field="urbrur",
+            cardinality=2,
+            frequencies=[
+                QsvFrequencyItem(value="2", count=3934, percentage=85.8952),
+                QsvFrequencyItem(value="1", count=646, percentage=14.1048),
+            ],
+        )
+    ]
+
+    stats_file = QsvStatsFile(datafile=datafile)
+
+    schema_data = {
+        "properties": {
+            "urbrur": {
+                "type": ["integer"],
+                "enum": [1, 2],
+            }
+        }
+    }
+
+    xml_str = generate_ddi_codebook(
+        stats_data=stats_file,
+        schema_data=schema_data,
+        frequency_data=freq_file,
+        version="2.5",
+    )
+    assert 'name="urbrur"' in xml_str
+    assert 'type="freq">3934' in xml_str
+    assert 'type="percent">85.8952' in xml_str
+
+
+def test_generate_ddi_codebook_qsv_schema_file():
+    from dartfx.qsv.model import CsvDataFile, QsvSchemaFile, QsvStatsFile, Repository
+
+    repository = Repository(root="tests/data/sdc")
+    datafile = CsvDataFile(repository=repository, name="sdc_test.csv")
+
+    schema_file = QsvSchemaFile(datafile=datafile)
+    schema_file.load()
+
+    stats_file = QsvStatsFile(datafile=datafile)
+
+    xml_str = generate_ddi_codebook(
+        stats_data=stats_file,
+        schema_data=schema_file,
+        version="2.5",
+    )
+    assert 'name="urbrur"' in xml_str
+    # Check that enum mapping works (urbrur has enum)
+    assert 'intrvl="discrete"' in xml_str
+    assert 'representationType="coded"' in xml_str
+
+
 @requires_qsv
 def test_generate_ddi_codebook_dynamic_qsv():
     csv_path = "tests/data/sdc/sdc_test.csv"
@@ -336,6 +434,32 @@ def test_generate_sql_static_postgres():
     assert '\\copy "my_schema"."Users" FROM \'test_data.csv\'' in sql
     assert "*/" in sql
     assert "/some/full/path" not in sql
+
+
+def test_generate_sql_qsv_models():
+    from dartfx.qsv.model import CsvDataFile, QsvSchemaFile, QsvStatsFile, Repository
+
+    repository = Repository(root="tests/data/sdc")
+    datafile = CsvDataFile(repository=repository, name="sdc_test.csv")
+
+    schema_file = QsvSchemaFile(datafile=datafile)
+    schema_file.load()
+
+    stats_file = QsvStatsFile(datafile=datafile)
+    stats_file.load()
+
+    sql = generate_sql(
+        csv_path="tests/data/sdc/sdc_test.csv",
+        schema_data=schema_file,
+        stats_data=stats_file,
+        flavor="postgres",
+        table_name="sdc_table",
+    )
+
+    assert 'CREATE TABLE "sdc_table"' in sql
+    # urbrur has min=1 max=2 in stats/schema, so it should map to SMALLINT
+    assert '"urbrur" SMALLINT' in sql
+    assert '"sex" VARCHAR(1)' in sql
 
 
 def test_generate_sql_static_sqlite_mysql():
@@ -547,7 +671,7 @@ def test_stat_file_conversion_and_metadata(tmp_path):
     import pandas as pd
     import pyreadstat
 
-    from dartfx.qsv import convert_stat_file_to_csv, export_stat_metadata_to_json, read_stat_metadata
+    from dartfx.qsv import readstat_metadata, readstat_metadata_to_json, readstat_to_csv
 
     # 1. Create a dummy dataframe
     df = pd.DataFrame({"id": [1.0, 2.0, 3.0], "name": ["Alice", "Bob", "Charlie"], "age": [25.0, 30.0, 35.0]})
@@ -563,15 +687,15 @@ def test_stat_file_conversion_and_metadata(tmp_path):
     # Verify SPSS file exists
     assert sav_file.exists()
 
-    # 3. Test read_stat_metadata
-    meta = read_stat_metadata(sav_file)
+    # 3. Test readstat_metadata
+    meta = readstat_metadata(sav_file)
     assert meta["column_names"] == ["id", "name", "age"]
     assert meta["column_labels"] == column_labels
     assert "id" in meta["variable_value_labels"]
 
-    # 4. Test convert_stat_file_to_csv and export_stat_metadata_to_json
-    csv_path = convert_stat_file_to_csv(sav_file)
-    json_path = export_stat_metadata_to_json(sav_file)
+    # 4. Test readstat_to_csv and readstat_metadata_to_json
+    csv_path = readstat_to_csv(sav_file)
+    json_path = readstat_metadata_to_json(sav_file)
 
     assert os.path.exists(csv_path)
     assert os.path.exists(json_path)
@@ -594,14 +718,14 @@ def test_stat_file_conversion_and_metadata(tmp_path):
     with open(csv_path, "w", encoding="utf-8") as f:
         f.write("id,name,age\n99,Mock,99\n")
 
-    # If we call convert_stat_file_to_csv now without overwrite, it should NOT overwrite because the CSV is newer
-    convert_stat_file_to_csv(sav_file)
+    # If we call readstat_to_csv now without overwrite, it should NOT overwrite because the CSV is newer
+    readstat_to_csv(sav_file)
     with open(csv_path, encoding="utf-8") as f:
         content = f.read()
     assert "Mock" in content  # untouched because it wasn't outdated
 
     # If we call it with overwrite=True, it should overwrite
-    convert_stat_file_to_csv(sav_file, overwrite=True)
+    readstat_to_csv(sav_file, overwrite=True)
     with open(csv_path, encoding="utf-8") as f:
         content = f.read()
     assert "Mock" not in content
@@ -611,26 +735,26 @@ def test_stat_file_conversion_and_metadata(tmp_path):
     bad_file = tmp_path / "test.txt"
     bad_file.write_text("dummy")
     with pytest.raises(ValueError, match="Unsupported file extension"):
-        read_stat_metadata(bad_file)
+        readstat_metadata(bad_file)
 
 
-def test_get_pyreadstat_reader():
+def test_get_readstat_reader():
     import pyreadstat
     import pytest
 
-    from dartfx.qsv.utils import get_pyreadstat_reader
+    from dartfx.qsv.utils import get_readstat_reader
 
-    assert get_pyreadstat_reader(".sav") == pyreadstat.read_sav
-    assert get_pyreadstat_reader(".zsav") == pyreadstat.read_sav
-    assert get_pyreadstat_reader(".por") == pyreadstat.read_por
-    assert get_pyreadstat_reader(".dta") == pyreadstat.read_dta
-    assert get_pyreadstat_reader(".sas7bdat") == pyreadstat.read_sas7bdat
-    assert get_pyreadstat_reader(".sas7bcat") == pyreadstat.read_sas7bcat
-    assert get_pyreadstat_reader(".xport") == pyreadstat.read_xport
-    assert get_pyreadstat_reader(".xpt") == pyreadstat.read_xport
+    assert get_readstat_reader(".sav") == pyreadstat.read_sav
+    assert get_readstat_reader(".zsav") == pyreadstat.read_sav
+    assert get_readstat_reader(".por") == pyreadstat.read_por
+    assert get_readstat_reader(".dta") == pyreadstat.read_dta
+    assert get_readstat_reader(".sas7bdat") == pyreadstat.read_sas7bdat
+    assert get_readstat_reader(".sas7bcat") == pyreadstat.read_sas7bcat
+    assert get_readstat_reader(".xport") == pyreadstat.read_xport
+    assert get_readstat_reader(".xpt") == pyreadstat.read_xport
 
     with pytest.raises(ValueError, match="Unsupported file extension"):
-        get_pyreadstat_reader(".txt")
+        get_readstat_reader(".txt")
 
 
 def test_qsv_stats_file_loading():

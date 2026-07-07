@@ -3,17 +3,17 @@
 # SPDX-License-Identifier: MIT
 
 from dartfx.qsv.utils import (
-    convert_stat_file_to_csv,
-    export_stat_metadata_to_json,
     generate_ddi_codebook,
     generate_sql,
-    read_stat_metadata,
+    readstat_metadata,
+    readstat_metadata_to_json,
+    readstat_to_csv,
 )
 
 __all__ = [
     "generate_ddi_codebook",
     "generate_sql",
-    "convert_stat_file_to_csv",
-    "export_stat_metadata_to_json",
-    "read_stat_metadata",
+    "readstat_to_csv",
+    "readstat_metadata_to_json",
+    "readstat_metadata",
 ]

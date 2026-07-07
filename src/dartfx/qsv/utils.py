@@ -9,21 +9,16 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Any
 
-from dartfx.qsv.model import QsvStatsDataModel
-
-
-def _load_json_data(data: Any) -> Any:
-    """Load JSON/dict data from a file path, JSON string, or dictionary."""
-    if isinstance(data, dict):
-        return data
-    if isinstance(data, (str, os.PathLike)):
-        # Check if it's a file path
-        if os.path.exists(data):
-            with open(data, encoding="utf-8") as f:
-                return json.load(f)
-        else:
-            return json.loads(str(data))
-    raise ValueError("Invalid JSON data source.")
+from dartfx.qsv.model import (
+    CsvDataFile,
+    QsvFrequencyField,
+    QsvFrequencyFile,
+    QsvFrequencyMetadata,
+    QsvSchemaFile,
+    QsvStatsDataModel,
+    QsvStatsFile,
+    Repository,
+)
 
 
 def _parse_stats_json_or_jsonl(content: str) -> list[dict[str, Any]]:
@@ -40,44 +35,53 @@ def _parse_stats_json_or_jsonl(content: str) -> list[dict[str, Any]]:
     return results
 
 
-def _load_stats_data(data: Any) -> list[dict[str, Any]]:
-    """Load stats data from lists (Pydantic/dicts), file paths, or raw strings."""
-    if isinstance(data, list):
-        if not data:
-            return []
-        if hasattr(data[0], "model_dump"):  # Pydantic v2
-            return [item.model_dump(by_alias=True) for item in data]
-        elif hasattr(data[0], "dict"):  # Pydantic v1 fallback
-            return [item.dict(by_alias=True) for item in data]
-        return [dict(item) for item in data]
-
-    if isinstance(data, (str, os.PathLike)):
-        if os.path.exists(data):
-            path_str = str(data).lower()
-            if path_str.endswith(".jsonl") or path_str.endswith(".json"):
-                with open(data, encoding="utf-8") as f:
-                    content = f.read()
-                return _parse_stats_json_or_jsonl(content)
-            else:
-                # Default to CSV
-                with open(data, encoding="utf-8") as f:
-                    reader = csv.DictReader(f)
-                    return list(reader)
+def _populate_frequency_file(freq_file: QsvFrequencyFile, raw_data: Any) -> None:
+    if isinstance(raw_data, dict):
+        if "fields" in raw_data:
+            freq_file._data = [QsvFrequencyField(**f) for f in raw_data["fields"]]
+            meta_dict = {
+                "record_count": raw_data.get("rowcount") or raw_data.get("record_count"),
+                "column_count": raw_data.get("fieldcount") or raw_data.get("column_count"),
+                "arg_input": raw_data.get("input") or raw_data.get("arg_input"),
+            }
+            freq_file._metadata = QsvFrequencyMetadata(**meta_dict)
+    elif isinstance(raw_data, list):
+        if len(raw_data) > 0 and isinstance(raw_data[0], str):
+            fields = []
+            metadata = None
+            try:
+                meta_data = json.loads(raw_data[0])
+                metadata = QsvFrequencyMetadata(**meta_data)
+            except Exception:
+                try:
+                    field_data = json.loads(raw_data[0])
+                    if "field" in field_data:
+                        fields.append(QsvFrequencyField(**field_data))
+                except Exception:
+                    pass
+            for line in raw_data[1:]:
+                try:
+                    field_data = json.loads(line)
+                    fields.append(QsvFrequencyField(**field_data))
+                except Exception:
+                    pass
+            freq_file._data = fields
+            freq_file._metadata = metadata
         else:
-            data_str = str(data).strip()
-            if data_str.startswith("{") or data_str.startswith("["):
-                return _parse_stats_json_or_jsonl(data_str)
-            else:
-                reader = csv.DictReader(io.StringIO(data_str))
-                return list(reader)
-    raise ValueError("Invalid stats data source.")
+            fields = []
+            for item in raw_data:
+                if isinstance(item, QsvFrequencyField):
+                    fields.append(item)
+                elif isinstance(item, dict):
+                    fields.append(QsvFrequencyField(**item))
+            freq_file._data = fields
 
 
 def generate_ddi_codebook(
     csv_path: str | os.PathLike[str] | None = None,
-    stats_data: list[dict[str, Any]] | list[QsvStatsDataModel] | str | os.PathLike[str] | None = None,
-    schema_data: dict[str, Any] | str | os.PathLike[str] | None = None,
-    frequency_data: dict[str, Any] | str | os.PathLike[str] | None = None,
+    stats_data: list[dict[str, Any]] | list[QsvStatsDataModel] | QsvStatsFile | str | os.PathLike[str] | None = None,
+    schema_data: dict[str, Any] | str | os.PathLike[str] | QsvSchemaFile | None = None,
+    frequency_data: dict[str, Any] | str | os.PathLike[str] | QsvFrequencyFile | None = None,
     version: str = "2.6",
     output_xml_path: str | os.PathLike[str] | None = None,
     categorical_threshold: int = 20,
@@ -91,8 +95,8 @@ def generate_ddi_codebook(
         csv_path: Optional path to the source CSV file. If provided and other data is missing,
             the corresponding QSV commands are run automatically.
         stats_data: Pre-computed stats data (Pydantic models list, dict list, file path, or string).
-        schema_data: Pre-computed schema data (dict, file path, or string).
-        frequency_data: Pre-computed frequency data (dict, file path, or string).
+        schema_data: Pre-computed schema data (dict, file path, string, or QsvSchemaFile).
+        frequency_data: Pre-computed frequency data (dict, file path, string, or QsvFrequencyFile).
         version: DDI-Codebook version ("2.5" or "2.6"). Default is "2.6".
 
         output_xml_path: Optional file path to write the generated XML.
@@ -107,49 +111,198 @@ def generate_ddi_codebook(
         raise ValueError("Only DDI-Codebook versions '2.5' and '2.6' are supported.")
 
     # 1. Gather stats and schema (either pre-supplied or executed dynamically)
-    if stats_data is None:
+    if isinstance(stats_data, QsvStatsFile):
+        stats_file = stats_data
+        if not stats_file.data:
+            stats_file.load()
+    elif stats_data is None:
         if not csv_path:
             raise ValueError("Must provide either stats_data or csv_path to run QSV stats.")
         from dartfx.qsv.cmd import Stats
 
         stats_csv = Stats(infer_dates=True, infer_boolean=True).run(str(csv_path))
-        parsed_stats = _load_stats_data(stats_csv)
-    else:
-        parsed_stats = _load_stats_data(stats_data)
+        reader = csv.DictReader(io.StringIO(stats_csv.strip()))
+        models = [
+            QsvStatsDataModel.model_validate({k: (None if v == "" and k != "field" else v) for k, v in row.items()})
+            for row in reader
+        ]
 
-    if schema_data is None:
-        if not csv_path:
-            raise ValueError("Must provide either schema_data or csv_path to run QSV schema.")
-        from dartfx.qsv.cmd import Schema
+        abs_csv_path = os.path.abspath(csv_path)
+        repository = Repository(root=os.path.dirname(abs_csv_path))
+        datafile = CsvDataFile(repository=repository, name=os.path.basename(abs_csv_path))
+        stats_file = QsvStatsFile(datafile=datafile)
+        stats_file._data = models
+    elif isinstance(stats_data, list):
+        models = []
+        for item in stats_data:
+            if isinstance(item, QsvStatsDataModel):
+                models.append(item)
+            elif isinstance(item, dict):
+                cleaned_item = {k: (None if v == "" and k != "field" else v) for k, v in item.items()}
+                models.append(QsvStatsDataModel.model_validate(cleaned_item))
+            elif hasattr(item, "model_dump"):
+                cleaned_item = {
+                    k: (None if v == "" and k != "field" else v) for k, v in item.model_dump(by_alias=True).items()
+                }
+                models.append(QsvStatsDataModel.model_validate(cleaned_item))
+            elif hasattr(item, "dict"):
+                cleaned_item = {
+                    k: (None if v == "" and k != "field" else v) for k, v in item.dict(by_alias=True).items()
+                }
+                models.append(QsvStatsDataModel.model_validate(cleaned_item))
+            else:
+                cleaned_item = {k: (None if v == "" and k != "field" else v) for k, v in dict(item).items()}
+                models.append(QsvStatsDataModel.model_validate(cleaned_item))
 
-        schema_json = Schema(stdout=True).run(str(csv_path))
-        parsed_schema = _load_json_data(schema_json)
+        if csv_path:
+            abs_csv_path = os.path.abspath(csv_path)
+            repository = Repository(root=os.path.dirname(abs_csv_path))
+            datafile = CsvDataFile(repository=repository, name=os.path.basename(abs_csv_path))
+        else:
+            dummy_repo = Repository(root=".")
+            datafile = CsvDataFile(repository=dummy_repo, name="dataset.csv")
+
+        stats_file = QsvStatsFile(datafile=datafile)
+        stats_file._data = models
+    elif isinstance(stats_data, (str, os.PathLike)):
+        stats_path = str(stats_data)
+        if os.path.exists(stats_path):
+            path_str = stats_path.lower()
+            if path_str.endswith(".jsonl") or path_str.endswith(".json"):
+                import re
+
+                base_name = os.path.basename(stats_path)
+                match = re.search(r"^(.*)\.stats\.([^.]+)\.data\.jsonl$", base_name, re.IGNORECASE)
+                if match:
+                    stem, ext = match.groups()
+                    datafile_name = f"{stem}.{ext}"
+                    repository = Repository(root=os.path.dirname(os.path.abspath(stats_path)))
+                    datafile = CsvDataFile(repository=repository, name=datafile_name)
+                    stats_file = QsvStatsFile(datafile=datafile)
+                    stats_file.load()
+                else:
+                    with open(stats_path, encoding="utf-8") as f:
+                        content = f.read()
+                    parsed = _parse_stats_json_or_jsonl(content)
+                    models = [
+                        QsvStatsDataModel.model_validate(
+                            {k: (None if v == "" and k != "field" else v) for k, v in item.items()}
+                        )
+                        for item in parsed
+                    ]
+                    dummy_repo = Repository(root=".")
+                    datafile = CsvDataFile(repository=dummy_repo, name="dataset.csv")
+                    stats_file = QsvStatsFile(datafile=datafile)
+                    stats_file._data = models
+            else:
+                with open(stats_path, encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    models = [
+                        QsvStatsDataModel.model_validate(
+                            {k: (None if v == "" and k != "field" else v) for k, v in row.items()}
+                        )
+                        for row in reader
+                    ]
+                dummy_repo = Repository(root=".")
+                datafile = CsvDataFile(repository=dummy_repo, name="dataset.csv")
+                stats_file = QsvStatsFile(datafile=datafile)
+                stats_file._data = models
+        else:
+            data_str = stats_path.strip()
+            if data_str.startswith("{") or data_str.startswith("["):
+                parsed = _parse_stats_json_or_jsonl(data_str)
+                models = [
+                    QsvStatsDataModel.model_validate(
+                        {k: (None if v == "" and k != "field" else v) for k, v in item.items()}
+                    )
+                    for item in parsed
+                ]
+            else:
+                reader = csv.DictReader(io.StringIO(data_str))
+                models = [
+                    QsvStatsDataModel.model_validate(
+                        {k: (None if v == "" and k != "field" else v) for k, v in row.items()}
+                    )
+                    for row in reader
+                ]
+            dummy_repo = Repository(root=".")
+            datafile = CsvDataFile(repository=dummy_repo, name="dataset.csv")
+            stats_file = QsvStatsFile(datafile=datafile)
+            stats_file._data = models
     else:
-        parsed_schema = _load_json_data(schema_data)
+        raise ValueError("Invalid stats data source.")
+
+    parsed_stats = stats_file.data
+
+    # 2. Gather schema
+    from dartfx.qsv.model import QsvSchemaFile
+
+    if isinstance(schema_data, QsvSchemaFile):
+        schema_file = schema_data
+    else:
+        # Build standard schema_file wrapper
+        if csv_path:
+            abs_csv_path = os.path.abspath(csv_path)
+            repository = Repository(root=os.path.dirname(abs_csv_path))
+            datafile = CsvDataFile(repository=repository, name=os.path.basename(abs_csv_path))
+        else:
+            dummy_repo = Repository(root=".")
+            datafile = CsvDataFile(repository=dummy_repo, name="dataset.csv")
+
+        if schema_data is None:
+            if not csv_path:
+                raise ValueError("Must provide either schema_data or csv_path to run QSV schema.")
+            from dartfx.qsv.cmd import Schema
+
+            schema_json = Schema(stdout=True).run(str(csv_path))
+            schema_file = QsvSchemaFile(datafile=datafile, **json.loads(schema_json))
+        elif isinstance(schema_data, dict):
+            schema_file = QsvSchemaFile(datafile=datafile, **schema_data)
+        elif isinstance(schema_data, (str, os.PathLike)):
+            schema_path = str(schema_data)
+            if os.path.exists(schema_path):
+                path_str = schema_path.lower()
+                if path_str.endswith(".json"):
+                    import re
+
+                    base_name = os.path.basename(schema_path)
+                    match = re.search(r"^(.*)\.schema\.json$", base_name, re.IGNORECASE)
+                    if match:
+                        datafile_name = match.group(1)
+                        repository = Repository(root=os.path.dirname(os.path.abspath(schema_path)))
+                        datafile = CsvDataFile(repository=repository, name=datafile_name)
+                        schema_file = QsvSchemaFile(datafile=datafile).load()
+                    else:
+                        with open(schema_path, encoding="utf-8") as f:
+                            schema_file = QsvSchemaFile(datafile=datafile, **json.load(f))
+                else:
+                    with open(schema_path, encoding="utf-8") as f:
+                        schema_file = QsvSchemaFile(datafile=datafile, **json.load(f))
+            else:
+                try:
+                    schema_file = QsvSchemaFile(datafile=datafile, **json.loads(schema_path))
+                except json.JSONDecodeError as err:
+                    raise ValueError(f"Invalid JSON data: {schema_path[:100]}") from err
+        else:
+            raise ValueError("Invalid schema data source.")
 
     # Helper maps
-    stats_dict = {row["field"]: row for row in parsed_stats}
-    properties = parsed_schema.get("properties", {})
+    stats_dict = {row.field: row for row in parsed_stats}
+    properties = schema_file.properties
 
     def get_cardinality(field_name: str) -> int | None:
         row = stats_dict.get(field_name)
         if not row:
             return None
-        val = row.get("cardinality")
-        if val is None or val == "":
-            return None
-        try:
-            return int(val)
-        except ValueError:
-            return None
+        return row.cardinality
 
     def get_field_type(field_name: str) -> str | None:
         row = stats_dict.get(field_name)
         if not row:
             return None
-        return row.get("type")
+        return row.type
 
-    # 2. Identify categorical columns
+    # 3. Identify categorical columns
     detected_categorical = []
     for col, prop in properties.items():
         if categorical_columns is not None:
@@ -158,9 +311,9 @@ def generate_ddi_codebook(
             continue
 
         # Auto-detect categorical columns
-        has_enum = "enum" in prop
+        has_enum = prop.enum is not None if prop else False
         card = get_cardinality(col)
-        col_type = get_field_type(col) or prop.get("type", ["String"])
+        col_type = get_field_type(col) or (prop.type if prop else ["String"])
         if isinstance(col_type, list):
             col_type = col_type[0] if col_type else "String"
         col_type_str = str(col_type)
@@ -171,21 +324,75 @@ def generate_ddi_codebook(
             if col_type_str in ("Integer", "String", "Boolean"):
                 detected_categorical.append(col)
 
-    # 3. Gather frequency (either pre-supplied, executed dynamically, or fallback to empty)
-    if frequency_data is None:
-        if csv_path and detected_categorical:
-            from dartfx.qsv.cmd import Frequency
+    # 4. Gather frequency (either pre-supplied, executed dynamically, or fallback to empty)
+    from dartfx.qsv.model import QsvFrequencyFile
 
-            freq_json = Frequency(select=",".join(detected_categorical), limit=0, unq_limit=1, json=True).run(
-                str(csv_path)
-            )
-            parsed_frequency = _load_json_data(freq_json)
-        else:
-            parsed_frequency = {"fields": []}
+    freq_file: QsvFrequencyFile | None = None
+
+    if isinstance(frequency_data, QsvFrequencyFile):
+        freq_file = frequency_data
+        if not freq_file.data:
+            freq_file.load()
     else:
-        parsed_frequency = _load_json_data(frequency_data)
+        # Build standard freq_file wrapper
+        if csv_path:
+            abs_csv_path = os.path.abspath(csv_path)
+            repository = Repository(root=os.path.dirname(abs_csv_path))
+            datafile = CsvDataFile(repository=repository, name=os.path.basename(abs_csv_path))
+        else:
+            dummy_repo = Repository(root=".")
+            datafile = CsvDataFile(repository=dummy_repo, name="dataset.csv")
+        freq_file = QsvFrequencyFile(datafile=datafile)
 
-    # 4. XML construction
+        if frequency_data is None:
+            if csv_path and detected_categorical:
+                from dartfx.qsv.cmd import Frequency
+
+                freq_json = Frequency(select=",".join(detected_categorical), limit=0, unq_limit=1, json=True).run(
+                    str(csv_path)
+                )
+                _populate_frequency_file(freq_file, json.loads(freq_json))
+            else:
+                _populate_frequency_file(freq_file, {"fields": []})
+        else:
+            if isinstance(frequency_data, (str, os.PathLike)):
+                freq_path = str(frequency_data)
+                if os.path.exists(freq_path):
+                    path_str = freq_path.lower()
+                    if path_str.endswith(".jsonl"):
+                        import re
+
+                        base_name = os.path.basename(freq_path)
+                        match = re.search(r"^(.*)\.freq\.([^.]+)\.data\.jsonl$", base_name, re.IGNORECASE)
+                        if match:
+                            stem, ext = match.groups()
+                            datafile_name = f"{stem}.{ext}"
+                            repository = Repository(root=os.path.dirname(os.path.abspath(freq_path)))
+                            datafile = CsvDataFile(repository=repository, name=datafile_name)
+                            freq_file = QsvFrequencyFile(datafile=datafile)
+                            freq_file.load()
+                        else:
+                            with open(freq_path, encoding="utf-8") as f:
+                                content = f.read()
+                            lines = [line.strip() for line in content.splitlines() if line.strip()]
+                            _populate_frequency_file(freq_file, lines)
+                    else:
+                        with open(freq_path, encoding="utf-8") as f:
+                            _populate_frequency_file(freq_file, json.load(f))
+                else:
+                    data_str = freq_path.strip()
+                    if data_str.startswith("{") or data_str.startswith("["):
+                        if "\n" in data_str:
+                            lines = [line.strip() for line in data_str.splitlines() if line.strip()]
+                            _populate_frequency_file(freq_file, lines)
+                        else:
+                            _populate_frequency_file(freq_file, json.loads(data_str))
+                    else:
+                        raise ValueError(f"Invalid frequency data path or string: {freq_path}")
+            else:
+                _populate_frequency_file(freq_file, frequency_data)
+
+    # 5. XML construction
     version_underscore = "2_5" if version == "2.5" else "2_6"
     ns = f"ddi:codebook:{version_underscore}"
 
@@ -206,8 +413,8 @@ def generate_ddi_codebook(
     filename = "dataset.csv"
     if csv_path:
         filename = os.path.basename(csv_path)
-    elif isinstance(parsed_frequency, dict) and isinstance(parsed_frequency.get("input"), str):
-        filename = os.path.basename(parsed_frequency["input"])
+    elif freq_file.metadata and freq_file.metadata.arg_input:
+        filename = os.path.basename(freq_file.metadata.arg_input)
 
     # QSV version for metadata
     qsv_version = "unknown"
@@ -246,8 +453,8 @@ def generate_ddi_codebook(
 
     # Row/Var dimensions
     rowcount = None
-    if isinstance(parsed_frequency, dict) and "rowcount" in parsed_frequency:
-        rowcount = parsed_frequency["rowcount"]
+    if freq_file.metadata and freq_file.metadata.record_count is not None:
+        rowcount = freq_file.metadata.record_count
     elif csv_path:
         try:
             from dartfx.qsv.cmd import Count
@@ -262,8 +469,8 @@ def generate_ddi_codebook(
         fieldcount = len(properties)
     elif parsed_stats:
         fieldcount = len(parsed_stats)
-    elif isinstance(parsed_frequency, dict) and "fieldcount" in parsed_frequency:
-        fieldcount = parsed_frequency["fieldcount"]
+    elif freq_file.metadata and freq_file.metadata.column_count is not None:
+        fieldcount = freq_file.metadata.column_count
 
     # <fileDscr>
     file_id = "F1"
@@ -288,19 +495,20 @@ def generate_ddi_codebook(
     dataDscr = ET.SubElement(root, f"{{{ns}}}dataDscr")
 
     # Order of columns
-    columns = list(properties.keys()) if properties else [row["field"] for row in parsed_stats]
+    columns = list(properties.keys()) if properties else [row.field for row in parsed_stats]
 
     # Map frequencies by field
-    freq_fields = parsed_frequency.get("fields", []) if isinstance(parsed_frequency, dict) else []
-    freq_dict = {f["field"]: f for f in freq_fields if "field" in f}
+    freq_dict = {f.field: f for f in freq_file.data if f.field}
 
     for idx, col in enumerate(columns, start=1):
-        prop = properties.get(col, {})
-        stats_row = stats_dict.get(col, {})
+        prop = properties.get(col)
+        stats_row = stats_dict.get(col)
 
         is_cat = col in detected_categorical
 
-        qsv_type = stats_row.get("type") or prop.get("type", ["String"])
+        qsv_type = stats_row.type if stats_row else None
+        if not qsv_type:
+            qsv_type = prop.type if prop else ["String"]
         if isinstance(qsv_type, list):
             qsv_type = qsv_type[0] if qsv_type else "String"
         qsv_type_str = str(qsv_type).lower()
@@ -328,11 +536,11 @@ def generate_ddi_codebook(
             "representationType": rep_type,
         }
 
-        max_prec = stats_row.get("max_precision")
+        max_prec = stats_row.max_precision if stats_row else None
         if max_prec is not None and max_prec != "":
             try:
                 var_attrs["dcml"] = str(int(max_prec))
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
 
         var_elem = ET.SubElement(dataDscr, f"{{{ns}}}var", var_attrs)
@@ -342,7 +550,6 @@ def generate_ddi_codebook(
 
         # Add summary statistics
         def add_sum_stat(stat_type: str, val: Any, other_type: str | None = None, var_elem=var_elem) -> None:
-
             if val is not None and val != "":
                 attrs = {"type": stat_type}
                 if other_type:
@@ -350,57 +557,55 @@ def generate_ddi_codebook(
                 elem = ET.SubElement(var_elem, f"{{{ns}}}sumStat", attrs)
                 elem.text = str(val)
 
-        add_sum_stat("mean", stats_row.get("mean"))
-        add_sum_stat("medn", stats_row.get("q2_median"))
-        add_sum_stat("mode", stats_row.get("mode"))
-        add_sum_stat("stdev", stats_row.get("stddev"))
-        add_sum_stat("min", stats_row.get("min"))
-        add_sum_stat("max", stats_row.get("max"))
+        if stats_row:
+            add_sum_stat("mean", stats_row.mean)
+            add_sum_stat("medn", stats_row.q2_median)
+            add_sum_stat("mode", stats_row.mode)
+            add_sum_stat("stdev", stats_row.stddev)
+            add_sum_stat("min", stats_row.min)
+            add_sum_stat("max", stats_row.max)
 
-        nullcount = stats_row.get("nullcount")
-        if nullcount is not None and nullcount != "":
-            try:
-                nullcount_int = int(nullcount)
-                add_sum_stat("invd", nullcount_int)
+            nullcount = stats_row.nullcount
+            if nullcount is not None:
+                add_sum_stat("invd", nullcount)
                 if rowcount is not None:
                     if isinstance(rowcount, (int, str, float)):
-                        add_sum_stat("vald", max(0, int(rowcount) - nullcount_int))
-            except ValueError:
-                add_sum_stat("invd", nullcount)
+                        add_sum_stat("vald", max(0, int(rowcount) - nullcount))
 
-        add_sum_stat("other", stats_row.get("sum"), "sum")
-        add_sum_stat("other", stats_row.get("range"), "range")
-        add_sum_stat("other", stats_row.get("variance"), "variance")
-        add_sum_stat("other", stats_row.get("cv"), "cv")
-        add_sum_stat("other", stats_row.get("skewness"), "skewness")
-        add_sum_stat("other", stats_row.get("sparsity"), "sparsity")
-        add_sum_stat("other", stats_row.get("cardinality"), "cardinality")
+            add_sum_stat("other", stats_row.sum, "sum")
+            add_sum_stat("other", stats_row.range, "range")
+            add_sum_stat("other", stats_row.variance, "variance")
+            add_sum_stat("other", stats_row.cv, "cv")
+            add_sum_stat("other", stats_row.skewness, "skewness")
+            add_sum_stat("other", stats_row.sparsity, "sparsity")
+            add_sum_stat("other", stats_row.cardinality, "cardinality")
 
         # Category Frequencies
-        freq_field = freq_dict.get(col, {})
-        frequencies = freq_field.get("frequencies", [])
-        for f_item in frequencies:
-            cat_val = f_item.get("value")
-            if cat_val is None:
-                continue
+        freq_field = freq_dict.get(col)
+        if freq_field:
+            frequencies = freq_field.frequencies
+            for f_item in frequencies:
+                cat_val = f_item.value
+                if cat_val is None:
+                    continue
 
-            catgry = ET.SubElement(var_elem, f"{{{ns}}}catgry")
+                catgry = ET.SubElement(var_elem, f"{{{ns}}}catgry")
 
-            catValu = ET.SubElement(catgry, f"{{{ns}}}catValu")
-            catValu.text = str(cat_val)
+                catValu = ET.SubElement(catgry, f"{{{ns}}}catValu")
+                catValu.text = str(cat_val)
 
-            labl = ET.SubElement(catgry, f"{{{ns}}}labl")
-            labl.text = str(cat_val)
+                labl = ET.SubElement(catgry, f"{{{ns}}}labl")
+                labl.text = str(cat_val)
 
-            count = f_item.get("count")
-            if count is not None:
-                catStat_freq = ET.SubElement(catgry, f"{{{ns}}}catStat", {"type": "freq"})
-                catStat_freq.text = str(count)
+                count = f_item.count
+                if count is not None:
+                    catStat_freq = ET.SubElement(catgry, f"{{{ns}}}catStat", {"type": "freq"})
+                    catStat_freq.text = str(count)
 
-            pct = f_item.get("percentage")
-            if pct is not None:
-                catStat_pct = ET.SubElement(catgry, f"{{{ns}}}catStat", {"type": "percent"})
-                catStat_pct.text = str(pct)
+                pct = f_item.percentage
+                if pct is not None:
+                    catStat_pct = ET.SubElement(catgry, f"{{{ns}}}catStat", {"type": "percent"})
+                    catStat_pct.text = str(pct)
 
         # Add varFormat element
         vf_attrs = {
@@ -426,9 +631,9 @@ def generate_ddi_codebook(
 
 def generate_sql(
     csv_path: str | os.PathLike[str],
-    schema_data: dict[str, Any] | str | os.PathLike[str] | None = None,
-    stats_data: list[dict[str, Any]] | list[QsvStatsDataModel] | str | os.PathLike[str] | None = None,
-    frequency_data: dict[str, Any] | str | os.PathLike[str] | None = None,
+    schema_data: dict[str, Any] | str | os.PathLike[str] | QsvSchemaFile | None = None,
+    stats_data: list[dict[str, Any]] | list[QsvStatsDataModel] | QsvStatsFile | str | os.PathLike[str] | None = None,
+    frequency_data: dict[str, Any] | str | os.PathLike[str] | QsvFrequencyFile | None = None,
     flavor: str = "postgres",
     table_name: str | None = None,
     schema_name: str | None = None,
@@ -441,9 +646,9 @@ def generate_sql(
 
     Args:
         csv_path: Path to the source CSV file. Used for defaulting table name and path in comments.
-        schema_data: Pre-computed schema data (dict, file path, or JSON string).
+        schema_data: Pre-computed schema data (dict, file path, string, or QsvSchemaFile).
         stats_data: Pre-computed stats data (list of dicts, list of Pydantic models, file path, or string).
-        frequency_data: Pre-computed frequency data (dict, file path, or JSON string).
+        frequency_data: Pre-computed frequency data (dict, file path, string, or QsvFrequencyFile).
         flavor: SQL flavor ("postgres", "sqlite", "mysql", "mssql", "oracle", "clickhouse",
             "duckdb", "snowflake", "bigquery", "redshift", "mariadb"). Default is "postgres".
         table_name: Custom table name. If not specified, defaults to "tbl_<csv-filename>".
@@ -474,32 +679,240 @@ def generate_sql(
         raise ValueError(f"Unsupported flavor '{flavor}'. Supported: {', '.join(supported_flavors)}.")
 
     # 1. Resolve JSON Schema (reuse existing internal methods)
-    if schema_data is None:
-        from dartfx.qsv.cmd import Schema
+    from dartfx.qsv.model import QsvSchemaFile
 
-        schema_json = Schema(stdout=True).run(str(csv_path))
-        parsed_schema = _load_json_data(schema_json)
+    if isinstance(schema_data, QsvSchemaFile):
+        schema_file = schema_data
     else:
-        parsed_schema = _load_json_data(schema_data)
+        # Build standard schema_file wrapper
+        if csv_path:
+            abs_csv_path = os.path.abspath(csv_path)
+            repository = Repository(root=os.path.dirname(abs_csv_path))
+            datafile = CsvDataFile(repository=repository, name=os.path.basename(abs_csv_path))
+        else:
+            dummy_repo = Repository(root=".")
+            datafile = CsvDataFile(repository=dummy_repo, name="dataset.csv")
+
+        if schema_data is None:
+            from dartfx.qsv.cmd import Schema
+
+            schema_json = Schema(stdout=True).run(str(csv_path))
+            schema_file = QsvSchemaFile(datafile=datafile, **json.loads(schema_json))
+        elif isinstance(schema_data, dict):
+            schema_file = QsvSchemaFile(datafile=datafile, **schema_data)
+        elif isinstance(schema_data, (str, os.PathLike)):
+            schema_path = str(schema_data)
+            if os.path.exists(schema_path):
+                path_str = schema_path.lower()
+                if path_str.endswith(".json"):
+                    import re
+
+                    base_name = os.path.basename(schema_path)
+                    match = re.search(r"^(.*)\.schema\.json$", base_name, re.IGNORECASE)
+                    if match:
+                        datafile_name = match.group(1)
+                        repository = Repository(root=os.path.dirname(os.path.abspath(schema_path)))
+                        datafile = CsvDataFile(repository=repository, name=datafile_name)
+                        schema_file = QsvSchemaFile(datafile=datafile).load()
+                    else:
+                        with open(schema_path, encoding="utf-8") as f:
+                            schema_file = QsvSchemaFile(datafile=datafile, **json.load(f))
+                else:
+                    with open(schema_path, encoding="utf-8") as f:
+                        schema_file = QsvSchemaFile(datafile=datafile, **json.load(f))
+            else:
+                try:
+                    schema_file = QsvSchemaFile(datafile=datafile, **json.loads(schema_path))
+                except json.JSONDecodeError as err:
+                    raise ValueError(f"Invalid JSON data: {schema_path[:100]}") from err
+        else:
+            raise ValueError("Invalid schema data source.")
+
+    properties = schema_file.properties
 
     # 2. Resolve Stats Data (optional but resolved if None and csv_path exists)
-    parsed_stats = None
-    if stats_data is None:
+    stats_file: QsvStatsFile | None = None
+
+    if isinstance(stats_data, QsvStatsFile):
+        stats_file = stats_data
+        if not stats_file.data:
+            stats_file.load()
+    elif stats_data is None:
         if csv_path:
             try:
                 from dartfx.qsv.cmd import Stats
 
                 stats_csv = Stats(infer_dates=True, infer_boolean=True).run(str(csv_path))
-                parsed_stats = _load_stats_data(stats_csv)
+                reader = csv.DictReader(io.StringIO(stats_csv.strip()))
+                models = [
+                    QsvStatsDataModel.model_validate(
+                        {k: (None if v == "" and k != "field" else v) for k, v in row.items()}
+                    )
+                    for row in reader
+                ]
+
+                abs_csv_path = os.path.abspath(csv_path)
+                repository = Repository(root=os.path.dirname(abs_csv_path))
+                datafile = CsvDataFile(repository=repository, name=os.path.basename(abs_csv_path))
+                stats_file = QsvStatsFile(datafile=datafile)
+                stats_file._data = models
             except Exception:
-                # Fallback to no stats if running stats fails
                 pass
-    else:
-        parsed_stats = _load_stats_data(stats_data)
+    elif isinstance(stats_data, list):
+        models = []
+        for item in stats_data:
+            if isinstance(item, QsvStatsDataModel):
+                models.append(item)
+            elif isinstance(item, dict):
+                cleaned_item = {k: (None if v == "" and k != "field" else v) for k, v in item.items()}
+                models.append(QsvStatsDataModel.model_validate(cleaned_item))
+            elif hasattr(item, "model_dump"):
+                cleaned_item = {
+                    k: (None if v == "" and k != "field" else v) for k, v in item.model_dump(by_alias=True).items()
+                }
+                models.append(QsvStatsDataModel.model_validate(cleaned_item))
+            elif hasattr(item, "dict"):
+                cleaned_item = {
+                    k: (None if v == "" and k != "field" else v) for k, v in item.dict(by_alias=True).items()
+                }
+                models.append(QsvStatsDataModel.model_validate(cleaned_item))
+            else:
+                cleaned_item = {k: (None if v == "" and k != "field" else v) for k, v in dict(item).items()}
+                models.append(QsvStatsDataModel.model_validate(cleaned_item))
+
+        if csv_path:
+            abs_csv_path = os.path.abspath(csv_path)
+            repository = Repository(root=os.path.dirname(abs_csv_path))
+            datafile = CsvDataFile(repository=repository, name=os.path.basename(abs_csv_path))
+        else:
+            dummy_repo = Repository(root=".")
+            datafile = CsvDataFile(repository=dummy_repo, name="dataset.csv")
+
+        stats_file = QsvStatsFile(datafile=datafile)
+        stats_file._data = models
+    elif isinstance(stats_data, (str, os.PathLike)):
+        stats_path = str(stats_data)
+        if os.path.exists(stats_path):
+            path_str = stats_path.lower()
+            if path_str.endswith(".jsonl") or path_str.endswith(".json"):
+                import re
+
+                base_name = os.path.basename(stats_path)
+                match = re.search(r"^(.*)\.stats\.([^.]+)\.data\.jsonl$", base_name, re.IGNORECASE)
+                if match:
+                    stem, ext = match.groups()
+                    datafile_name = f"{stem}.{ext}"
+                    repository = Repository(root=os.path.dirname(os.path.abspath(stats_path)))
+                    datafile = CsvDataFile(repository=repository, name=datafile_name)
+                    stats_file = QsvStatsFile(datafile=datafile)
+                    stats_file.load()
+                else:
+                    with open(stats_path, encoding="utf-8") as f:
+                        content = f.read()
+                    parsed = _parse_stats_json_or_jsonl(content)
+                    models = [
+                        QsvStatsDataModel.model_validate(
+                            {k: (None if v == "" and k != "field" else v) for k, v in item.items()}
+                        )
+                        for item in parsed
+                    ]
+                    dummy_repo = Repository(root=".")
+                    datafile = CsvDataFile(repository=dummy_repo, name="dataset.csv")
+                    stats_file = QsvStatsFile(datafile=datafile)
+                    stats_file._data = models
+            else:
+                with open(stats_path, encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    models = [
+                        QsvStatsDataModel.model_validate(
+                            {k: (None if v == "" and k != "field" else v) for k, v in row.items()}
+                        )
+                        for row in reader
+                    ]
+                dummy_repo = Repository(root=".")
+                datafile = CsvDataFile(repository=dummy_repo, name="dataset.csv")
+                stats_file = QsvStatsFile(datafile=datafile)
+                stats_file._data = models
+        else:
+            data_str = stats_path.strip()
+            if data_str.startswith("{") or data_str.startswith("["):
+                parsed = _parse_stats_json_or_jsonl(data_str)
+                models = [
+                    QsvStatsDataModel.model_validate(
+                        {k: (None if v == "" and k != "field" else v) for k, v in item.items()}
+                    )
+                    for item in parsed
+                ]
+            else:
+                reader = csv.DictReader(io.StringIO(data_str))
+                models = [
+                    QsvStatsDataModel.model_validate(
+                        {k: (None if v == "" and k != "field" else v) for k, v in row.items()}
+                    )
+                    for row in reader
+                ]
+            dummy_repo = Repository(root=".")
+            datafile = CsvDataFile(repository=dummy_repo, name="dataset.csv")
+            stats_file = QsvStatsFile(datafile=datafile)
+            stats_file._data = models
+
+    parsed_stats = stats_file.data if stats_file else None
 
     # 3. Resolve Frequency Data (optional)
+    freq_file: QsvFrequencyFile | None = None
+
     if frequency_data is not None:
-        _load_json_data(frequency_data)
+        if isinstance(frequency_data, QsvFrequencyFile):
+            freq_file = frequency_data
+            if not freq_file.data:
+                freq_file.load()
+        else:
+            # Build standard freq_file wrapper
+            if csv_path:
+                abs_csv_path = os.path.abspath(csv_path)
+                repository = Repository(root=os.path.dirname(abs_csv_path))
+                datafile = CsvDataFile(repository=repository, name=os.path.basename(abs_csv_path))
+            else:
+                dummy_repo = Repository(root=".")
+                datafile = CsvDataFile(repository=dummy_repo, name="dataset.csv")
+            freq_file = QsvFrequencyFile(datafile=datafile)
+
+            if isinstance(frequency_data, (str, os.PathLike)):
+                freq_path = str(frequency_data)
+                if os.path.exists(freq_path):
+                    path_str = freq_path.lower()
+                    if path_str.endswith(".jsonl"):
+                        import re
+
+                        base_name = os.path.basename(freq_path)
+                        match = re.search(r"^(.*)\.freq\.([^.]+)\.data\.jsonl$", base_name, re.IGNORECASE)
+                        if match:
+                            stem, ext = match.groups()
+                            datafile_name = f"{stem}.{ext}"
+                            repository = Repository(root=os.path.dirname(os.path.abspath(freq_path)))
+                            datafile = CsvDataFile(repository=repository, name=datafile_name)
+                            freq_file = QsvFrequencyFile(datafile=datafile)
+                            freq_file.load()
+                        else:
+                            with open(freq_path, encoding="utf-8") as f:
+                                content = f.read()
+                            lines = [line.strip() for line in content.splitlines() if line.strip()]
+                            _populate_frequency_file(freq_file, lines)
+                    else:
+                        with open(freq_path, encoding="utf-8") as f:
+                            _populate_frequency_file(freq_file, json.load(f))
+                else:
+                    data_str = freq_path.strip()
+                    if data_str.startswith("{") or data_str.startswith("["):
+                        if "\n" in data_str:
+                            lines = [line.strip() for line in data_str.splitlines() if line.strip()]
+                            _populate_frequency_file(freq_file, lines)
+                        else:
+                            _populate_frequency_file(freq_file, json.loads(data_str))
+                    else:
+                        raise ValueError(f"Invalid frequency data path or string: {freq_path}")
+            else:
+                _populate_frequency_file(freq_file, frequency_data)
 
     # 4. Resolve table name
     if not table_name:
@@ -528,8 +941,7 @@ def generate_sql(
         quoted_table = f"{quote(schema_name)}.{quoted_table}"
 
     # Helpers
-    stats_dict = {row["field"]: row for row in parsed_stats} if parsed_stats else {}
-    properties = parsed_schema.get("properties", {})
+    stats_dict = {row.field: row for row in parsed_stats} if parsed_stats else {}
 
     # Resolve and validate primary key fields (case-insensitive)
     resolved_pk_fields = []
@@ -599,14 +1011,14 @@ def generate_sql(
     columns_defs = []
     for col, prop in properties.items():
         # Get types
-        json_types = prop.get("type", [])
+        json_types = prop.type if prop else ["string"]
         if isinstance(json_types, str):
             json_types = [json_types]
         primary_types = [t for t in json_types if t != "null"]
         primary_type = primary_types[0] if primary_types else "string"
 
-        stats_row = stats_dict.get(col, {})
-        stats_type = stats_row.get("type")  # e.g., "Integer", "Float", "String", "Date", "DateTime", "Boolean"
+        stats_row = stats_dict.get(col)
+        stats_type = stats_row.type if stats_row else None
         stats_type_str = str(stats_type).lower() if stats_type else ""
 
         col_type = "TEXT"  # fallback
@@ -615,15 +1027,15 @@ def generate_sql(
         minimum = None
         maximum = None
         if stats_row:
-            minimum = stats_row.get("min")
-            maximum = stats_row.get("max")
-        if minimum is None:
-            minimum = prop.get("minimum")
-        if maximum is None:
-            maximum = prop.get("maximum")
+            minimum = stats_row.min
+            maximum = stats_row.max
+        if minimum is None and prop:
+            minimum = prop.minimum
+        if maximum is None and prop:
+            maximum = prop.maximum
 
-        is_date = "date" in stats_type_str or prop.get("format") == "date"
-        is_datetime = "datetime" in stats_type_str or prop.get("format") == "date-time"
+        is_date = "date" in stats_type_str or (prop.format == "date" if prop else False)
+        is_datetime = "datetime" in stats_type_str or (prop.format == "date-time" if prop else False)
 
         if flavor_lower == "postgres":
             if is_date:
@@ -637,7 +1049,7 @@ def generate_sql(
             elif primary_type == "boolean" or stats_type_str == "boolean":
                 col_type = "BOOLEAN"
             else:
-                max_len = prop.get("maxLength")
+                max_len = prop.max_length if prop else None
                 col_type = f"VARCHAR({max_len})" if max_len else "TEXT"
 
         elif flavor_lower == "sqlite":
@@ -662,7 +1074,7 @@ def generate_sql(
             elif primary_type == "boolean" or stats_type_str == "boolean":
                 col_type = "BOOLEAN"
             else:
-                max_len = prop.get("maxLength")
+                max_len = prop.max_length if prop else None
                 col_type = f"VARCHAR({max_len})" if max_len else "TEXT"
 
         elif flavor_lower == "mssql":
@@ -677,7 +1089,7 @@ def generate_sql(
             elif primary_type == "boolean" or stats_type_str == "boolean":
                 col_type = "BIT"
             else:
-                max_len = prop.get("maxLength")
+                max_len = prop.max_length if prop else None
                 col_type = f"VARCHAR({max_len})" if max_len else "VARCHAR(MAX)"
 
         elif flavor_lower == "oracle":
@@ -692,7 +1104,7 @@ def generate_sql(
             elif primary_type == "boolean" or stats_type_str == "boolean":
                 col_type = "NUMBER(1)"
             else:
-                max_len = prop.get("maxLength")
+                max_len = prop.max_length if prop else None
                 col_type = f"VARCHAR2({max_len})" if max_len else "VARCHAR2(4000)"
 
         elif flavor_lower == "clickhouse":
@@ -735,7 +1147,7 @@ def generate_sql(
             elif primary_type == "boolean" or stats_type_str == "boolean":
                 col_type = "BOOLEAN"
             else:
-                max_len = prop.get("maxLength")
+                max_len = prop.max_length if prop else None
                 col_type = f"VARCHAR({max_len})" if max_len else "VARCHAR"
 
         elif flavor_lower == "bigquery":
@@ -764,7 +1176,7 @@ def generate_sql(
             elif primary_type == "boolean" or stats_type_str == "boolean":
                 col_type = "BOOLEAN"
             else:
-                max_len = prop.get("maxLength")
+                max_len = prop.max_length if prop else None
                 col_type = f"VARCHAR({max_len})" if max_len else "VARCHAR(256)"
 
         elif flavor_lower == "mariadb":
@@ -779,7 +1191,7 @@ def generate_sql(
             elif primary_type == "boolean" or stats_type_str == "boolean":
                 col_type = "BOOLEAN"
             else:
-                max_len = prop.get("maxLength")
+                max_len = prop.max_length if prop else None
                 col_type = f"VARCHAR({max_len})" if max_len else "TEXT"
 
         columns_defs.append(f"    {quote(col)} {col_type}")
@@ -898,7 +1310,7 @@ def _is_outdated(source_path: str | os.PathLike[str], target_path: str | os.Path
     return os.path.getmtime(source_path) > os.path.getmtime(target_path)
 
 
-def metadata_to_dict(meta: Any) -> dict[str, Any]:
+def readstat_metadata_to_dict(meta: Any) -> dict[str, Any]:
     """Convert a pyreadstat metadata container to a dictionary."""
     meta_dict = {
         "column_names": getattr(meta, "column_names", []),
@@ -925,7 +1337,7 @@ def metadata_to_dict(meta: Any) -> dict[str, Any]:
     return clean_dict(meta_dict)
 
 
-def get_pyreadstat_reader(extension: str) -> Any:
+def get_readstat_reader(extension: str) -> Any:
     """Get the pyreadstat reader function for a given file extension."""
     import pyreadstat
 
@@ -948,7 +1360,7 @@ def get_pyreadstat_reader(extension: str) -> Any:
         raise ValueError(f"Unsupported file extension: {extension}")
 
 
-def read_stat_metadata(file_path: str | os.PathLike[str]) -> dict[str, Any]:
+def readstat_metadata(file_path: str | os.PathLike[str]) -> dict[str, Any]:
     """
     Reads a SAS, Stata, or SPSS file and extracts its metadata as a dictionary.
 
@@ -963,17 +1375,17 @@ def read_stat_metadata(file_path: str | os.PathLike[str]) -> dict[str, Any]:
         raise FileNotFoundError(f"File not found: {file_path}")
 
     _, ext = os.path.splitext(file_path)
-    reader = get_pyreadstat_reader(ext)
+    reader = get_readstat_reader(ext)
 
     if ext.lower() == ".sas7bcat":
         meta = reader(file_path)
     else:
         _, meta = reader(file_path, metadataonly=True)
 
-    return metadata_to_dict(meta)
+    return readstat_metadata_to_dict(meta)
 
 
-def convert_stat_file_to_csv(
+def readstat_to_csv(
     file_path: str | os.PathLike[str],
     csv_path: str | os.PathLike[str] | None = None,
     overwrite: bool = False,
@@ -1000,7 +1412,7 @@ def convert_stat_file_to_csv(
 
     if overwrite or _is_outdated(file_path, csv_path):
         _, ext = os.path.splitext(file_path)
-        reader = get_pyreadstat_reader(ext)
+        reader = get_readstat_reader(ext)
 
         if ext.lower() == ".sas7bcat":
             import pandas as pd
@@ -1015,7 +1427,7 @@ def convert_stat_file_to_csv(
     return str(csv_path)
 
 
-def export_stat_metadata_to_json(
+def readstat_metadata_to_json(
     file_path: str | os.PathLike[str],
     json_path: str | os.PathLike[str] | None = None,
     overwrite: bool = False,
@@ -1041,7 +1453,7 @@ def export_stat_metadata_to_json(
         json_path = os.path.abspath(json_path)
 
     if overwrite or _is_outdated(file_path, json_path):
-        meta_dict = read_stat_metadata(file_path)
+        meta_dict = readstat_metadata(file_path)
 
         os.makedirs(os.path.dirname(json_path), exist_ok=True)
         with open(json_path, "w", encoding="utf-8") as f:
