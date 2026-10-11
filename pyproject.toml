@@ -76,7 +76,7 @@ omit = ["src/dartfx/qsv/__about__.py"]
 
 [tool.coverage.paths]
 source = ["src/dartfx/qsv", "*/qsv-toolkit/src/dartfx/qsv"]
-tests = ["tests", "*/dartfx/qsv/tests"]
+tests = ["tests"]
 
 [tool.coverage.report]
 exclude_lines = ["no cov", "if __name__ == .__main__.:", "if TYPE_CHECKING:"]
@@ -106,7 +106,7 @@ select = [
   "ARG", # flake8-unused-arguments
   "PT",  # flake8-pytest-style
 ]
-ignore = ["B008"]
+ignore = []
 
 [tool.ruff.lint.isort]
 known-first-party = ["dartfx"]
@@ -120,7 +120,7 @@ line-ending = "auto"
 [tool.pyrefly]
 search-path = ["src"]
 python-version = "3.12.0"
-preset = "legacy"
+preset = "default"
 ignore-missing-imports = ["*"]
 
 [dependency-groups]

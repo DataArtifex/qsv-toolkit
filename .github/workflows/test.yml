@@ -73,6 +73,7 @@ jobs:
 
           curl -fsSL "https://github.com/dathere/qsv/releases/download/${QSV_VERSION}/${ASSET}" -o qsv.zip
           unzip -o qsv.zip -d qsv-bin
+          chmod -R +x qsv-bin
           # Add to PATH
           echo "${{ github.workspace }}/qsv-bin" >> "$GITHUB_PATH"
 
