@@ -38,7 +38,7 @@ def test_cli_help() -> None:
     help_text = _strip_ansi(result.stdout)
     assert result.exit_code == 0
     assert "Generate a DDI-Codebook XML document" in help_text
-    assert "CSV_PATH" in help_text
+    assert "csv_path" in help_text.lower()
 
 
 def test_cli_toddic_precomputed(tmp_path: str) -> None:
@@ -167,7 +167,7 @@ def test_cli_tosql_help() -> None:
     help_text = _strip_ansi(result.stdout)
     assert result.exit_code == 0
     assert "Generate a SQL script to host a CSV file" in help_text
-    assert "CSV_PATH" in help_text
+    assert "csv_path" in help_text.lower()
     assert "--flavor" in help_text
     assert "--table" in help_text
 

@@ -677,7 +677,7 @@ def test_stat_file_conversion_and_metadata(tmp_path):
     df = pd.DataFrame({"id": [1.0, 2.0, 3.0], "name": ["Alice", "Bob", "Charlie"], "age": [25.0, 30.0, 35.0]})
 
     # Define labels
-    column_labels = ["Identifier", "Name of person", "Age of person"]
+    column_labels: list[str | None] = ["Identifier", "Name of person", "Age of person"]
     variable_value_labels = {"id": {1.0: "First", 2.0: "Second", 3.0: "Third"}}
 
     # 2. Write to a temporary SPSS (.sav) file
