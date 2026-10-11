@@ -108,6 +108,9 @@ select = [
 ]
 ignore = []
 
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["typer.Argument", "typer.Option"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["dartfx"]
 
