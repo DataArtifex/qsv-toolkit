@@ -1,6 +1,6 @@
 # qsv joinp
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Joins two sets of CSV data on the specified columns using the Polars engine.
@@ -15,6 +15,7 @@ non-equi & asof joins and its output columns can be coalesced (no duplicate colu
 Returns the shape of the join result (number of rows, number of columns) to stderr.
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_joinp.rs.
+See also https://github.com/dathere/qsv/wiki/Joins-and-Set-Ops#joinp
 
 Usage:
     qsv joinp [options] <columns1> <input1> <columns2> <input2>
@@ -100,14 +101,29 @@ joinp options:
                             JOIN OPTIONS:
     --maintain-order <arg>  Which row order to preserve, if any. Valid values are:
                               none, left, right, left_right, right_left
-                            Do not rely on any observed ordering without explicitly
-                            setting this parameter. Not specifying any order can improve
-                            performance. Supported for inner, left, right and full joins.
+                            Defaults to "none", which lets the engine emit rows in
+                            whatever order it finishes them - faster on large joins,
+                            but the output is NOT reproducible: the same invocation
+                            can return the same rows in a different order each run.
+                            "left" orders by the left row only, so when one left row
+                            matches several right rows those matches are tied and
+                            their relative order is still unspecified. Use
+                            "left_right" (or "right_left") for a fully deterministic,
+                            byte-repeatable order.
+                            Only inner, left, right and full joins can maintain order;
+                            cross, non-equi and asof joins ignore this option.
                             [default: none]
     --nulls                When set, joins will work on empty fields.
                            Otherwise, empty fields are completely ignored.
-    --streaming            When set, the join will be done in a streaming fashion.
-                           Only use this when you get out of memory errors.
+    --streaming            Write the join result as it is computed, batch by batch, instead
+                           of collecting the whole result in memory first. Use this when the
+                           result is too big for memory: it uses less memory but is slower.
+                           An --output file is written beside its target and only moved into
+                           place if the join succeeds; overwriting an existing file copies the
+                           result into it, so it keeps its owner, group, mode and links, and
+                           briefly needs disk space for two copies.
+                           On stdout, rows are sent as they are computed, so a join that fails
+                           part-way leaves its output cut short; check the exit code.
 
                            POLARS CSV PARSING OPTIONS:
     --try-parsedates       When set, will attempt to parse the columns as dates.
@@ -138,9 +154,6 @@ joinp options:
                            at the same time as the input files, they will be used to inform the join
                            operation regardless of the value of --cache-schema unless --infer-len is 0.
                            [default: 0]
-    --low-memory           Use low memory mode when parsing CSVs. This will use less memory
-                           but will be slower. It will also process the join in streaming mode.
-                           Only use this when you get out of memory errors.
     --no-optimizations     Disable non-default join optimizations. This will make joins slower.
                            Only use this when you get join errors.
     --ignore-errors        Ignore errors when parsing CSVs. If set, rows with errors

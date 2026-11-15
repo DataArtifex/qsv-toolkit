@@ -25,6 +25,6 @@ It is assume that you have QSV is installed and available in your PATH.
 - The documentation should be generated using the `make html` command.
 
 ## File Conversion and Metadata Extraction (SAS, Stata, SPSS)
-- Support reading statistical data formats including SAS (`.sas7bdat`, `.sas7bcat`, `.xport`), Stata (`.dta`), and SPSS (`.sav`, `.zsav`, `.por`) using `pyreadstat`.
+- Support reading and writing statistical data formats including SAS (`.sas7bdat`, `.sas7bcat`, `.xport`, `.xpt`), Stata (`.dta`), and SPSS (`.sav`, `.zsav`, `.por`) using QSV's native `readstat` and `writestat` commands.
 - Support converting these formats to and from CSV to allow processing with QSV.
 - Extract file-level and variable-level metadata (such as variable labels, value labels, and formats) from these formats to generate metadata schemas or DDI-Codebook XML.

@@ -1,6 +1,6 @@
 # qsv fetch
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Send/Fetch data to/from web services for every row using HTTP Get.
@@ -33,7 +33,8 @@ Set the --disk-cache-dir option and the environment variables QSV_DISKCACHE_TTL_
 QSV_DISKCACHE_TTL_REFRESH to change default DiskCache settings.
 
 Redis Cache:
-Another persistent, inter-session cache option is a Redis cache enabled with the --redis flag.
+Another persistent, inter-session cache option is a Redis cache, enabled with
+the --redis-cache flag.
 By default, it will connect to a local Redis instance at redis://127.0.0.1:6379/1,
 with a cache expiry Time-to-Live (TTL) of 2,419,200 seconds (28 days),
 and cache hits NOT refreshing the TTL of cached values.
@@ -50,7 +51,9 @@ to be as fast as allowed. The --rate-limit option sets the maximum number of que
 throttling as required, based on rate-limit and retry-after response headers.
 
 To use a proxy, set the environment variables HTTP_PROXY, HTTPS_PROXY or ALL_PROXY
-(e.g. export HTTPS_PROXY=socks5://127.0.0.1:1086).
+(e.g. export HTTPS_PROXY=socks5://127.0.0.1:1086). Your operating system's own
+proxy configuration (macOS System Settings, Windows registry) is also honored;
+the environment variables take precedence over it.
 
 qsv fetch supports brotli, gzip and deflate automatic decompression for improved throughput
 and performance, preferring brotli over gzip over deflate.
@@ -100,10 +103,10 @@ $ qsv fetch URL --new-column CityState --jaq '[ ."places"[0]."place name",."plac
 
 data_with_CityState.csv
 ```csv
-URL, CityState,
-https://api.zippopotam.us/us/90210, "[\"Beverly Hills\",\"CA\"]"
-https://api.zippopotam.us/us/94105, "[\"San Francisco\",\"CA\"]"
-https://api.zippopotam.us/us/92802, "[\"Anaheim\",\"CA\"]"
+URL,CityState
+https://api.zippopotam.us/us/90210,"[""Beverly Hills"",""CA""]"
+https://api.zippopotam.us/us/94105,"[""San Francisco"",""CA""]"
+https://api.zippopotam.us/us/92802,"[""Anaheim"",""CA""]"
 ```
 
 # As you can see, entering jaq selectors on the command line is error prone and can quickly become cumbersome.
@@ -151,6 +154,7 @@ Note that you can pass as many key-value pairs by using --http-header option rep
   $ qsv fetch URL data.csv --http-header "X-Api-Key:TEST_KEY" -H "X-Api-Secret:ABC123XYZ" -H "Accept-Language: fr-FR"
 
 For more extensive examples, see https://github.com/dathere/qsv/blob/master/tests/test_fetch.rs.
+See also https://github.com/dathere/qsv/wiki/HTTP-and-Web#fetch
 
 Usage:
     qsv fetch [<url-column> | --url-template <template>] [--jaq <selector> | --jaqfile <file>] [--http-header <k:v>...] [options] [<input>]
@@ -182,6 +186,13 @@ Fetch options:
                                [default: 0 ]
     --timeout <seconds>        Timeout for each URL request.
                                [default: 30 ]
+    --default-encoding <enc>   Fallback character encoding used to decode a response body when
+                               the server does NOT send a charset parameter in its Content-Type
+                               header. Accepts WHATWG encoding labels, e.g. utf-8, windows-1252,
+                               iso-8859-1, shift_jis, euc-jp, koi8-r.
+                               When the server DOES send a charset, the server always wins and
+                               this option is ignored.
+                               [default: utf-8]
     -H, --http-header <k:v>    Append custom header(s) to the HTTP header. Pass multiple key-value pairs
                                by adding this option multiple times, once for each pair. The key and value
                                should be separated by a colon.
@@ -217,7 +228,8 @@ Fetch options:
                                It has a default Time To Live (TTL)/lifespan of 28 days and cache hits do not
                                refresh the TTL of cached values.
                                Adjust the QSV_DISKCACHE_TTL_SECS & QSV_DISKCACHE_TTL_REFRESH env vars
-                               to change DiskCache settings.
+                               to change DiskCache settings. A QSV_DISKCACHE_TTL_SECS of 0 disables
+                               time-based expiration (entries are cached indefinitely).
     --disk-cache-dir <dir>     The directory <dir> to store the disk cache. Note that if the directory
                                does not exist, it will be created. If the directory exists, it will be used as is,
                                and will not be flushed. This option allows you to maintain several disk caches
@@ -229,6 +241,7 @@ Fetch options:
                                NOT renewing an entry's TTL.
                                Adjust the QSV_REDIS_CONNSTR, QSV_REDIS_MAX_POOL_SIZE, QSV_REDIS_TTL_SECS &
                                QSV_REDIS_TTL_REFRESH env vars respectively to change Redis settings.
+                               A QSV_REDIS_TTL_SECS of 0 disables expiration (entries cached indefinitely).
                                This option is ignored if the --disk-cache option is enabled.
 
     --cache-error              Cache error responses even if a request fails. If an identical URL is requested,

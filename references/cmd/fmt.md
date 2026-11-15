@@ -1,6 +1,6 @@
 # qsv fmt
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Formats CSV data with a custom delimiter or CRLF line endings.
@@ -12,6 +12,7 @@ have a specific delimiter or record separator, and this is where 'qsv fmt' is
 useful.
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_fmt.rs.
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#fmt
 
 Usage:
     qsv fmt [options] [<input>]

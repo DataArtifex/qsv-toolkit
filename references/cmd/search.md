@@ -1,6 +1,6 @@
 # qsv search
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Filters CSV data by whether the given regex matches a row.
@@ -47,6 +47,7 @@ Examples:
   qsv search --preview-match 5 'warning' data.csv
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_search.rs.
+See also https://github.com/dathere/qsv/wiki/Selection-and-Inspection#search
 
 Usage:
     qsv search [options] <regex> [<input>]

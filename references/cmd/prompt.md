@@ -1,6 +1,6 @@
 # qsv prompt
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Open a file dialog to pick a file as input or save to an output file.
@@ -18,6 +18,8 @@ Examples:
   # Prompt for a spreadsheet, and export to CSV using a save file dialog:
   qsv prompt -m 'Select a spreadsheet to export to CSV' -F xlsx,xls,ods | \
       qsv excel - | qsv prompt -m 'Save exported CSV to...' --fd-output
+
+See also https://github.com/dathere/qsv/wiki/Conversion-and-IO#prompt
 
 Usage:
     qsv prompt [options]

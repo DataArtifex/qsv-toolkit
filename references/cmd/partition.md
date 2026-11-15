@@ -1,6 +1,6 @@
 # qsv partition
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Partitions the given CSV data into chunks based on the value of a column.
@@ -29,6 +29,7 @@ will create the following files, each containing the data for each borough:
     nyc311-Staten_Island.csv
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_partition.rs.
+See also https://github.com/dathere/qsv/wiki/Joins-and-Set-Ops#partition
 
 Usage:
     qsv partition [options] <column> <outdir> [<input>]

@@ -1,6 +1,6 @@
 # qsv frequency
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Compute a frequency distribution table on input data. It has CSV and JSON output modes.
@@ -11,7 +11,7 @@ columns - field,value,count,percentage,rank.
 
 The rank column is 1-based and is calculated based on the count of the values,
 with the most frequent having a rank of 1. In case of ties, the rank is calculated
-based on the rank-strategy option - "min" (default), "max", "dense", "ordinal", or "average".
+based on the rank-strategy option - "dense" (default), "min", "max", "ordinal", or "average".
 
 Only the top N values (set by the --limit option) are computed, with the rest of the values
 grouped into an "Other" category with a special rank of 0. The "Other" category includes
@@ -49,30 +49,33 @@ You can override this behavior by setting the QSV_FREQ_CHUNK_MEMORY_MB environme
 or any non-u64 value (e.g. -1 or "auto") for CPU-based chunking (1 chunk = num records/number of
 CPUs)), or by setting the --jobs option.
 
-NOTE: "Complete" Frequency Tables:
+"COMPLETE" FREQUENCY TABLES FOR ID COLUMNS:
+By default, ID columns will have an `<ALL UNIQUE>` value with count equal to
+rowcount and percentage set to 100 with a rank of 0. This is done by using the
+stats cache to fetch each column's cardinality - allowing qsv to short-circuit
+frequency compilation and eliminate the need to maintain a hashmap for ID columns.
+The stats cache counts untrimmed values, so if trimming changes any value in such
+a column (e.g. " a" and "a" would merge), that column is counted in full instead,
+and a message names it.
 
-    By default, ID columns will have an "<ALL UNIQUE>" value with count equal to
-    rowcount and percentage set to 100 with a rank of 0. This is done by using the
-    stats cache to fetch each column's cardinality - allowing qsv to short-circuit
-    frequency compilation and eliminate the need to maintain a hashmap for ID columns.
+If you wish to compile a "complete" frequency table even for ID columns, set
+QSV_STATSCACHE_MODE to "none". This will force the frequency command to compute
+frequencies for all columns regardless of cardinality, even for ID columns.
 
-    If you wish to compile a "complete" frequency table even for ID columns, set
-    QSV_STATSCACHE_MODE to "none". This will force the frequency command to compute
-    frequencies for all columns regardless of cardinality, even for ID columns.
+In this case, the unique limit (--unq-limit) option is particularly useful when
+a column has all unique values  and --limit is set to 0.
+Without a unique limit, the frequency table for that column will be the same as
+the number of rows in the data.
+With a unique limit, the frequency table will be a sample of N unique values,
+all with a count of 1.
 
-    In this case, the unique limit (--unq-limit) option is particularly useful when
-    a column has all unique values  and --limit is set to 0.
-    Without a unique limit, the frequency table for that column will be the same as
-    the number of rows in the data.
-    With a unique limit, the frequency table will be a sample of N unique values,
-    all with a count of 1.
-
-    The --lmt-threshold option also allows you to apply the --limit and --unq-limit
-    options only when the number of unique items in a column >= threshold.
-    This is useful when you want to apply limits only to columns with a large number
-    of unique items and not to columns with a small number of unique items.
+The --lmt-threshold option also allows you to apply the --limit and --unq-limit
+options only when the number of unique items in a column >= threshold.
+This is useful when you want to apply limits only to columns with a large number
+of unique items and not to columns with a small number of unique items.
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_frequency.rs.
+See also https://github.com/dathere/qsv/wiki/Aggregation-and-Statistics#frequency
 
 Usage:
     qsv frequency [options] [<input>]
@@ -109,7 +112,9 @@ frequency options:
                             label is the bare other-text (no unique-count suffix
                             since the sketch cannot recover the true count of
                             items not in the top-K); rank is 0 to match the
-                            exact convention.
+                            exact convention. Its count is approximate.
+                            NULLs are counted exactly, outside the sketch, and
+                            are reported as in exact mode (after "Other").
                             Note: 'frequent_items' requires a little-endian
                             target. Apache DataSketches does not support
                             big-endian platforms (e.g., s390x); on those
@@ -183,6 +188,16 @@ frequency options:
                             (original behavior).
                             Has no effect when --no-nulls is set.
     -i, --ignore-case       Ignore case when computing frequencies.
+                            The stats cache's cardinality is case-sensitive,
+                            so it cannot prove that case-folded values are
+                            unique. All-unique columns are therefore counted
+                            in full instead of being short-circuited to
+                            <ALL_UNIQUE> - except Integer columns, which have
+                            no letters to fold (unless trimming changes one
+                            of their values). On large files with all-unique
+                            text columns (e.g. emails), this can use memory
+                            proportional to the row count. Exclude such
+                            columns with -s if you don't need them.
     --no-float <cols>       Exclude Float columns from frequency analysis.
                             Floats typically contain continuous values where
                             frequency tables are not meaningful.
@@ -206,7 +221,7 @@ frequency options:
    --all-unique-text <arg>  The text to use for the "<ALL_UNIQUE>" category.
                             [default: <ALL_UNIQUE>]
     --vis-whitespace        Visualize whitespace characters in the output. See
-                            https://github.com/dathere/qsv/wiki/Supplemental#whitespace-markers
+                            https://github.com/dathere/qsv/wiki/Aggregation-and-Statistics#whitespace-markers
                             for the list of whitespace markers.
     -j, --jobs <arg>        The number of jobs to run in parallel when the given CSV data has
                             an index. Note that a file handle is opened for each job.
@@ -221,6 +236,10 @@ frequency options:
                             ALL_UNIQUE sentinel. HIGH_CARDINALITY columns (cardinality
                             exceeds the smaller of --high-card-threshold/--high-card-pct
                             of rowcount) get a single HIGH_CARDINALITY sentinel.
+                            Columns with any value that is not valid UTF-8 get
+                            a single NON_UTF8 sentinel, since the cache stores
+                            values as UTF-8 text. HIGH_CARDINALITY and NON_UTF8
+                            columns are recomputed when the cache is reused.
                             When a valid (fresh) cache already exists, frequency will
                             automatically reuse it instead of recomputing from the CSV.
                             Use --force to regenerate the cache even when it is valid.
@@ -268,6 +287,16 @@ Common options:
                            names.
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
+    --flexible             Allow records with a varying number of fields.
+                           Without this, a "ragged" record (one with more or
+                           fewer fields than the header) is an error. With it,
+                           extra fields are ignored and a SHORT record
+                           contributes no value at all for its missing
+                           columns (not even a null), so those columns are counted
+                           fewer times. Note that field selection stops at the
+                           first missing column, so an out-of-order selection
+                           (e.g. `3,1`) makes a short record skip columns that
+                           ARE present.
     --memcheck             Use CONSERVATIVE heuristics for the in-memory load
                            check (file size vs. available + free_swap × platform
                            factor − headroom), instead of the default NORMAL

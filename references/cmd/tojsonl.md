@@ -1,6 +1,6 @@
 # qsv tojsonl
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Smartly converts CSV to a newline-delimited JSON (JSONL/NDJSON).
@@ -17,6 +17,7 @@ current (i.e. stats generated with --cardinality and --infer-dates options) and 
 skip recomputing stats.
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_tojsonl.rs.
+See also https://github.com/dathere/qsv/wiki/Conversion-and-IO#tojsonl
 
 Usage:
     qsv tojsonl [options] [<input>]

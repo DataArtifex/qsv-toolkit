@@ -1,6 +1,6 @@
 # qsv sample
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Randomly samples CSV data.
@@ -158,6 +158,7 @@ Examples:
   qsv sample --sketch-in a.sk,b.sk 1000 -o merged.csv
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_sample.rs.
+See also https://github.com/dathere/qsv/wiki/Selection-and-Inspection#sample
 
 Usage:
     qsv sample [options] <sample-size> [<input>]
@@ -271,7 +272,8 @@ sample options:
                            $QSV_VERSION, $QSV_TARGET, $QSV_BIN_NAME, $QSV_KIND and $QSV_COMMAND.
                            Try to follow the syntax here -
                            https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent
-    --timeout <secs>       Timeout for downloading URLs in seconds. If 0, no timeout is used.
+    --timeout <secs>       Inactivity timeout for downloading URLs in seconds. Aborts only if
+                           no data is received from the server for this long. If 0, no timeout.
                            [default: 30]
     --max-size <mb>        Maximum size of the file to download in MB before sampling.
                            Will download the entire file if not specified.

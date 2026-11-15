@@ -1,6 +1,6 @@
 # qsv explode
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Explodes a row into multiple ones by splitting a column value based on the
@@ -23,6 +23,8 @@ John,blue
 John,yellow
 Mary,red
 ```
+
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#explode
 
 Usage:
     qsv explode [options] <column> <separator> [<input>]

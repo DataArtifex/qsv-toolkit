@@ -1,6 +1,6 @@
 # qsv excel
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Exports a specified Excel/ODS sheet to a CSV file.
@@ -72,6 +72,7 @@ qsv excel --metadata JSON input.xlsx
 qsv excel --metadata Short input.xlsx
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_excel.rs.
+See also https://github.com/dathere/qsv/wiki/Conversion-and-IO#excel
 
 Usage:
     qsv excel [options] [<input>]
@@ -114,6 +115,9 @@ Excel options:
                                  index, sheet_name, type and visible fields.
                                For all JSON modes, the filename, the full file path, the workbook format
                                 and the number of sheets are also included.
+                               For XLS/XLSX/XLSM/XLSB workbooks, has_1904_epoch is also included,
+                                indicating whether the workbook uses the 1904 date system
+                                (true) or the 1900 date system (false). Omitted for ODS.
                                If metadata retrieval performance is a concern, use the short modes
                                as they return instantaneously as they don't need to process the sheet data.
 
@@ -157,6 +161,6 @@ Common options:
     -h, --help                 Display this message
     -o, --output <file>        Write output to <file> instead of stdout.
     -d, --delimiter <arg>      The delimiter to use when writing CSV data.
-                               Must be a single character. [default: ,]
+                               Must be a single character. (default: ,)
     -q, --quiet                Do not display export summary message.
 ```

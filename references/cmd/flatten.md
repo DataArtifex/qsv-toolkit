@@ -1,6 +1,6 @@
 # qsv flatten
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Prints flattened records such that fields are labeled separated by a new line.
@@ -12,6 +12,7 @@ There is also a condensed view (-c or --condense) that will shorten the
 contents of each field to provide a summary view.
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_flatten.rs.
+See also https://github.com/dathere/qsv/wiki/Selection-and-Inspection#flatten
 
 Usage:
     qsv flatten [options] [<input>]

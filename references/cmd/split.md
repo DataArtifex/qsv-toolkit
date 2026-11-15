@@ -1,6 +1,6 @@
 # qsv split
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Splits the given CSV data into chunks. It has three modes: by size (rowcount),
@@ -66,6 +66,7 @@ Examples:
   qsv split outdir --filter "powershell Compress-Archive -Path $FILE -Destination {}.zip" input.csv
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_split.rs.
+See also https://github.com/dathere/qsv/wiki/Joins-and-Set-Ops#split
 
 Usage:
     qsv split [options] (--size <arg> | --chunks <arg> | --kb-size <arg>) <outdir> [<input>]

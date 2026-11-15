@@ -1,6 +1,6 @@
 # qsv color
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Outputs tabular data as a pretty, colorized table that always fits into the
@@ -19,6 +19,8 @@ to override this behavior.
 The color theme is detected based on the current terminal background color
 if possible. Set QSV_THEME to DARK or LIGHT to skip detection. QSV_TERMWIDTH
 can be used to override terminal size.
+
+See also https://github.com/dathere/qsv/wiki/Selection-and-Inspection#color
 
 Usage:
     qsv color [options] [<input>]

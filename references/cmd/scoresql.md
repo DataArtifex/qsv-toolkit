@@ -1,6 +1,6 @@
 # qsv scoresql
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Analyze a SQL query against CSV file caches (stats, moarstats, frequency) to produce a
@@ -42,6 +42,7 @@ Examples:
   $ qsv scoresql data.csv script.sql
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_scoresql.rs.
+See also https://github.com/dathere/qsv/wiki/SQL-and-Polars#scoresql
 
 Usage:
     qsv scoresql [options] <input>... <sql>
@@ -75,6 +76,6 @@ Common options:
     -h, --help                Display this message
     -o, --output <file>       Write output to <file> instead of stdout.
     -d, --delimiter <arg>     The field delimiter for reading CSV data.
-                              Must be a single character. [default: ,]
+                              Must be a single character. (default: ,)
     -q, --quiet               Do not print informational messages to stderr.
 ```

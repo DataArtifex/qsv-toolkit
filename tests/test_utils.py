@@ -669,20 +669,30 @@ def test_stat_file_conversion_and_metadata(tmp_path):
     import os
 
     import pandas as pd
-    import pyreadstat
 
-    from dartfx.qsv import readstat_metadata, readstat_metadata_to_json, readstat_to_csv
+    from dartfx.qsv import readstat_metadata, readstat_metadata_to_json, readstat_to_csv, writestat_from_csv
 
-    # 1. Create a dummy dataframe
-    df = pd.DataFrame({"id": [1.0, 2.0, 3.0], "name": ["Alice", "Bob", "Charlie"], "age": [25.0, 30.0, 35.0]})
+    # 1. Create a dummy CSV and dictionary
+    csv_input = tmp_path / "input_data.csv"
+    csv_input.write_text("id,name,age\n1,Alice,25\n2,Bob,30\n3,Charlie,35\n", encoding="utf-8")
 
-    # Define labels
-    column_labels: list[str | None] = ["Identifier", "Name of person", "Age of person"]
-    variable_value_labels = {"id": {1.0: "First", 2.0: "Second", 3.0: "Third"}}
+    dict_file = tmp_path / "dict.schema.json"
+    column_labels = ["Identifier", "Name of person", "Age of person"]
+    dict_content = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "id": {"type": "number", "title": column_labels[0]},
+            "name": {"type": "string", "title": column_labels[1]},
+            "age": {"type": "number", "title": column_labels[2]},
+        },
+    }
+    with open(dict_file, "w", encoding="utf-8") as f:
+        json.dump(dict_content, f)
 
-    # 2. Write to a temporary SPSS (.sav) file
+    # 2. Write to a temporary SPSS (.sav) file using QSV writestat
     sav_file = tmp_path / "test_data.sav"
-    pyreadstat.write_sav(df, str(sav_file), column_labels=column_labels, variable_value_labels=variable_value_labels)
+    writestat_from_csv(csv_input, sav_file, dictionary=dict_file)
 
     # Verify SPSS file exists
     assert sav_file.exists()
@@ -691,7 +701,7 @@ def test_stat_file_conversion_and_metadata(tmp_path):
     meta = readstat_metadata(sav_file)
     assert meta["column_names"] == ["id", "name", "age"]
     assert meta["column_labels"] == column_labels
-    assert "id" in meta["variable_value_labels"]
+    assert meta["number_of_rows"] == 3
 
     # 4. Test readstat_to_csv and readstat_metadata_to_json
     csv_path = readstat_to_csv(sav_file)
@@ -733,25 +743,18 @@ def test_stat_file_conversion_and_metadata(tmp_path):
 
     # 6. Verify error on invalid extension
     bad_file = tmp_path / "test.txt"
-    bad_file.write_text("dummy")
+    bad_file.write_text("dummy", encoding="utf-8")
     with pytest.raises(ValueError, match="Unsupported file extension"):
         readstat_metadata(bad_file)
 
 
 def test_get_readstat_reader():
-    import pyreadstat
     import pytest
 
-    from dartfx.qsv.utils import get_readstat_reader
+    from dartfx.qsv.utils import SUPPORTED_STAT_EXTENSIONS, get_readstat_reader
 
-    assert get_readstat_reader(".sav") == pyreadstat.read_sav
-    assert get_readstat_reader(".zsav") == pyreadstat.read_sav
-    assert get_readstat_reader(".por") == pyreadstat.read_por
-    assert get_readstat_reader(".dta") == pyreadstat.read_dta
-    assert get_readstat_reader(".sas7bdat") == pyreadstat.read_sas7bdat
-    assert get_readstat_reader(".sas7bcat") == pyreadstat.read_sas7bcat
-    assert get_readstat_reader(".xport") == pyreadstat.read_xport
-    assert get_readstat_reader(".xpt") == pyreadstat.read_xport
+    for ext in (".sav", ".zsav", ".por", ".dta", ".sas7bdat", ".sas7bcat", ".xport", ".xpt"):
+        assert ext in SUPPORTED_STAT_EXTENSIONS
 
     with pytest.raises(ValueError, match="Unsupported file extension"):
         get_readstat_reader(".txt")

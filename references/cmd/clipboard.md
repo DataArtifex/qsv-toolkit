@@ -1,6 +1,6 @@
 # qsv clipboard
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Provide input from the clipboard or save output to the clipboard.
@@ -17,6 +17,8 @@ If you want to save the output of a command to the clipboard,
 pipe into qsv clipboard using the --save or -s flag:
 
   $ qsv clipboard | qsv stats | qsv clipboard -s
+
+See also https://github.com/dathere/qsv/wiki/Selection-and-Inspection#clipboard
 
 Usage:
     qsv clipboard [options]

@@ -67,6 +67,19 @@ def main(args: argparse.Namespace) -> None:
     with open(os.path.join(args.output, "ALL.md"), "w") as f:
         f.write(all_in_one_md)
 
+    # write index README.md
+    print(f"Writing index README.md: {os.path.join(args.output, 'README.md')}")
+    readme_md = "# QSV Command Reference\n\n"
+    full_version = QSV.version().splitlines()[0] if QSV.version() else qsv_version
+    readme_md += f"Generated for QSV version {full_version}.\n\n"
+    readme_md += "## Available Commands\n\n"
+    for cmd_info in sorted(QSV.list(), key=lambda x: x["name"]):
+        name = cmd_info["name"]
+        desc = cmd_info["description"]
+        readme_md += f"- [{name}]({name}.md) - {desc}\n"
+    with open(os.path.join(args.output, "README.md"), "w") as f:
+        f.write(readme_md)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

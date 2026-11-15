@@ -1,56 +1,59 @@
 # qsv geocode
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
-Geocodes a location in CSV data against an updatable local copy of the Geonames cities index
-and a local copy of the MaxMind GeoLite2 City database.
+Geocodes a location in CSV data using one of five geocoders:
+ * Geonames  - OFFLINE. Matches partial city names, WGS-84 coordinates and country codes
+               against a local, updatable index of Geonames cities, downloaded
+               automatically on first use. Multithreaded and cached.
+ * GeoIP2    - OFFLINE. Locates IP addresses and URLs using a local copy of the MaxMind
+               GeoLite2 City database, which you download manually.
+ * OpenCage  - ONLINE. Worldwide forward geocoding of free-form street addresses and
+               reverse geocoding of coordinates, using the OpenCage API. Requires an
+               OpenCage API key.
+ * Geoclient - ONLINE. Geocodes New York City addresses, BBLs, BINs, intersections and
+               places using NYC's Geoclient API, returning NYC-specific attributes such
+               as council districts and census tracts. Requires a free NYC API key.
+ * Census    - ONLINE. Geocodes US addresses and coordinates using the free, keyless US
+               Census Geocoder, returning Census geographies (state, county, tract,
+               block group and block GEOIDs, and more) for Census data enrichment.
 
-The Geonames cities index can be retrieved and updated using the `geocode index-*` subcommands.
+The major subcommands are:
+ * suggest      - (Geonames) given a partial city name, return the closest city.
+ * reverse      - (Geonames) given a WGS-84 coordinate, return the nearest city.
+ * countryinfo  - (Geonames) given an ISO 3166-1 alpha-2 country code, return the
+                  country's information.
+ * iplookup     - (GeoIP2) given an IP address or URL, return its city.
+ * opencage     - (OpenCage) forward or reverse geocode an address or coordinate.
+ * geoclient    - (Geoclient) geocode a New York City location.
+ * census       - (Census) geocode a US address or coordinate.
+ * index-*      - manage the local Geonames cities index.
+                  (index-check, index-update, index-load & index-reset)
+ * cache-*      - manage the persistent on-disk OpenCage, Geoclient and Census result
+                  caches.
+                  (cache-clear, cache-prune & cache-info)
 
-The GeoLite2 City database will need to be MANUALLY downloaded from MaxMind. Though it is
-free, you will need to create a MaxMind account to download the GeoIP2 Binary database (mmdb)
-from https://www.maxmind.com/en/accounts/current/geoip/downloads.
-Copy the GeoLite2-City.mmdb file to the ~/.qsv-cache/ directory or point to it using the
-QSV_GEOIP2_FILENAME environment variable.
+Each geocoding subcommand has a "now" variant - suggestnow, reversenow, countryinfonow,
+iplookupnow, opencagenow, geoclientnow and censusnow - that geocodes a single location
+given on the command line instead of a CSV column.
 
-When you run the command for the first time, it will download a prebuilt Geonames cities
-index from the qsv GitHub repo and use it going forward. You can operate on the local
-index using the `geocode index-*` subcommands.
+### Geonames
+The suggest, reverse and countryinfo subcommands use a local Geonames cities index. Two
+prebuilt, English-only indexes, built from the Geonames Gazetteer cities files, are
+distributed on the qsv GitHub repo:
 
-By default, the prebuilt index uses the Geonames Gazeteer cities15000.zip file using
-English names. It contains cities with populations > 15,000 (about ~26k cities).
+ * cities15000 - cities with populations > 15,000 (about ~26k cities). The default.
+ * cities1000  - cities with populations > 1,000 (about ~140k cities). Resolves small
+                 towns the default omits, at ~4x the index size.
+
+The first time you run one of these subcommands, qsv downloads the default cities15000
+index and uses it going forward. To switch to cities1000, run `qsv geocode index-load 1000`.
 See https://download.geonames.org/export/dump/ for more information.
+Use the index-* operations (see "index-* operations" below) to update the index, rebuild it
+with other languages or more cities, or load another one.
 
-It has twelve major subcommands:
- * suggest        - given a partial City name, return the closest City's location metadata
-                    per the local Geonames cities index (Jaro-Winkler distance)
- * suggestnow     - same as suggest, but using a partial City name from the command line,
-                    instead of CSV data.
- * reverse        - given a WGS-84 location coordinate, return the closest City's location
-                    metadata per the local Geonames cities index.
-                    (Euclidean distance - shortest distance "as the crow flies")
- * reversenow     - sames as reverse, but using a coordinate from the command line,
-                    instead of CSV data.
- * countryinfo    - returns the country information for the ISO-3166 2-letter country code
-                    (e.g. US, CA, MX, etc.)
- * countryinfonow - same as countryinfo, but using a country code from the command line,
-                    instead of CSV data.
- * iplookup       - given an IP address or URL, return the closest City's location metadata
-                    per the local Maxmind GeoLite2 City database.
- * iplookupnow    - same as iplookup, but using an IP address or URL from the command line,
-                    instead of CSV data.
- * opencage       - ONLINE forward/reverse geocoding using the OpenCage API.
-                    Forward-geocodes a free-form address, or reverse-geocodes a
-                    "lat, long" coordinate. Requires an OpenCage API key.
- * opencagenow    - same as opencage, but using an address/coordinate from the
-                    command line, instead of CSV data.
- * index-*        - operations to update the local Geonames cities index.
-                    (index-check, index-update, index-load & index-reset)
- * cache-*        - operations to manage the persistent on-disk OpenCage result cache.
-                    (cache-clear, cache-prune & cache-info)
-
-SUGGEST
+#### suggest
 Suggest a Geonames city based on a partial city name. It returns the closest Geonames
 city record based on the Jaro-Winkler distance between the partial city name and the
 Geonames city name.
@@ -90,15 +93,15 @@ Using French place names. You'll need to rebuild the index with the --languages 
 
   $ qsv geocode suggest city -f "{name}, {admin1}, {country} in {timezone}" -l fr file.csv
 
-SUGGESTNOW
+#### suggestnow
 Accepts the same options as suggest, but does not require an input file.
 Its default format is more verbose - "{name}, {admin1} {country}: {latitude}, {longitude}"
 
   $ qsv geocode suggestnow "New York"
   $ qsv geocode suggestnow --country US -f %cityrecord "Paris"
-  $ qsv geocode suggestnow --admin1 "US:OH" "Athens"
+  $ qsv geocode suggestnow --admin1 "US.OH" "Athens"
 
-REVERSE
+#### reverse
 Reverse geocode a WGS 84 coordinate to the nearest City. It returns the closest Geonames
 city record based on the Euclidean distance between the coordinate and the nearest city.
 It accepts "lat, long" or "(lat, long)" format.
@@ -119,14 +122,14 @@ The same as above, but get the timezone instead of the city and state.
 
   $ qsv geocode reverse LatLong -f %timezone -c tz file.csv -o file_with_tz.csv
 
-REVERSENOW
+#### reversenow
 Accepts the same options as reverse, but does not require an input file.
 
   $ qsv geocode reversenow "40.71427, -74.00597"
   $ qsv geocode reversenow --country US -f %cityrecord "40.71427, -74.00597"
   $ qsv geocode reversenow "(39.32924, -82.10126)"
 
-COUNTRYINFO
+#### countryinfo
 Returns the country information for the specified ISO-3166 2-letter country code.
 
   $ qsv geocode countryinfo country_col data.csv
@@ -134,7 +137,7 @@ Returns the country information for the specified ISO-3166 2-letter country code
   $ qsv geocode countryinfo -f "%continent" country_col data.csv
   $ qsv geocode countryinfo -f "{country_name} ({fips}) in {continent}" country_col data.csv
 
-COUNTRYINFONOW
+#### countryinfonow
 Accepts the same options as countryinfo, but does not require an input file.
 
   $ qsv geocode countryinfonow US
@@ -142,15 +145,60 @@ Accepts the same options as countryinfo, but does not require an input file.
   $ qsv geocode countryinfonow -f "%continent" US
   $ qsv geocode countryinfonow -f "{country_name} ({fips}) in {continent}" US
 
-IPLOOKUP
-Given an IP address or URL, return the closest City's location metadata per the
-local Geonames cities index.
+#### index-* operations
+Manage the local Geonames cities index used by the Geonames and GeoIP2 subcommands.
+
+It has four operations:
+ * check  - checks if the local Geonames index is up-to-date compared to the Geonames website.
+            returns the index file's metadata JSON to stdout.
+ * update - updates the local Geonames index with the latest changes from the Geonames website.
+            use this command judiciously as it downloads about ~200mb of data from Geonames
+            and rebuilds the index from scratch using the --languages option.
+            If you don't need a language other than English, use the index-load subcommand instead
+            as it's faster and will not download any data from Geonames.
+ * reset  - resets the local Geonames index to the default prebuilt, English-only Geonames cities
+            index (cities15000) - downloading it from the qsv GitHub repo for the current qsv version.
+ * load   - load a Geonames cities index from a file, making it the default index going forward.
+            If set to a published population floor (15000 or 1000), it will download that
+            prebuilt English-only Geonames index rkyv file from the qsv GitHub repo for the
+            current qsv version. cities1000 (~140k cities) resolves small towns the default
+            cities15000 (~26k) omits, at ~4x the index size.
+
+Update the Geonames cities index with the latest changes.
+
+  $ qsv geocode index-update
+
+Rebuild the index using the latest Geonames data w/ English, French, German & Spanish place names
+
+  $ qsv geocode index-update --languages en,fr,de,es
+
+Load an alternative Geonames cities index from a file, making it the default index going forward.
+
+  $ qsv geocode index-load my_geonames_index.rkyv
+
+### GeoIP2
+The iplookup subcommand locates an IP address - or the IP address a URL's host resolves
+to - using a local copy of the MaxMind GeoLite2 City database, then returns that city's
+record from the local Geonames cities index. It therefore supports the same --formatstr
+formats as the Geonames subcommands. If the IP address cannot be located, or its city is
+not in the Geonames index (e.g. a small town not in the default cities15000 index), the
+IP address itself is returned.
+
+The GeoLite2 City database will need to be MANUALLY downloaded from MaxMind. Though it is
+free, you will need to create a MaxMind account to download the GeoIP2 Binary database (mmdb)
+from https://www.maxmind.com/en/accounts/current/geoip/downloads.
+Copy the GeoLite2-City.mmdb file to the ~/.qsv-cache/ directory or point to it using the
+QSV_GEOIP2_FILENAME environment variable.
+
+#### iplookup
+Given an IP address or URL, return its city's location metadata. The default format is
+'%city-admin1-country' (e.g. "San Francisco, California US").
 
   $ qsv geocode iplookup IP_col data.csv
   $ qsv geocode iplookup --formatstr "%json" IP_col data.csv
   $ qsv geocode iplookup -f "%cityrecord" IP_col data.csv
 
-IPLOOKUPNOW
+#### iplookupnow
 Accepts the same options as iplookup, but does not require an input file.
 
   $ qsv geocode iplookupnow 140.174.222.253
@@ -158,23 +206,36 @@ Accepts the same options as iplookup, but does not require an input file.
   $ qsv geocode iplookupnow --formatstr "%json" 140.174.222.253
   $ qsv geocode iplookupnow -f "%cityrecord" 140.174.222.253
 
-OPENCAGE
+### OpenCage
 Online forward or reverse geocoding using the OpenCage Geocoding API
 (https://opencagedata.com). Unlike the suggest/reverse subcommands which use the
 local Geonames index, opencage geocodes real street addresses online.
+
+Compared with more popular commercial geocoders such as Google Maps, OpenCage is
+built on open data, chiefly OpenStreetMap, so its results come with far fewer strings:
+ * you may store results as long as you like - even after you stop being a customer -
+   which is what makes qsv's persistent result cache permissible.
+ * results can be displayed on any map.
+ * results may be used commercially, behind a firewall or publicly.
+ * pricing is a flat monthly or annual fee. A free trial (2,500 requests/day) lets you
+   test it, but is not for production use, which needs a paid plan.
+ * bad results can be fixed at the source by correcting OpenStreetMap.
+
+See https://opencagedata.com/why-use-open-data.
 
 Requires an OpenCage API key. Set it with --api-key or the QSV_OPENCAGE_API_KEY
 environment variable (the --api-key flag takes precedence). Get a free key at
 https://opencagedata.com/users/sign_up.
 
+OpenCage's Terms of Service explicitly allow caching, so results are cached in a
+persistent on-disk cache (see --cache-ttl & --no-cache). Re-runs and duplicate
+queries do NOT re-hit the API. The free trial allows 2,500 requests/day at 1
+request/second; rows are processed sequentially and rate-limited (see --rate-limit).
+
+#### opencage
 The <column> may contain either a free-form address (forward geocoding) or a
 "lat, long" / "(lat, long)" WGS-84 coordinate (reverse geocoding). The mode is
 auto-detected per row; pass --reverse to force reverse geocoding.
-
-OpenCage's Terms of Service explicitly allow caching, so results are cached in a
-persistent on-disk cache (see --cache-ttl & --no-cache). Re-runs and duplicate
-queries do NOT re-hit the API. The free tier allows 2,500 requests/day at 1
-request/second; rows are processed sequentially and rate-limited (see --rate-limit).
 
 The --country option, if set, restricts results to the given ISO 3166-1 alpha-2
 country code(s). The --timeout, --language, --invalid-result, --new-column, --rename
@@ -210,49 +271,236 @@ Like the other subcommands, "%dyncols:" cannot be combined with --new-column.
   $ qsv geocode opencage address -f '{components.city}, {components.country}' file.csv
   $ qsv geocode opencage address -f '%dyncols: {city:components.city}, {pc:components.postcode}' file.csv
 
-OPENCAGENOW
+#### opencagenow
 Accepts the same options as opencage, but does not require an input file.
 
   $ qsv geocode opencagenow --api-key YOURKEY "Brooklyn, NY"
   $ qsv geocode opencagenow "40.71427, -74.00597"
   $ qsv geocode opencagenow -f '%pretty-json' "Eiffel Tower, Paris"
 
-INDEX-<operation>
-Manage the local Geonames cities index used by the geocode command.
+### Geoclient
+Online geocoding of New York City locations using NYC's Geoclient v2 API
+(https://api-portal.nyc.gov), a REST wrapper around the NYC Department of City
+Planning's Geosupport system. Besides coordinates, it returns NYC-specific attributes
+such as the BBL, BIN, community district, city council district, census tracts, NTA
+and ZIP code. It only geocodes locations in the five boroughs.
 
-It has four operations:
- * check  - checks if the local Geonames index is up-to-date compared to the Geonames website.
-            returns the index file's metadata JSON to stdout.
- * update - updates the local Geonames index with the latest changes from the Geonames website.
-            use this command judiciously as it downloads about ~200mb of data from Geonames
-            and rebuilds the index from scratch using the --languages option.
-            If you don't need a language other than English, use the index-load subcommand instead
-            as it's faster and will not download any data from Geonames.
- * reset  - resets the local Geonames index to the default prebuilt, English-only Geonames cities
-            index (cities15000) - downloading it from the qsv GitHub repo for the current qsv version.
- * load   - load a Geonames cities index from a file, making it the default index going forward.
-            If set to 15000, it will download the prebuilt English-only cities15000 Geonames
-            index rkyv file from the qsv GitHub repo for the current qsv version.
+The public API requires a free subscription key: sign up at https://api-portal.nyc.gov
+and subscribe to the "Geoclient V2 User" product. Set the key with --api-key or the
+QSV_GEOCLIENT_API_KEY environment variable (--api-key takes precedence).
+To use a self-hosted Geoclient (https://github.com/mlipper/geoclient), set
+QSV_GEOCLIENT_API_URL to its base URL (e.g. http://localhost:8080/geoclient/v2) -
+no key is needed then.
 
-Update the Geonames cities index with the latest changes.
+The public API allows 100 requests/second per IP, 2,500 requests/minute and 500,000
+requests/day. Requests are sent concurrently (see --jobs) behind a rate limiter that
+defaults to 40 requests/second, to stay under the per-minute cap (see --rate-limit).
+Requests that are rate-limited or fail on the server are retried up to 3 times. If 10
+requests in a row still fail, the run is aborted, as the quota is likely exhausted.
+Results are cached in a persistent on-disk cache (see --cache-ttl & --no-cache), and
+duplicate locations are only looked up once.
 
-  $ qsv geocode index-update
+#### geoclient
+The --endpoint option selects the kind of lookup:
+  * search       - (default) a free-form NYC location in <column>, e.g.
+                   "314 W 100 St Manhattan", "Empire State Building" or a BBL/BIN.
+  * bin          - a Building Identification Number in <column>.
+  * bbl          - a Borough-Block-Lot in <column>, either as 10 digits (1000670001)
+                   or delimited (1-67-1, 1/00067/0001).
+  * normalize    - a street name in <column>, returned in Geosupport's normalized
+                   form ("w 100 st" -> "WEST  100 STREET"). It only standardizes the
+                   name: it does not check that the street exists. By default, numbers
+                   are padded for sorting ("WEST    1 STREET"), the same spacing as the
+                   street names in other Geoclient results; to compare with
+                   single-spaced data, add --params format=C ("WEST 1 STREET").
+  * streetcode   - a Geosupport street code in <column> (the borough digit plus a 5-,
+                   7- or 10-digit code: 6, 8 or 11 digits, e.g. 11361001), returned as
+                   the street's name. Other values are left unchanged, not sent.
+  * address, addresspoint, intersection, place, blockface - structured lookups whose
+                   inputs come from several columns, mapped with --params.
 
-Rebuild the index using the latest Geonames data w/ English, French, German & Spanish place names
+For the structured endpoints, --params maps Geoclient parameters to input columns
+("name={Column}") or to fixed values ("name=value"), comma-separated. Parameter names
+are case-sensitive:
+  * address, addresspoint - houseNumber, street, and borough or zip
+  * intersection - crossStreetOne, crossStreetTwo, borough
+                   (optional: boroughCrossStreetTwo, compassDirection)
+  * place        - name, and borough or zip
+  * blockface    - onStreet, crossStreetOne, crossStreetTwo, borough
+                   (optional: boroughCrossStreetOne, boroughCrossStreetTwo, compassDirection)
+The borough may be a name (Manhattan), an abbreviation (MN) or a number (1-5).
+With a structured endpoint, <column> is not sent to the API: it is only the column that
+is replaced with the result (or that --rename applies to). For search, --params may
+set fixed search options, e.g. "exactMatchMaxLevel=5". For normalize and streetcode,
+it may set format - S (sort, the default) pads numbers so names sort numerically
+("WEST    1 STREET"), C (compact) does not ("WEST 1 STREET") - and length (4-32,
+default 32), which abbreviates names to fit (length=10: "W 100 ST").
 
-  $ qsv geocode index-update --languages en,fr,de,es
+A location that Geoclient cannot geocode is left unchanged (or set to --invalid-result).
+So is a search that matches in MORE than one borough - typically a street address
+without its borough, e.g. "100 Broadway" exists in Manhattan, Brooklyn, Queens and
+Staten Island - rather than silently picking one; add the borough or ZIP code to the
+input. (If one of the matches is an exact match, it is used.) A warning reports how
+many rows were ambiguous.
 
-Load an alternative Geonames cities index from a file, making it the default index going forward.
+Why a location did not geocode is available through %dyncols keys starting with
+"_reject." - filled only on those rows, e.g. {why:_reject.message} gives Geosupport's
+reason (e.g. "ADDRESS NUMBER OUT OF RANGE") or, for an ambiguous search, the boroughs
+matched - marked "[street only]" where only the street's address range matched, not a
+property. Other useful keys are _reject.reasonCode, _reject.message2 (the second
+message of address and place lookups) and _reject._resultCount. With geoclientnow,
+the JSON formats print the reject under "_reject". So that rejected searches carry
+their reason, search sends returnRejections=true unless it is set in --params.
 
-  $ qsv geocode index-load my_geonames_index.rkyv
+The --formatstr option supports these Geoclient-specific formats:
+  * '%+' | '%lat-long'    - <latitude>, <longitude> (default). For normalize and
+                            streetcode, which return no coordinates: the street name
+                            (firstStreetNameNormalized).
+  * '%location'           - (<latitude>, <longitude>)
+  * '%bbl'                - the BBL
+  * '%bin'                - the BIN (buildingIdentificationNumber)
+  * '%normalized-address' - the address on one line, single-spaced, e.g.
+                            "314 WEST 100 STREET, NEW YORK, NY 10025". Empty unless
+                            the result has a house number (address and search results).
+  * '%nyc-districts'      - 11 columns, as with "%dyncols:": borough,
+                            community_district, council_district, assembly_district,
+                            state_senate_district, congressional_district,
+                            police_precinct, school_district, nta2020,
+                            census_tract2020 and zip_code. Filled for address,
+                            intersection, place and search results; bbl, bin and
+                            addresspoint results only have the borough.
+  * '%json'               - the full Geoclient result as JSON
+  * '%pretty-json'        - the full Geoclient result as pretty JSON
+Dynamic formatting is also supported, using any Geoclient result field, e.g.
+  "{bbl} - council district {cityCouncilDistrict}". Commonly used fields include
+latitude, longitude, bbl, buildingIdentificationNumber, communityDistrict,
+cityCouncilDistrict, censusTract2020, nta2020, zipCode, xCoordinate, yCoordinate and
+uspsPreferredCityName. A field missing from a result renders empty.
+Two fields are added by qsv: _resultCount (how many results geocoded successfully)
+and, for search, _level (the Geosupport search level of the result used).
+For bbl and bin lookups, latitude/longitude are the building's internal label point.
 
-CACHE-<operation>
-Manage the persistent on-disk OpenCage result cache used by the opencage subcommands.
-This cache is separate from the Geonames cities index and is only populated by the
-opencage/opencagenow subcommands. It lives in {cache-dir}/geocode-opencage_v1.
+The "%dyncols:" format is also supported, e.g.
+  "%dyncols: {bbl:bbl}, {council:cityCouncilDistrict}, {tract:censusTract2020}"
+  "%dyncols: {lat:latitude}, {lng:longitude}, {why:_reject.message}"
+
+  $ qsv geocode geoclient address --api-key YOURKEY nyc_311.csv
+  $ qsv geocode geoclient bbl --endpoint bbl -f '%dyncols: {lat:latitude}, {lng:longitude}' pluto.csv
+  $ qsv geocode geoclient Street --endpoint address -c latlong --params "houseNumber={HouseNo},street={Street},borough={Borough}" file.csv
+
+#### geoclientnow
+Accepts the same options as geoclient (search, bin, bbl, normalize and streetcode
+endpoints only), but does not require an input file.
+
+  $ qsv geocode geoclientnow "350 5th Ave Manhattan"
+  $ qsv geocode geoclientnow --endpoint bbl -f '%pretty-json' 1008350041
+  $ qsv geocode geoclientnow --endpoint normalize "w 100 st"
+
+### Census
+Online geocoding of US addresses and coordinates using the US Census Geocoder
+(https://geocoding.geo.census.gov/geocoder). It is free and needs no API key. Besides
+coordinates and the matched address, it returns the Census geographies a location falls
+in - state, county, tract, block group and block, and more (places, county subdivisions,
+congressional and state legislative districts, urban areas, ZCTAs, etc.) - with their
+GEOIDs, which is what joining Census statistics to your data needs.
+
+To use a caching proxy that speaks the same API (e.g.
+https://github.com/dathere/uscensus-caching-geocoder), set QSV_CENSUS_GEOCODER_URL to its
+base URL (e.g. http://localhost:8080/geocoder). As the proxy caches results itself, using
+the --no-cache option is then suggested.
+
+#### census
+There are three kinds of input:
+  * a one-line address in <column> (the default), e.g.
+    "4600 Silver Hill Rd, Washington, DC 20233".
+  * an address in several columns, mapped with --params to the parts street, city,
+    state and zip ("name={Column}" or a fixed "name=value"), e.g.
+    "street={Street},city={City},state=MD,zip={Zip}". The Census Geocoder
+    needs a street plus a ZIP code, or a street plus city and state: a row without
+    them is not sent, and is left unchanged (or set to --invalid-result). <column> is
+    then only the column the result goes in.
+  * a "lat, long" WGS 84 coordinate in <column>, with --reverse. It returns the Census
+    geographies at that point (there is no matched address).
+
+The --benchmark (address ranges release) and --vintage (geography release) options
+select what Census matches against. The defaults, Public_AR_Current and
+Current_Current, are the latest. Use e.g. --vintage Census2020_Current for 2020 Census
+geographies or ACS2026_Current for the ones the ACS uses. See
+https://geocoding.geo.census.gov/geocoder/vintages?benchmark=Public_AR_Current.
+
+Census has single-record and batch endpoints. A single lookup returns everything; a batch
+lookup (up to 2,000 addresses per upload, one upload at a time) is much faster for large
+files, but only returns the matched address, coordinates, TIGER line and match type, and
+the state, county, tract, block group and block. By default (--census-mode auto), each
+read chunk of rows (see --batch) is geocoded in batch when the --formatstr only needs
+those fields and at least 50 of its locations are not cached yet; otherwise one request
+per location is sent, 5 per second (see --rate-limit). Batch lookups are only used with
+Current_* vintages.
+An address the batch endpoint matches to more than one address (a "Tie") is not
+geocoded; a warning counts them. --census-mode single geocodes them with the first match.
+Connecticut batch matches are looked up again one by one: in Current vintages, its
+counties are its planning regions, which batch results do not carry. Otherwise, batch
+and single results are the same, except that coordinates can differ in their last
+digit (~1e-12 degrees), as Census rounds them differently in the two.
+
+A location that Census cannot geocode is left unchanged (or set to --invalid-result).
+Requests that are rate-limited or fail on the server are retried up to 3 times. If 10
+requests (or batch uploads) in a row still fail, the run is aborted. An HTTP 400 answer
+(e.g. an invalid --benchmark or --vintage) stops the run. Results are cached in a
+persistent on-disk cache (see --cache-ttl & --no-cache), and duplicate locations are only
+looked up once. Batch no-matches and ties are not cached, as batch matching varies with
+the load on the Census servers.
+
+The --formatstr option supports these Census-specific formats:
+  * '%+' | '%lat-long'    - <latitude>, <longitude> (default)
+  * '%location'           - (<latitude>, <longitude>)
+  * '%matched-address'    - the matched address, e.g.
+                            "4600 SILVER HILL RD, WASHINGTON, DC, 20233"
+  * '%census-geoids'      - 5 columns, as with "%dyncols:": census_state,
+                            census_county, census_tract, census_blockgroup and
+                            census_block - the GEOIDs of the location's state (24),
+                            county (24033), tract (24033802405), block group
+                            (240338024052) and block (240338024052004). ACS vintages
+                            have no blocks, so census_block is empty for them.
+  * '%json'               - the full result as JSON
+  * '%pretty-json'        - the full result as pretty JSON
+The result qsv returns (and prints for %json) has these fields: matchedAddress,
+coordinates.x (longitude), coordinates.y (latitude), tigerLine.tigerLineId,
+tigerLine.side, addressComponents (address searches), geographies (Census's own,
+verbatim: one array of features per layer) and flat - the first feature of each layer,
+e.g. flat.Counties.GEOID, flat.Census Tracts.TRACT or
+flat.120th Congressional Districts.BASENAME. qsv adds _resultCount (how many addresses
+matched; the first is used), _matchType (Exact or Non_Exact, batch lookups only) and
+_source (single or batch). A field missing from a result renders empty.
+Dynamic formatting is also supported, e.g. "{matchedAddress} ({tigerLine.side})".
+As layer names contain spaces, the flat fields can only be used with "%dyncols:", e.g.
+  "%dyncols: {tract:flat.Census Tracts.GEOID}, {cd:flat.120th Congressional Districts.GEOID}"
+Layer names vary by vintage (e.g. "2020 Census Blocks" in Current vintages, "Census
+Blocks" in Census2020 ones); run censusnow with -f %pretty-json to see them.
+
+  $ qsv geocode census Address -f %census-geoids addresses.csv
+  $ qsv geocode census Address --params "street={Street},city={City},state={State},zip={Zip}" -c latlong file.csv
+  $ qsv geocode census LatLong --reverse -f '%dyncols: {tract:flat.Census Tracts.GEOID}' points.csv
+
+#### censusnow
+Accepts the same options as census (except --params), but does not require an
+input file.
+
+  $ qsv geocode censusnow "4600 Silver Hill Rd, Washington, DC 20233"
+  $ qsv geocode censusnow -f %pretty-json "1600 Pennsylvania Ave NW, Washington, DC 20500"
+  $ qsv geocode censusnow --reverse -f %census-geoids "38.84601, -76.92744"
+
+### OpenCage, Geoclient & Census result caches
+
+#### cache-* operations
+Manage the persistent on-disk result caches used by the opencage, geoclient and census
+subcommands. They are separate from the Geonames cities index, and live in
+{cache-dir}/geocode-opencage_v3.redb, {cache-dir}/geocode-geoclient_v3.redb and
+{cache-dir}/geocode-censusgeocoder_v3.redb.
+Each operation applies to all three caches; cache-info prints one JSON line per cache.
 
 It has three operations:
- * clear  - wipe the entire OpenCage disk cache, removing all cached results.
+ * clear  - wipe the entire disk caches, removing all cached results.
  * prune  - delete cache entries older than the --older-than value. The value is either
             an absolute date/datetime (e.g. 2025-01-31, "2025-01-31 12:00:00") or a
             relative age with a unit suffix - s(econds), m(inutes), h(ours), d(ays) or
@@ -260,7 +508,7 @@ It has three operations:
  * info   - report the cache directory, entry count, on-disk size and the oldest/newest
             cached entry timestamps. Emits a JSON summary to stdout.
 
-Wipe the entire OpenCage cache.
+Wipe the entire OpenCage, Geoclient and Census caches.
 
   $ qsv geocode cache-clear
 
@@ -291,6 +539,7 @@ qsv geocode reverse wgs84_coordinate_col --country US -f \
     input_data.csv -o output_data_with_fips.csv
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_geocode.rs.
+See also https://github.com/dathere/qsv/wiki/Geospatial#geocode
 
 Usage:
 qsv geocode suggest [--formatstr=<string>] [options] <column> [<input>]
@@ -303,10 +552,14 @@ qsv geocode iplookup [options] <column> [<input>]
 qsv geocode iplookupnow [options] <location>
 qsv geocode opencage [--formatstr=<string>] [options] <column> [<input>]
 qsv geocode opencagenow [options] <location>
-qsv geocode index-load <index-file>
+qsv geocode geoclient [--formatstr=<string>] [options] <column> [<input>]
+qsv geocode geoclientnow [options] <location>
+qsv geocode census [--formatstr=<string>] [options] <column> [<input>]
+qsv geocode censusnow [options] <location>
+qsv geocode index-load [--timeout=<seconds>] <index-file>
 qsv geocode index-check
 qsv geocode index-update [--languages=<lang>] [--cities-url=<url>] [--force] [--timeout=<seconds>]
-qsv geocode index-reset
+qsv geocode index-reset [--timeout=<seconds>]
 qsv geocode cache-clear [options]
 qsv geocode cache-prune --older-than=<val> [options]
 qsv geocode cache-info [options]
@@ -323,6 +576,10 @@ geocode arguments:
                                 For countryinfo, it must be a column with a ISO 3166-1 alpha-2 country code.
                                 For iplookup, it must be a column with an IP address or a URL.
                                 For opencage, it may be a free-form address OR a WGS 84 coordinate.
+                                For geoclient, it is the NYC location, BIN, BBL, street name or
+                                street code (see --endpoint).
+                                For census, it is a one-line US address or, with --reverse, a
+                                WGS 84 coordinate (with --params, the column the result goes in).
                                 Note that you can use column selector syntax to select the column, but only
                                 the first column will be used. See `select --help` for more information.
 
@@ -333,11 +590,15 @@ geocode arguments:
                                   For countryinfonow, it must be a ISO 3166-1 alpha-2 code.
                                   For iplookupnow, it must be an IP address or a URL.
                                   For opencagenow, it must be an address OR a WGS 84 coordinate.
+                                  For geoclientnow, it is a NYC location, BIN, BBL, street name or street code.
+                                  For censusnow, it is a one-line US address or, with --reverse,
+                                  a WGS 84 coordinate.
 
     <index-file>                The alternate geonames index file to use. It must be a .rkyv file.
-                                For convenience, if this is set to 15000, it will download the prebuilt
-                                English-only cities15000 Geonames index rkyv file from the qsv GitHub repo
-                                for the current qsv version and use it. Only used by the index-load subcommand.
+                                For convenience, if this is set to a published population floor
+                                (15000 or 1000), it will download that prebuilt English-only Geonames
+                                index rkyv file from the qsv GitHub repo for the current qsv version and
+                                use it. Only used by the index-load subcommand.
 
 geocode options:
     -c, --new-column <name>     Put the transformed values in a new column instead. Not valid when
@@ -361,20 +622,29 @@ geocode options:
     --min-score <score>         The minimum Jaro-Winkler distance score.
                                 [default: 0.8]
     --admin1 <admin1_list>      The comma-delimited, case-insensitive list of admin1s to filter for.
+                                Only a place inside one of them is returned. A value with no match
+                                inside them is left unchanged (or set to the invalid-result value),
+                                and the number of such values is reported on stderr.
 
-                                If all uppercase, it will be treated as an admin1 code (e.g. US.NY, JP.40, CN.23).
+                                If it has the form CC.CODE, it will be treated as an admin1 code
+                                (e.g. US.NY, JP.40, CN.23 - case-insensitive, so us.ny also works).
                                 Otherwise, it will be treated as an admin1 name (e.g New York, Tokyo, Shanghai).
+                                US territories, which Geonames files as countries of their own, are
+                                accepted as US.PR, US.VI, US.GU, US.AS and US.MP.
 
-                                Requires the --country option. However, if all admin1 codes have the same
-                                prefix (e.g. US.TX, US.NJ, US.CA), the country can be inferred from the
-                                admin1 code (in this example - US), and the --country option is not required.
+                                Requires the --country option, unless every entry is an admin1 code:
+                                then the countries are inferred from the code prefixes (e.g. US.TX,US.PR
+                                infers US and PR), and the --country option is not required.
 
-                                If specifying multiple admin1 filters, you can mix admin1 codes and names,
-                                and they are matched in priority order.
+                                If specifying multiple admin1 filters, you can mix admin1 codes and names.
+                                A place inside any of them qualifies, and the best-scoring one is
+                                returned, preferring a place whose name is exactly the value.
 
-                                Matches are made using a starts_with() comparison (i.e. "US" will match "US.NY",
+                                Matches are made using a starts_with() comparison (i.e. "US.N" will match "US.NY",
                                 "US.NJ", etc. for admin1 code. "New" will match "New York", "New Jersey",
-                                "Newfoundland", etc. for admin1 name.)
+                                "Newfoundland", etc. for admin1 name.) Note that a few full Geonames codes are
+                                prefixes of others (e.g. KZ.12 also matches KZ.12510143), so such a code
+                                also admits the longer codes it prefixes.
 
                                 admin1 is the second priority filter, and will be applied after country filters.
                                 See https://download.geonames.org/export/dump/admin1CodesASCII.txt for
@@ -387,23 +657,65 @@ geocode options:
                                 If not set (default), the population is not used and the
                                 nearest city is returned.
 
-                                OPENCAGE only options:
-    --api-key <key>             The OpenCage API key for the opencage/opencagenow subcommands.
+                                OPENCAGE, GEOCLIENT & CENSUS options:
+    --api-key <key>             The API key for the opencage and geoclient subcommands.
                                 If set, it takes precedence over the QSV_OPENCAGE_API_KEY
-                                environment variable. Get a free key at
-                                https://opencagedata.com/users/sign_up.
-    --rate-limit <qps>          Maximum number of OpenCage API requests per second.
-                                The free tier allows 1 request/second (2,500/day).
-                                [default: 1]
-    --reverse                   Force reverse geocoding for opencage/opencagenow (treat the
+                                (opencage) or QSV_GEOCLIENT_API_KEY (geoclient) environment
+                                variable. Get a free OpenCage key at
+                                https://opencagedata.com/users/sign_up, or a Geoclient
+                                subscription key at https://api-portal.nyc.gov.
+    --rate-limit <qps>          Maximum number of API requests per second.
+                                Defaults to 1 for opencage (its free trial allows 1
+                                request/second, 2,500/day), 40 for geoclient (the
+                                public API allows 100/second per IP but only 2,500/minute,
+                                so 41.6/second sustained, and 500,000/day) and 5 for census
+                                (single-record lookups; batch uploads are paced separately).
+    --cache-ttl <seconds>       Time-to-live for the persistent on-disk result cache.
+                                A value of 0 disables time-based expiration (entries are
+                                cached indefinitely). Use --no-cache to disable caching entirely.
+                                [default: 1209600]
+    --no-cache                  Disable the persistent on-disk result cache. Duplicate
+                                queries within a run are still de-duplicated
+                                (for geoclient and census, within each --batch).
+
+                                OPENCAGE only options:
+    --reverse                  Force reverse geocoding for opencage/opencagenow (treat the
                                 query as a "lat, long" WGS-84 coordinate). If not set, forward
                                 and reverse mode is auto-detected per row.
+                                For census/censusnow, <column> holds "lat, long" coordinates
+                                and the Census geographies at that point are returned.
     --no-annotations            Omit OpenCage annotations (timezone, currency, etc.) from the
                                 result and from %json output.
-    --cache-ttl <seconds>       Time-to-live for the persistent on-disk OpenCage result cache.
-                                [default: 1209600]
-    --no-cache                  Disable the persistent on-disk OpenCage cache. Duplicate
-                                queries within a run are still de-duplicated.
+
+                                GEOCLIENT only options:
+    --endpoint <name>           The Geoclient lookup: search (default), bin, bbl, normalize,
+                                streetcode, address, addresspoint, intersection, place
+                                or blockface.
+                                See GEOCLIENT above.
+    --params <list>             Comma-separated Geoclient parameters for the structured
+                                endpoints, each "name={Column}" or "name=value", e.g.
+                                "houseNumber={HouseNo},street={Street},borough={Boro}".
+                                For search, only fixed options are allowed, e.g.
+                                "exactMatchMaxLevel=5".
+                                Also used by census to read an address from several
+                                columns: see CENSUS only options.
+
+                                CENSUS only options:
+    --benchmark <name>          The Census Geocoder benchmark (address ranges release).
+                                Default: Public_AR_Current.
+    --vintage <name>            The Census Geocoder vintage (geography release), e.g.
+                                Current_Current, Census2020_Current or ACS2026_Current.
+                                Default: Current_Current.
+    --census-mode <mode>        Whether to use the Census batch endpoints:
+                                  auto   - (default) batch when the output only needs batch
+                                           fields and at least 50 rows of a --batch still
+                                           need a lookup.
+                                  batch  - always batch. An output that needs more than
+                                           the batch fields (e.g. %json) is an error.
+                                  single - one request per location.
+                                The address parts for census --params are street, city,
+                                state and zip, e.g. "street={Street},city={City},state=NY".
+                                A street needs a zip, or a city and state.
 
     -f, --formatstr=<string>    The place format to use. It has three options:
                                 1. Use one of the predefined formats.
@@ -438,7 +750,7 @@ geocode options:
                                            suggestnow - '{name}, {admin1} {country}: {latitude}, {longitude}'
                                            reverse & reversenow - '%city-admin1-country'
                                            countryinfo - '%country_name'
-                                           iplookup - '%cityrecord'
+                                           iplookup - '%city-admin1-country'
                                            iplookupnow - '{name}, {admin1} {country}: {latitude}, {longitude}'
 
 
@@ -497,19 +809,32 @@ geocode options:
                                 If not set, the original value is used.
     -j, --jobs <arg>            The number of jobs to run in parallel.
                                 When not set, the number of jobs is set to the number of CPUs detected.
+                                For geoclient and census, it is the number of requests in
+                                flight at once.
     -b, --batch <size>          The number of rows per batch to load into memory, before running in parallel.
                                 Set to 0 to load all rows in one batch.
                                 [default: 50000]
     --timeout <seconds>         Timeout for downloading Geonames cities index.
+                                Also applies to each Geonames source file downloaded
+                                when rebuilding the index with index-update, and to the
+                                prebuilt index downloaded by index-load and index-reset -
+                                raise it on slow connections.
+                                For opencage, geoclient and census, it is the timeout for each
+                                API request.
                                 [default: 120]
     --cache-dir <dir>           The directory to use for caching the Geonames cities index
-                                and the persistent on-disk OpenCage result cache.
+                                and the persistent on-disk OpenCage, Geoclient and Census result
+                                caches.
                                 If the directory does not exist, qsv will attempt to create it.
                                 If the QSV_CACHE_DIR envvar is set, it will be used instead.
+                                The index file is named for the qsv release, so each upgrade
+                                downloads a new one. When it does, qsv deletes the index files
+                                of all but the 5 most recent releases found in this directory.
                                 [default: ~/.qsv-cache]
 
                                 CACHE-PRUNE only option:
-    --older-than <val>          Delete OpenCage cache entries older than this value.
+    --older-than <val>          Delete OpenCage, Geoclient and Census cache entries older than
+                                this value.
                                 Accepts an absolute date/datetime (e.g. 2025-01-31) or a
                                 relative age with a unit suffix (s/m/h/d/w = seconds,
                                 minutes, hours, days or weeks; e.g. 30d, 2w, 48h).
@@ -518,11 +843,14 @@ geocode options:
                                 INDEX-UPDATE only options:
     --languages <lang-list>     The comma-delimited, case-insensitive list of languages to use when building
                                 the Geonames cities index.
-                                The languages are specified as a comma-separated list of ISO 639-2 codes.
+                                The languages are specified as Geonames language codes - the ISO 639-1
+                                2-letter code where one exists (e.g. en,fr,de,es), else the ISO 639-2/3 code.
                                 See https://download.geonames.org/export/dump/iso-languagecodes.txt to look up codes
                                 and https://download.geonames.org/export/dump/alternatenames/ for the supported
                                 language files. 253 languages are currently supported.
-                                [default: en]
+                                If not set, the languages the current index was built with are used
+                                (en if there is no current index).
+                                Setting it to a different list than the current index's forces a rebuild.
     --cities-url <url>          The URL to download the Geonames cities file from. There are several
                                 available at https://download.geonames.org/export/dump/.
                                   cities500.zip   - cities with populations > 500; ~200k cities, 56mb
@@ -533,9 +861,12 @@ geocode options:
                                 lookup times will be slower, and the search results will be different.
                                 For convenience, if this is set to 500, 1000, 5000 or 15000, it will be
                                 converted to a geonames cities URL.
-                                [default: https://download.geonames.org/export/dump/cities15000.zip]
+                                If not set, the cities file the current index was built from is used
+                                (cities15000.zip if there is no current index).
+                                Setting it to a different URL than the current index's forces a rebuild.
     --force                     Force update the Geonames cities index. If not set, qsv will check if there
                                 are updates available at Geonames.org before updating the index.
+                                With --force, the index is built even if there is no current index.
 
 Common options:
     -h, --help                  Display this message

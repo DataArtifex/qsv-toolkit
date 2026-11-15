@@ -1,18 +1,21 @@
 # qsv apply
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Apply a series of transformation functions to given CSV column/s. This can be used to
 perform typical data-wrangling tasks and/or to harmonize some values, etc.
 
-It has four subcommands:
+It has five subcommands:
  1. operations*   - 40 string, format, currency, regex & NLP operators.
  2. emptyreplace* - replace empty cells with <--replacement> string.
  3. dynfmt        - Dynamically constructs a new column from other columns using
                     the <--formatstr> template.
  4. calcconv      - parse and evaluate math expressions, with support for units
                     and conversions.
+ 5. summarize*    - summarize a column or group of columns using an OpenAI
+                    API-compatible LLM (local or commercial), with customizable,
+                    MiniJinja-templated per-record prompts.
     * subcommand is multi-column capable.
 
 OPERATIONS (multi-column capable)
@@ -220,13 +223,42 @@ Examples:
   # Use very large numbers:
   qsv apply calcconv --formatstr '{col1} Billion Trillion * {col2} quadrillion vigintillion' -c num_atoms file.csv
 
+== SUMMARIZE ==
+
+The summarize subcommand sends each record to an OpenAI API-compatible LLM and stores the
+returned summary in a new column. The prompt is a MiniJinja template (like `qsv template`)
+rendered per record - reference any column by its "safe" name (non-alphanumeric chars become
+'_'); the 1-based row number is available as {{QSV_ROWNO}}.
+
+If no --prompt/--prompt-file is given, a default prompt that summarizes the selected column/s
+is used. The LLM endpoint, model & API key are resolved with this precedence:
+  CLI flag > env var (QSV_LLM_BASE_URL / QSV_LLM_MODEL / QSV_LLM_APIKEY) > built-in default
+(default base-url: http://localhost:1234/v1 ; default model: openai/gpt-oss-20b).
+
+An API key is required when the base URL is not a localhost endpoint (set --api-key to "NONE"
+to suppress sending a key). One HTTP call is made per uncached row, so summarizing large files
+can be slow & costly. Results are cached on disk (keyed by base-url, model, max-tokens,
+addl-props & the rendered prompt) so repeated rows & re-runs don't re-pay for inference;
+use --no-cache to disable & --fresh to force fresh calls that refresh the cache.
+
+  # Summarize the support_ticket column into a new "summary" column using a local LLM:
+  qsv apply summarize support_ticket -c summary file.csv
+
+  # Use a custom prompt referencing multiple columns against a cloud provider:
+  qsv apply summarize subject,body -c summary --prompt 'Summarize: {{subject}} - {{body}}' -u https://api.openai.com/v1 -m gpt-4o-mini -k $OPENAI_API_KEY file.csv
+
+  # Also capture per-row inference time & token usage in extra columns:
+  qsv apply summarize notes -c summary --stats file.csv
+
 For more extensive examples, see https://github.com/dathere/qsv/blob/master/tests/test_apply.rs.
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#apply
 
 Usage:
 qsv apply operations <operations> [options] <column> [<input>]
 qsv apply emptyreplace --replacement=<string> [options] <column> [<input>]
 qsv apply dynfmt --formatstr=<string> [options] --new-column=<name> [<input>]
 qsv apply calcconv --formatstr=<string> [options] --new-column=<name> [<input>]
+qsv apply summarize [options] --new-column=<name> <column> [<input>]
 qsv apply --help
 
 apply arguments:
@@ -251,6 +283,13 @@ apply arguments:
     CALCCONV subcommand:
         --formatstr=<string>        The calculation/conversion expression to use.
         --new-column=<name>         Put the calculated/converted values in a new column.
+
+    SUMMARIZE subcommand:
+        <column>                    The column/s whose values are summarized by the LLM.
+                                    Used to build the default prompt. With a custom prompt
+                                    (via the --prompt/--prompt-file options), any column
+                                    can be referenced.
+        --new-column=<name>         Put the generated summaries in a new column (required).
 
     <input>                     The input file to read from. If not specified, reads from stdin.
 
@@ -293,6 +332,40 @@ apply options:
                                 Set to 0 to load all rows in one batch. Set to 1 to force batch optimization
                                 even for files with less than 50000 rows.
                                 [default: 50000]
+
+SUMMARIZE options:
+    -u, --base-url <url>        Base URL of the OpenAI API-compatible endpoint.
+                                Precedence: this flag > QSV_LLM_BASE_URL env var > http://localhost:1234/v1
+    -m, --model <model>         Model name compatible with the OpenAI API spec.
+                                Precedence: this flag > QSV_LLM_MODEL env var > openai/gpt-oss-20b
+    -k, --api-key <key>         API key for Bearer token authentication.
+                                Precedence: this flag > QSV_LLM_APIKEY env var.
+                                Set to "NONE" to suppress sending a key. Required for non-localhost URLs.
+    -t, --max-tokens <n>        Maximum number of tokens in the LLM output. Set to 0 to not send a
+                                max_tokens limit (automatically used for localhost endpoints).
+                                [default: 10000]
+    --timeout <secs>            Timeout for each LLM request in seconds (0 = no timeout).
+                                [default: 300]
+    --addl-props <json>         Additional model properties as a JSON object, e.g.
+                                '{"reasoning_effort": "high", "temperature": 0.2}'
+    --prompt <template>         MiniJinja prompt template rendered per record. Overrides the
+                                default prompt. Reference columns by their safe name.
+    --prompt-file <file>        Read the prompt template from a file. Ignored if --prompt is set.
+    --rate-limit <secs>         Seconds to sleep between LLM requests to avoid provider rate limits.
+                                Accepts fractional seconds (e.g. 0.5). [default: 0]
+    --on-error <mode>           What to do when an LLM request fails: "fail" aborts; "skip" writes
+                                an "<ERROR: ...>" cell and continues. [default: fail]
+    --user-agent <agent>        Custom user agent for LLM requests. Supports variables like $QSV_VERSION.
+    --cache-dir <dir>           Directory for the disk cache. [default: ~/.qsv-cache/apply-summarize]
+                                The cache TTL defaults to 28 days; set the QSV_DISKCACHE_TTL_SECS env
+                                var to change it. A value of 0 disables time-based expiration
+                                (entries are cached indefinitely). Use --no-cache to disable caching.
+    --no-cache                  Disable the disk cache (one LLM call per row, always).
+    --fresh                     Force fresh LLM calls, refreshing any cached values.
+    --stats                     Append two extra columns per row alongside --new-column:
+                                "<new-column>_elapsed_ms" (inference time in milliseconds) and
+                                "<new-column>_tokens" (total tokens used). For cached rows, these
+                                report the values captured when the summary was first computed.
 
 Common options:
     -h, --help                  Display this message

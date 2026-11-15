@@ -144,3 +144,44 @@ def test_clean_get_viz_wrappers():
     args = cmd_viz._get_args()
     assert "--smarter" in args
     assert cmd_viz.init_args == ["smart"]
+
+
+def test_denull_fixedwidth_readstat_writestat_wrappers():
+    from dartfx.qsv.cmd import Denull, FixedWidth, ReadStat, WriteStat
+
+    assert Denull.name() == "denull"
+    assert FixedWidth.name() == "fixedwidth"
+    assert ReadStat.name() == "readstat"
+    assert WriteStat.name() == "writestat"
+
+    cmd_denull = Denull(apply=True, max_distinct=32, json=True)
+    args = cmd_denull._get_args()
+    assert "--apply" in args
+    assert "--max-distinct" in args
+    assert "32" in args
+    assert "--json" in args
+
+    cmd_fw = FixedWidth(positions="1,10,25", output="out.csv")
+    args = cmd_fw._get_args()
+    assert "--positions" in args
+    assert "1,10,25" in args
+    assert "--output" in args
+    assert "out.csv" in args
+
+    cmd_rs = ReadStat(value_labels=True, format_catalog="formats.sas7bcat", dictionary="dict.json")
+    args = cmd_rs._get_args()
+    assert "--value-labels" in args
+    assert "--format-catalog" in args
+    assert "formats.sas7bcat" in args
+    assert "--dictionary" in args
+    assert "dict.json" in args
+
+    cmd_ws = WriteStat(dictionary="dict.json", format="sav", lossy=True, output="survey.sav")
+    args = cmd_ws._get_args()
+    assert "--dictionary" in args
+    assert "dict.json" in args
+    assert "--format" in args
+    assert "sav" in args
+    assert "--lossy" in args
+    assert "--output" in args
+    assert "survey.sav" in args

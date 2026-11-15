@@ -1,6 +1,6 @@
 # qsv pseudo
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Pseudonymise the value of a given column by replacing it with an
@@ -45,6 +45,7 @@ ID-1000,cyan
 ```
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_pseudo.rs.
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#pseudo
 
 Usage:
     qsv pseudo [options] <column> [<input>]

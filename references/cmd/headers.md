@@ -1,6 +1,6 @@
 # qsv headers
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Prints the fields of the first row in the CSV data.
@@ -12,6 +12,7 @@ Note that multiple CSV files may be given to this command. This is useful with
 the --union flag.
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_headers.rs.
+See also https://github.com/dathere/qsv/wiki/Selection-and-Inspection#headers
 
 Usage:
     qsv headers [options] [<input>...]

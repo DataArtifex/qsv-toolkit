@@ -1,9 +1,11 @@
 # qsv behead
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Drop a CSV file's header.
+
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#behead
 
 Usage:
     qsv behead [options] [<input>]

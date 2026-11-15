@@ -1,6 +1,6 @@
 # qsv diff
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Find the difference between two CSVs with ludicrous speed.
@@ -44,6 +44,12 @@ qsv diff -k 0,1 --sort-columns 0,1 left.csv right.csv
 # Find the difference but replace equal field values with empty string (key fields still appear)
 qsv diff --drop-equal-fields left.csv right.csv
 
+# Find the difference but drop entire columns that have no differences anywhere (key columns still appear)
+qsv diff --drop-equal-columns left.csv right.csv
+
+# Combine both: keep only differing columns, and within them, blank out equal field values
+qsv diff --drop-equal-columns --drop-equal-fields left.csv right.csv
+
 # Find the difference but do not output headers in the result
 qsv diff --no-headers-output left.csv right.csv
 
@@ -51,6 +57,7 @@ qsv diff --no-headers-output left.csv right.csv
 qsv diff --no-headers-left --no-headers-right left.csv right.csv
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_diff.rs
+See also https://github.com/dathere/qsv/wiki/Indexing-Compression-Diff#diff
 
 Usage:
     qsv diff [options] [<input-left>] [<input-right>]
@@ -97,6 +104,11 @@ diff options:
     --drop-equal-fields         Drop values of equal fields in modified rows of the CSV
                                 diff result (and replace them with the empty string).
                                 Key field values will not be dropped.
+    --drop-equal-columns        Drop entire columns from the diff result that have no
+                                differences anywhere. A column is kept if it is a key
+                                column, if it differs in any modified row, or if it has
+                                a non-empty value in any added or deleted row. Otherwise
+                                it is dropped. Can be combined with --drop-equal-fields.
     -j, --jobs <arg>            The number of jobs to run in parallel.
                                 When not set, the number of jobs is set to the number
                                 of CPUs detected.

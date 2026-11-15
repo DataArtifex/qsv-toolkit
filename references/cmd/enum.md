@@ -1,6 +1,6 @@
 # qsv enum
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Add a new column enumerating the lines of a CSV file. This can be useful to keep
@@ -80,6 +80,7 @@ Examples:
   qsv enum --hash "/record|name|address/" data.csv
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_enumerate.rs.
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#enum
 
 Usage:
     qsv enum [options] [<input>]

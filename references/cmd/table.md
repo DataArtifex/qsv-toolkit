@@ -1,6 +1,6 @@
 # qsv table
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Outputs CSV data as a table with columns in alignment.
@@ -18,6 +18,8 @@ This will not work well if the CSV data contains large fields.
 Note that formatting a table requires buffering all CSV data into memory.
 Therefore, you should use the 'sample' or 'slice' command to trim down large
 CSV data before formatting it with this command.
+
+See also https://github.com/dathere/qsv/wiki/Selection-and-Inspection#table
 
 Usage:
     qsv table [options] [<input>]

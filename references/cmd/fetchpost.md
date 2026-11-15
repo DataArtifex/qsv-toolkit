@@ -1,6 +1,6 @@
 # qsv fetchpost
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Fetchpost sends/fetches data to/from web services for every row using HTTP Post.
@@ -45,7 +45,8 @@ Set the --disk-cache-dir option and the environment variables QSV_DISKCACHE_TTL_
 QSV_DISKCACHE_TTL_REFRESH to change default DiskCache settings.
 
 Redis Cache:
-Another persistent, inter-session cache option is a Redis cache enabled with the --redis flag.
+Another persistent, inter-session cache option is a Redis cache, enabled with
+the --redis-cache flag.
 By default, it will connect to a local Redis instance at redis://127.0.0.1:6379/2,
 with a cache expiry Time-to-Live (TTL) of 2,419,200 seconds (28 days),
 and cache hits NOT refreshing the TTL of cached values.
@@ -64,8 +65,10 @@ to be as fast as allowed. The --rate-limit option sets the maximum number of que
 (QPS) to be made. The default is 0, which means to go as fast as possible, automatically
 throttling as required, based on rate-limit and retry-after response headers.
 
-To use a proxy, please set env vars HTTP_PROXY, HTTPS_PROXY or ALL_PROXY
-(e.g. export HTTPS_PROXY=socks5://127.0.0.1:1086).
+To use a proxy, set the environment variables HTTP_PROXY, HTTPS_PROXY or ALL_PROXY
+(e.g. export HTTPS_PROXY=socks5://127.0.0.1:1086). Your operating system's own
+proxy configuration (macOS System Settings, Windows registry) is also honored;
+the environment variables take precedence over it.
 
 qsv fetchpost supports brotli, gzip and deflate automatic decompression for improved throughput
 and performance, preferring brotli over gzip over deflate.
@@ -142,6 +145,7 @@ Note that you can pass as many key-value pairs by using --http-header option rep
   $ qsv fetchpost https://httpbin.org/post col1-col3 data.csv -H "X-Api-Key:TEST_KEY" -H "X-Api-Secret:ABC123XYZ"
 
 For more extensive examples, see https://github.com/dathere/qsv/blob/master/tests/test_fetch.rs.
+See also https://github.com/dathere/qsv/wiki/HTTP-and-Web#fetchpost
 
 Usage:
     qsv fetchpost (<url-column>) (<column-list> | --payload-tpl <file>) [--jaq <selector> | --jaqfile <file>] [--http-header <k:v>...] [options] [<input>]
@@ -192,6 +196,13 @@ Fetchpost options:
                                [default: 0 ]
     --timeout <seconds>        Timeout for each URL request.
                                [default: 30 ]
+    --default-encoding <enc>   Fallback character encoding used to decode a response body when
+                               the server does NOT send a charset parameter in its Content-Type
+                               header. Accepts WHATWG encoding labels, e.g. utf-8, windows-1252,
+                               iso-8859-1, shift_jis, euc-jp, koi8-r.
+                               When the server DOES send a charset, the server always wins and
+                               this option is ignored.
+                               [default: utf-8]
     -H, --http-header <k:v>    Append custom header(s) to the HTTP header. Pass multiple key-value pairs
                                by adding this option multiple times, once for each pair. The key and value
                                should be separated by a colon.
@@ -232,7 +243,8 @@ Fetchpost options:
                                It has a default Time To Live (TTL)/lifespan of 28 days and cache hits do not
                                refresh the TTL of cached values.
                                Adjust the QSV_DISKCACHE_TTL_SECS & QSV_DISKCACHE_TTL_REFRESH env vars
-                               to change DiskCache settings.
+                               to change DiskCache settings. A QSV_DISKCACHE_TTL_SECS of 0 disables
+                               time-based expiration (entries are cached indefinitely).
     --disk-cache-dir <dir>     The directory <dir> to store the disk cache. Note that if the directory
                                does not exist, it will be created. If the directory exists, it will be used as is,
                                and will not be flushed. This option allows you to maintain several disk caches
@@ -244,6 +256,7 @@ Fetchpost options:
                                NOT renewing an entry's TTL.
                                Adjust the QSV_FP_REDIS_CONNSTR, QSV_REDIS_MAX_POOL_SIZE, QSV_REDIS_TTL_SECS &
                                QSV_REDIS_TTL_REFRESH respectively to change Redis settings.
+                               A QSV_REDIS_TTL_SECS of 0 disables expiration (entries cached indefinitely).
 
     --cache-error              Cache error responses even if a request fails. If an identical URL is requested,
                                the cached error is returned. Otherwise, the fetch is attempted again

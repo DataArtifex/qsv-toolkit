@@ -8,6 +8,7 @@ from dartfx.qsv.utils import (
     readstat_metadata,
     readstat_metadata_to_json,
     readstat_to_csv,
+    writestat_from_csv,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "readstat_to_csv",
     "readstat_metadata_to_json",
     "readstat_metadata",
+    "writestat_from_csv",
 ]

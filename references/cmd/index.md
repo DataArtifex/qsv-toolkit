@@ -1,6 +1,6 @@
 # qsv index
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Creates an index of the given CSV data, which can make other operations like
@@ -15,6 +15,8 @@ in an error (you have to regenerate the index before it can be used again).
 However, if the environment variable QSV_AUTOINDEX_SIZE is set, qsv will
 automatically create an index when the input file size >= specified size (bytes).
 It will also automatically update stale indices as well.
+
+See also https://github.com/dathere/qsv/wiki/Indexing-Compression-Diff#index
 
 Usage:
     qsv index [options] <input>

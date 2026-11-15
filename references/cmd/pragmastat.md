@@ -1,6 +1,6 @@
 # qsv pragmastat
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Pragmatic statistical toolkit.
@@ -129,8 +129,10 @@ Examples:
   qsv pragmastat --standalone --subsample 10000 --no-bounds data.csv
 
 Full Pragmastat manual:
-  https://github.com/AndreyAkinshin/pragmastat/releases/download/v12.1.0/pragmastat-v12.1.0.pdf
+  https://github.com/AndreyAkinshin/pragmastat/releases/download/v14.0.1/pragmastat-v14.0.1.pdf
   https://pragmastat.dev/ (latest version)
+
+See also https://github.com/dathere/qsv/wiki/Aggregation-and-Statistics#pragmastat
 
 Usage:
     qsv pragmastat [options] [<input>]

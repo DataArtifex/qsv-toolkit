@@ -156,7 +156,7 @@ class Apply(QSVCommand):
 
 
 class Behead(QSVCommand):
-    """Drop a CSV file's header."""
+    """Drop header from CSV file."""
 
     def __init__(self, **kwargs):
         super().__init__("behead", **kwargs)
@@ -170,14 +170,14 @@ class Blake3(QSVCommand):
 
 
 class Cat(QSVCommand):
-    """Concatenate CSV files by row or by column."""
+    """Concatenate by row or column."""
 
     def __init__(self, subcommand: str = "rows", **kwargs):
         super().__init__("cat", subcommand, **kwargs)
 
 
 class Clean(QSVCommand):
-    """Removes qsv-generated cache files."""
+    """Remove qsv-generated cache files."""
 
     def __init__(self, **kwargs):
         super().__init__("clean", **kwargs)
@@ -198,7 +198,7 @@ class Color(QSVCommand):
 
 
 class Count(QSVCommand):
-    """Returns a count of the number of records in the CSV data."""
+    """Count records."""
 
     def __init__(self, **kwargs):
         super().__init__("count", **kwargs)
@@ -218,8 +218,15 @@ class Dedup(QSVCommand):
         super().__init__("dedup", **kwargs)
 
 
+class Denull(QSVCommand):
+    """Detect null sentinels ("NULL", "N/A") in data."""
+
+    def __init__(self, **kwargs):
+        super().__init__("denull", **kwargs)
+
+
 class DescribeGPT(QSVCommand):
-    """Inference metadata and provide a summary of the given CSV data using an LLM."""
+    """Infer extended metadata or chat with your data using a LLM."""
 
     def __init__(self, **kwargs):
         super().__init__("describegpt", **kwargs)
@@ -262,14 +269,12 @@ class Exclude(QSVCommand):
     """Excludes the records in one CSV from another."""
 
     def __init__(self, columns1: str, columns2: str, **kwargs):
-        super().__init__("exclude", **kwargs)
-        self.columns1 = columns1
-        self.columns2 = columns2
+        super().__init__("exclude", columns1, columns2, **kwargs)
 
     def run(self, *inputs: str | None) -> str:
         input1 = inputs[0] if len(inputs) > 0 else None
         input2 = inputs[1] if len(inputs) > 1 else None
-        return super().run(self.columns1, input1, self.columns2, input2)
+        return super().run(input1, input2)
 
 
 class Explode(QSVCommand):
@@ -280,14 +285,14 @@ class Explode(QSVCommand):
 
 
 class ExtDedup(QSVCommand):
-    """Remove duplicate rows from an arbitrarily large CSV/text file."""
+    """Remove duplicates rows from an arbitrarily large text file."""
 
     def __init__(self, **kwargs):
         super().__init__("extdedup", **kwargs)
 
 
 class ExtSort(QSVCommand):
-    """Sort an arbitrarily large CSV/text file."""
+    """Sort arbitrarily large text file."""
 
     def __init__(self, **kwargs):
         super().__init__("extsort", **kwargs)
@@ -314,22 +319,29 @@ class Fill(QSVCommand):
         super().__init__("fill", **kwargs)
 
 
+class FixedWidth(QSVCommand):
+    """Convert fixed-width text to CSV."""
+
+    def __init__(self, **kwargs):
+        super().__init__("fixedwidth", **kwargs)
+
+
 class FixLengths(QSVCommand):
     """Makes all records have same length."""
 
     def __init__(self, **kwargs):
-        super().__init__("lengths", **kwargs)
+        super().__init__("fixlengths", **kwargs)
 
 
 class Flatten(QSVCommand):
-    """Flatten CSV records into a list of key-value pairs."""
+    """Show one field per line."""
 
     def __init__(self, **kwargs):
         super().__init__("flatten", **kwargs)
 
 
 class Fmt(QSVCommand):
-    """Reformat CSV data with different delimiters, quote styles, etc."""
+    """Format CSV output (change field delimiter)."""
 
     def __init__(self, **kwargs):
         super().__init__("fmt", **kwargs)
@@ -343,14 +355,14 @@ class Foreach(QSVCommand):
 
 
 class Frequency(QSVCommand):
-    """Compute a frequency table of the given CSV data."""
+    """Show frequency tables."""
 
     def __init__(self, **kwargs):
         super().__init__("frequency", **kwargs)
 
 
 class GeoConvert(QSVCommand):
-    """Convert between spatial formats & CSV."""
+    """Convert between spatial formats & CSV, including GeoJSON, SHP & more."""
 
     def __init__(self, column: str, **kwargs):
         super().__init__("geoconvert", column, **kwargs)
@@ -378,7 +390,7 @@ class Headers(QSVCommand):
 
 
 class Help(QSVCommand):
-    """Show usage message."""
+    """Show this usage message."""
 
     def __init__(self, command: str | None = None):
         super().__init__("help", command)
@@ -392,45 +404,41 @@ class Implode(QSVCommand):
 
 
 class Index(QSVCommand):
-    """Creates an index of the given CSV data."""
+    """Create CSV index for faster access."""
 
     def __init__(self, **kwargs):
         super().__init__("index", **kwargs)
 
 
 class Input(QSVCommand):
-    """Read CSV data with special parser options."""
+    """Read CSVs w/ special quoting, skipping, trimming & transcoding rules."""
 
     def __init__(self, **kwargs):
         super().__init__("input", **kwargs)
 
 
 class Join(QSVCommand):
-    """Joins two sets of CSV data on the specified columns."""
+    """Join CSV files."""
 
     def __init__(self, columns1: str, columns2: str, **kwargs):
-        super().__init__("join", **kwargs)
-        self.columns1 = columns1
-        self.columns2 = columns2
+        super().__init__("join", columns1, columns2, **kwargs)
 
     def run(self, *inputs: str | None) -> str:
         input1 = inputs[0] if len(inputs) > 0 else None
         input2 = inputs[1] if len(inputs) > 1 else None
-        return super().run(self.columns1, input1, self.columns2, input2)
+        return super().run(input1, input2)
 
 
 class Joinp(QSVCommand):
     """Join CSV files using the Pola.rs engine."""
 
     def __init__(self, columns1: str, columns2: str, **kwargs):
-        super().__init__("joinp", **kwargs)
-        self.columns1 = columns1
-        self.columns2 = columns2
+        super().__init__("joinp", columns1, columns2, **kwargs)
 
     def run(self, *inputs: str | None) -> str:
         input1 = inputs[0] if len(inputs) > 0 else None
         input2 = inputs[1] if len(inputs) > 1 else None
-        return super().run(self.columns1, input1, self.columns2, input2)
+        return super().run(input1, input2)
 
 
 class Json(QSVCommand):
@@ -441,7 +449,7 @@ class Json(QSVCommand):
 
 
 class Jsonl(QSVCommand):
-    """Convert newline-delimited JSON (JSONL/NDJSON) to CSV."""
+    """Convert newline-delimited JSON files to CSV."""
 
     def __init__(self, **kwargs):
         super().__init__("jsonl", **kwargs)
@@ -469,7 +477,7 @@ class Luau(QSVCommand):
 
 
 class MoarStats(QSVCommand):
-    """Computes additional statistics and outlier metadata for CSV data."""
+    """Add "moar" statistics to existing stats CSV."""
 
     def __init__(self, **kwargs):
         super().__init__("moarstats", **kwargs)
@@ -507,7 +515,7 @@ class Pro(QSVCommand):
 
 
 class Profile(QSVCommand):
-    """Extract and infer DCAT-3 / Croissant metadata from a CSV."""
+    """Extract and infer DCAT-3/Croissant metadata using a scheming spec."""
 
     def __init__(self, **kwargs):
         super().__init__("profile", **kwargs)
@@ -532,6 +540,13 @@ class Py(QSVCommand):
 
     def __init__(self, script: str, **kwargs):
         super().__init__("py", script, **kwargs)
+
+
+class ReadStat(QSVCommand):
+    """Convert SAS, Stata & SPSS files to CSV."""
+
+    def __init__(self, **kwargs):
+        super().__init__("readstat", **kwargs)
 
 
 class Rename(QSVCommand):
@@ -570,7 +585,7 @@ class Sample(QSVCommand):
 
 
 class Schema(QSVCommand):
-    """Generate JSON Schema or Polars Schema from CSV data."""
+    """Generate JSON Schema from CSV data."""
 
     def __init__(self, **kwargs):
         super().__init__("schema", **kwargs)
@@ -654,7 +669,7 @@ class Sqlp(QSVCommand):
 
 
 class Stats(QSVCommand):
-    """Computes summary statistics for CSV data."""
+    """Infer data types and compute summary statistics."""
 
     def __init__(self, **kwargs):
         super().__init__("stats", **kwargs)
@@ -682,7 +697,7 @@ class Template(QSVCommand):
 
 
 class To(QSVCommand):
-    """Convert CSV data to other formats (sqlite, postgres, parquet, xlsx, etc.)."""
+    """Convert CSVs to Parquet/PostgreSQL/XLSX/SQLite/Data Package."""
 
     def __init__(self, subcommand: str, destination: str, **kwargs):
         super().__init__("to", subcommand, destination, **kwargs)
@@ -709,11 +724,11 @@ class Validate(QSVCommand):
         super().__init__("validate", **kwargs)
         self.json_schema = json_schema
 
-    def run(self, *input_paths: str | None) -> str:
-        args = [p for p in input_paths if p is not None]
+    def _get_args(self) -> list[str]:
+        args = super()._get_args()
         if self.json_schema:
-            args.append(self.json_schema)
-        return super().run(*args)
+            args.extend(["--schema", self.json_schema])
+        return args
 
 
 class Viz(QSVCommand):
@@ -723,46 +738,53 @@ class Viz(QSVCommand):
         super().__init__("viz", subcommand, **kwargs)
 
 
+class WriteStat(QSVCommand):
+    """Write CSV as SPSS, Stata or SAS transport files."""
+
+    def __init__(self, **kwargs):
+        super().__init__("writestat", **kwargs)
+
+
 # --- Function Wrappers for Backward Compatibility ---
 
 
 def index(input_path: str, output: str | None = None) -> str:
-    """Creates an index of the given CSV data."""
+    """Create CSV index for faster access."""
     return Index(output=output).run(input_path)
 
 
 def frequency(input_path: str, **kwargs) -> str:
-    """Compute a frequency table of the given CSV data."""
+    """Show frequency tables."""
     return Frequency(**kwargs).run(input_path)
 
 
 def stats(input_path: str, **kwargs) -> str:
-    """Computes summary statistics for CSV data."""
+    """Infer data types and compute summary statistics."""
     return Stats(**kwargs).run(input_path)
 
 
 def schema(input_path: str, **kwargs) -> str:
-    """Generate JSON Schema or Polars Schema from CSV data."""
+    """Generate JSON Schema from CSV data."""
     return Schema(**kwargs).run(input_path)
 
 
 def describegpt(input_path: str, **kwargs) -> str:
-    """Inference metadata and provide a summary of the given CSV data using an LLM."""
+    """Infer extended metadata or chat with your data using a LLM."""
     return DescribeGPT(**kwargs).run(input_path)
 
 
 def select(input_path: str, selection: str, **kwargs) -> str:
-    """Select columns from CSV data efficiently."""
+    """Select, re-order, duplicate or drop columns."""
     return Select(selection=selection, **kwargs).run(input_path)
 
 
 def moarstats(input_path: str, **kwargs) -> str:
-    """Computes additional statistics and outlier metadata for CSV data."""
+    """Add "moar" statistics to existing stats CSV."""
     return MoarStats(**kwargs).run(input_path)
 
 
 def profile(input_path: str, **kwargs) -> str:
-    """Extract and infer DCAT-3 / Croissant metadata from a CSV."""
+    """Extract and infer DCAT-3/Croissant metadata using a scheming spec."""
     return Profile(**kwargs).run(input_path)
 
 
@@ -772,7 +794,7 @@ def synthesize(input_path: str, **kwargs) -> str:
 
 
 def clean(input_path: str | None = None, **kwargs) -> str:
-    """Removes qsv-generated cache files."""
+    """Remove qsv-generated cache files."""
     args = [input_path] if input_path else []
     return Clean(**kwargs).run(*args)
 
@@ -785,3 +807,23 @@ def get(*args, **kwargs) -> str:
 def viz(input_path: str, subcommand: str | None = None, **kwargs) -> str:
     """Generate charts & dashboards from CSV data using plotly."""
     return Viz(subcommand=subcommand, **kwargs).run(input_path)
+
+
+def denull(input_path: str, **kwargs) -> str:
+    """Detect null sentinels ("NULL", "N/A") in data."""
+    return Denull(**kwargs).run(input_path)
+
+
+def fixedwidth(input_path: str, **kwargs) -> str:
+    """Convert fixed-width text to CSV."""
+    return FixedWidth(**kwargs).run(input_path)
+
+
+def readstat(input_path: str, **kwargs) -> str:
+    """Convert SAS, Stata & SPSS files to CSV."""
+    return ReadStat(**kwargs).run(input_path)
+
+
+def writestat(input_path: str, **kwargs) -> str:
+    """Write CSV as SPSS, Stata or SAS transport files."""
+    return WriteStat(**kwargs).run(input_path)

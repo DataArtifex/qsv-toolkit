@@ -1,6 +1,6 @@
 # qsv to
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Convert CSV files to Parquet, PostgreSQL, SQLite, Excel XLSX, ODS and Data Package.
@@ -213,6 +213,7 @@ For all other conversions you can output the datapackage created by specifying `
   $ qsv to xlsx datapackage.xlsx --stats --print-package file1.csv file2.csv
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_to.rs.
+See also https://github.com/dathere/qsv/wiki/Conversion-and-IO#to
 
 Usage:
     qsv to parquet [options] <destination> [<input>...]
@@ -270,7 +271,9 @@ To options:
       --compress-level <arg>  Compression level (parquet only).
                               For gzip: 1-9 (default: 6). For zstd: -7 to 22 (default: 3).
                               Ignored for other codecs.
-  -A, --all-strings       Convert all fields to strings.
+  -A, --all-strings       Convert all fields to strings. For parquet, columns are read
+                          as strings without type inference, so the inference length
+                          and any pschema.json are not used.
   -j, --jobs <arg>        The number of jobs to run in parallel.
                           When not set, the number of jobs is set to the number of CPUs detected.
 

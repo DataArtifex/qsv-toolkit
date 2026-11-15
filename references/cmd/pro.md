@@ -1,6 +1,6 @@
 # qsv pro
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Interact with qsv pro API. Learn more about qsv pro at: https://qsvpro.dathere.com.
@@ -11,6 +11,8 @@ Interact with qsv pro API. Learn more about qsv pro at: https://qsvpro.dathere.c
 The qsv pro command has subcommands:
     lens:     Run csvlens on a local file in a new Alacritty terminal emulator window (Windows only).
     workflow: Import a local file into the qsv pro Workflow (Workflow must be open).
+
+See also https://github.com/dathere/qsv/wiki/Integrations#qsv-pro-bridge
 
 Usage:
     qsv pro lens [options] [<input>]

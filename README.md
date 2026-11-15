@@ -23,8 +23,7 @@ The toolkit provides high-level Python wrappers and Pydantic models for QSV comm
 ## 📋 Requirements
 
 - **Python 3.12+**
-- **[QSV CLI](https://github.com/dathere/qsv)**: The `qsv` executable must be installed and available in your `PATH`.
-- **[pyreadstat](https://github.com/Roche/pyreadstat)**: Used to read and write SAS, Stata, and SPSS files, and to extract metadata (installed automatically).
+- **[QSV CLI](https://github.com/dathere/qsv)**: The `qsv` executable must be installed and available in your `PATH` (supports native SAS, Stata, and SPSS processing via `readstat` and `writestat`).
 
 
 ## ⚙️ Installation

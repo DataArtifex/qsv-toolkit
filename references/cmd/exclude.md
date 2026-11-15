@@ -1,6 +1,6 @@
 # qsv exclude
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Removes a set of CSV data from another set based on the specified columns.
@@ -57,6 +57,7 @@ Examples:
       qsv --sorted dedup > new-sorted-deduped-records.csv
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_exclude.rs.
+See also https://github.com/dathere/qsv/wiki/Joins-and-Set-Ops#exclude
 
 Usage:
     qsv exclude [options] <columns1> <input1> <columns2> <input2>

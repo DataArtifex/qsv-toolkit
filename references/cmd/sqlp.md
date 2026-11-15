@@ -1,6 +1,6 @@
 # qsv sqlp
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Run blazing-fast Polars SQL queries against several CSVs - replete with joins, aggregations,
@@ -133,9 +133,24 @@ Examples:
 
   # you can also directly load CSVs using the Polars read_csv() SQL function. This is useful when
   # you want to bypass the regular CSV parser (with SKIP_INPUT) and use Polars' multithreaded,
-  # mem-mapped CSV parser instead - making for dramatically faster queries at the cost of CSV parser
-  # configurability (i.e. limited to comma delimiter, no CSV comments, etc.).
+  # mem-mapped CSV parser instead - making for dramatically faster queries.
   $ qsv sqlp SKIP_INPUT "select * from read_csv('data.csv') order by col1 desc limit 100"
+
+  # read_csv() takes Polars' scan_csv options as named arguments (name => value), e.g. for a
+  # semicolon-delimited file with comment lines and no header row:
+  $ qsv sqlp SKIP_INPUT "select * from read_csv('data.csv', separator => ';', comment_prefix => '#', has_header => false)"
+
+  # read_ndjson() takes Polars' scan_ndjson options the same way: schema, schema_overrides,
+  # infer_schema_length, ignore_errors and include_file_paths.
+  # Infer the schema from the whole file, so a key that first appears late isn't dropped
+  # (by default, only the first 100 rows are used):
+  $ qsv sqlp SKIP_INPUT "select * from read_ndjson('events.jsonl', infer_schema_length => NULL)"
+  # Type a column, and read a nested object as its JSON text. CSV output can't hold nested
+  # data, so this avoids the "CSV format does not support nested data" error:
+  $ qsv sqlp SKIP_INPUT "select * from read_ndjson('events.jsonl', schema_overrides => {'date': 'DATE', 'payload': 'VARCHAR'})"
+  # Use an explicit schema, turn values that don't fit it into nulls, and add a column with
+  # each row's source file:
+  $ qsv sqlp SKIP_INPUT "select * from read_ndjson('events.jsonl', schema => {'id': 'INT', 'name': 'VARCHAR'}, ignore_errors => true, include_file_paths => 'source')"
 
   # note that you can also use read_csv() to read compressed files directly
   # gzip, zstd and zlib automatic decompression are supported
@@ -146,6 +161,10 @@ Examples:
   # apart from using Polar's table functions, you can also use SKIP_INPUT when the SELECT
   # statement doesn't require an input file
   $ qsv sqlp SKIP_INPUT "SELECT 1 AS one, '2' AS two, 3.0 AS three"
+
+  # generate_series(start, stop[, step]) and range(start, stop[, step]) generate a column of
+  # integers. generate_series includes stop; range does not.
+  $ qsv sqlp SKIP_INPUT "SELECT * FROM generate_series(1, 10, 2)"
 
   # use stdin as input
   $ cat data.csv | qsv sqlp - 'select * from stdin'
@@ -158,6 +177,7 @@ Examples:
   $ qsv sqlp data.csv 'explain select * from data where col1 > 10 order by col2 desc limit 20'
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_sqlp.rs.
+See also https://github.com/dathere/qsv/wiki/SQL-and-Polars#sqlp
 
 Usage:
     qsv sqlp [options] <input>... <sql>
@@ -208,23 +228,34 @@ sqlp options:
                               stats cache is available. If so, it will use it to derive a Polars schema
                               and save it. If there's no stats cache, it will infer the schema
                               using --infer-len and save the inferred schemas.
+                              Date columns in formats Polars can't parse are saved as String,
+                              as are day-first dates unless QSV_PREFER_DMY is set.
                               Each schema file will have the same file stem as the corresponding
                               input file, with the extension ".pschema.json"
                               (data.csv's Polars schema file will be data.pschema.json)
                               NOTE: You can edit the generated schema files to change the Polars schema
-                              and cast columns to the desired data type. For example, you can force
-                              a Float32 column to be a Float64 column by changing the "Float32" type
-                              to "Float64" in the schema file.
+                              and cast columns to the desired data type. Float columns are saved
+                              as Float64. For example, to save memory you can narrow a Float64
+                              column to Float32 by changing its "Float64" type to "Float32" in the
+                              schema file, at the cost of precision (Float32 holds only about
+                              7 significant digits).
                               You can also cast a Float to a Decimal with a desired precision and scale.
-                              (e.g. instead of "Float32", use "{Decimal" : [10, 3]}")
+                              (e.g. instead of "Float64", use {"Decimal": [10, 3]})
                               The valid types are: `Boolean`, `UInt8`, `UInt16`, `UInt32`, `UInt64`, `Int8`,
                               `Int16`, `Int32`, `Int64`, `Float32`, `Float64`, `String`, `Date`, `Datetime`,
                               `Duration`, `Time`, `Null`, `Categorical`, `Decimal` and `Enum`.
 
-    --streaming               Use streaming mode when parsing CSVs. This will use less memory
-                              but will be slower. Only use this when you get out of memory errors.
-    --low-memory              Use low memory mode when parsing CSVs. This will use less memory
-                              but will be slower. Only use this when you get out of memory errors.
+    --streaming               Write the query result as it is computed, batch by batch, instead
+                              of collecting the whole result in memory first. Use this when the
+                              result is too big for memory. Works with the csv, jsonl, parquet
+                              and arrow formats; json and avro output still collect the whole
+                              result. Queries already run on Polars' streaming engine either way.
+                              An --output file is written beside its target and only moved
+                              into place if the query succeeds. Overwriting an existing file
+                              copies the result into it, so it keeps its owner, group, mode
+                              and links; that briefly needs disk space for two copies. On stdout, rows are sent as
+                              they are computed, so a query that fails part-way leaves its
+                              output cut short; check sqlp's exit code before using it.
     --no-optimizations        Disable non-default query optimizations. This will make queries slower.
                               Use this when you get query errors or to force CSV parsing when there
                               is only one input file, no CSV parsing options are used and its not
@@ -281,6 +312,6 @@ Common options:
     -h, --help             Display this message
     -o, --output <file>    Write output to <file> instead of stdout.
     -d, --delimiter <arg>  The field delimiter for reading and writing CSV data.
-                           Must be a single character. [default: ,]
+                           Must be a single character. (default: ,)
     -q, --quiet            Do not return result shape to stderr.
 ```

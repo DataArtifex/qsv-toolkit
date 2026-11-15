@@ -1310,59 +1310,117 @@ def _is_outdated(source_path: str | os.PathLike[str], target_path: str | os.Path
     return os.path.getmtime(source_path) > os.path.getmtime(target_path)
 
 
+SUPPORTED_STAT_EXTENSIONS = (
+    ".sav",
+    ".zsav",
+    ".por",
+    ".dta",
+    ".sas7bdat",
+    ".sas7bcat",
+    ".xport",
+    ".xpt",
+    ".xpt5",
+    ".xpt8",
+)
+
+
 def readstat_metadata_to_dict(meta: Any) -> dict[str, Any]:
-    """Convert a pyreadstat metadata container to a dictionary."""
-    meta_dict = {
-        "column_names": getattr(meta, "column_names", []),
-        "column_labels": getattr(meta, "column_labels", []),
-        "column_names_to_labels": getattr(meta, "column_names_to_labels", {}),
-        "file_label": getattr(meta, "file_label", None),
-        "file_format": getattr(meta, "file_format", None),
-        "number_of_rows": getattr(meta, "number_of_rows", None),
-        "number_of_columns": getattr(meta, "number_of_columns", None),
-        "variable_value_labels": getattr(meta, "variable_value_labels", {}),
-        "value_labels": getattr(meta, "value_labels", {}),
-        "original_variable_types": getattr(meta, "original_variable_types", {}),
-        "readstat_variable_types": getattr(meta, "readstat_variable_types", {}),
-        "table_name": getattr(meta, "table_name", None),
-    }
+    """Convert readstat metadata into a dictionary."""
+    if isinstance(meta, dict):
+        variables = meta.get("variables", [])
+        col_names = [v.get("name") for v in variables if isinstance(v, dict) and "name" in v]
+        col_labels = [v.get("label") for v in variables if isinstance(v, dict)]
+        col_names_to_labels = {
+            v["name"]: v.get("label")
+            for v in variables
+            if isinstance(v, dict) and "name" in v and v.get("label") is not None
+        }
+        var_value_labels: dict[str, Any] = {}
+        for v in variables:
+            if isinstance(v, dict) and v.get("value_labels"):
+                var_value_labels[v["name"]] = v["value_labels"]
 
-    def clean_dict(d: Any) -> Any:
-        if isinstance(d, dict):
-            return {str(k): clean_dict(v) for k, v in d.items()}
-        if isinstance(d, list):
-            return [clean_dict(x) for x in d]
-        return d
-
-    return clean_dict(meta_dict)
+        meta_dict: dict[str, Any] = {
+            "column_names": col_names,
+            "column_labels": col_labels,
+            "column_names_to_labels": col_names_to_labels,
+            "file_label": meta.get("file_label"),
+            "file_format": meta.get("file_format") or meta.get("format"),
+            "number_of_rows": meta.get("row_count") or meta.get("number_of_rows"),
+            "number_of_columns": len(variables) if variables else meta.get("number_of_columns"),
+            "variable_value_labels": var_value_labels,
+            "value_labels": meta.get("value_labels", {}),
+            "original_variable_types": {
+                v["name"]: v.get("type") for v in variables if isinstance(v, dict) and "name" in v
+            },
+            "readstat_variable_types": {
+                v["name"]: v.get("type") for v in variables if isinstance(v, dict) and "name" in v
+            },
+            "table_name": meta.get("table_name"),
+            "row_count": meta.get("row_count"),
+            "variables": variables,
+        }
+        for k, v in meta.items():
+            if k not in meta_dict:
+                meta_dict[k] = v
+        return meta_dict
+    else:
+        meta_dict = {
+            "column_names": getattr(meta, "column_names", []),
+            "column_labels": getattr(meta, "column_labels", []),
+            "column_names_to_labels": getattr(meta, "column_names_to_labels", {}),
+            "file_label": getattr(meta, "file_label", None),
+            "file_format": getattr(meta, "file_format", None),
+            "number_of_rows": getattr(meta, "number_of_rows", None),
+            "number_of_columns": getattr(meta, "number_of_columns", None),
+            "variable_value_labels": getattr(meta, "variable_value_labels", {}),
+            "value_labels": getattr(meta, "value_labels", {}),
+            "original_variable_types": getattr(meta, "original_variable_types", {}),
+            "readstat_variable_types": getattr(meta, "readstat_variable_types", {}),
+            "table_name": getattr(meta, "table_name", None),
+        }
+        return meta_dict
 
 
 def get_readstat_reader(extension: str) -> Any:
-    """Get the pyreadstat reader function for a given file extension."""
-    import pyreadstat
-
+    """
+    Get the statistical reader function for a given file extension.
+    Note: pyreadstat is no longer a dependency of dartfx-qsv; QSV CLI's native
+    readstat and writestat commands are used instead. If pyreadstat is installed,
+    its reader function is returned for backward compatibility.
+    """
     ext = extension.lower()
-    if ext == ".sav":
-        return pyreadstat.read_sav
-    elif ext == ".zsav":
-        return pyreadstat.read_sav
-    elif ext == ".por":
-        return pyreadstat.read_por
-    elif ext == ".dta":
-        return pyreadstat.read_dta
-    elif ext == ".sas7bdat":
-        return pyreadstat.read_sas7bdat
-    elif ext == ".sas7bcat":
-        return pyreadstat.read_sas7bcat
-    elif ext in (".xport", ".xpt"):
-        return pyreadstat.read_xport
-    else:
+    if ext not in SUPPORTED_STAT_EXTENSIONS:
         raise ValueError(f"Unsupported file extension: {extension}")
 
+    try:
+        import pyreadstat
 
-def readstat_metadata(file_path: str | os.PathLike[str]) -> dict[str, Any]:
+        if ext in (".sav", ".zsav"):
+            return pyreadstat.read_sav
+        elif ext == ".por":
+            return pyreadstat.read_por
+        elif ext == ".dta":
+            return pyreadstat.read_dta
+        elif ext == ".sas7bdat":
+            return pyreadstat.read_sas7bdat
+        elif ext == ".sas7bcat":
+            return pyreadstat.read_sas7bcat
+        elif ext in (".xport", ".xpt", ".xpt5", ".xpt8"):
+            return pyreadstat.read_xport
+    except ImportError:
+        pass
+
+    raise NotImplementedError(
+        "pyreadstat is no longer bundled with dartfx-qsv. "
+        "Use dartfx.qsv.utils.readstat_to_csv or dartfx.qsv.cmd.ReadStat instead."
+    )
+
+
+def readstat_metadata(file_path: str | os.PathLike[str], **kwargs) -> dict[str, Any]:
     """
-    Reads a SAS, Stata, or SPSS file and extracts its metadata as a dictionary.
+    Reads a SAS, Stata, or SPSS file and extracts its metadata as a dictionary
+    using QSV's native readstat command.
 
     Args:
         file_path: Path to the statistical data file.
@@ -1375,23 +1433,24 @@ def readstat_metadata(file_path: str | os.PathLike[str]) -> dict[str, Any]:
         raise FileNotFoundError(f"File not found: {file_path}")
 
     _, ext = os.path.splitext(file_path)
-    reader = get_readstat_reader(ext)
+    if ext.lower() not in SUPPORTED_STAT_EXTENSIONS:
+        raise ValueError(f"Unsupported file extension: {ext}")
 
-    if ext.lower() == ".sas7bcat":
-        meta = reader(file_path)
-    else:
-        _, meta = reader(file_path, metadataonly=True)
+    from dartfx.qsv.cmd import ReadStat
 
-    return readstat_metadata_to_dict(meta)
+    stdout = ReadStat(metadata="json", **kwargs).run(file_path)
+    meta_json = json.loads(stdout) if stdout.strip() else {}
+    return readstat_metadata_to_dict(meta_json)
 
 
 def readstat_to_csv(
     file_path: str | os.PathLike[str],
     csv_path: str | os.PathLike[str] | None = None,
     overwrite: bool = False,
+    **kwargs,
 ) -> str:
     """
-    Converts a SAS, Stata, or SPSS file to a CSV file.
+    Converts a SAS, Stata, or SPSS file to a CSV file using QSV's native readstat command.
 
     Args:
         file_path: Path to the input SAS, Stata, or SPSS file.
@@ -1405,24 +1464,20 @@ def readstat_to_csv(
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Source file not found: {file_path}")
 
+    _, ext = os.path.splitext(file_path)
+    if ext.lower() not in SUPPORTED_STAT_EXTENSIONS:
+        raise ValueError(f"Unsupported file extension: {ext}")
+
     if csv_path is None:
         csv_path = f"{file_path}.csv"
     else:
         csv_path = os.path.abspath(csv_path)
 
     if overwrite or _is_outdated(file_path, csv_path):
-        _, ext = os.path.splitext(file_path)
-        reader = get_readstat_reader(ext)
-
-        if ext.lower() == ".sas7bcat":
-            import pandas as pd
-
-            df = pd.DataFrame()
-        else:
-            df, _ = reader(file_path)
-
         os.makedirs(os.path.dirname(csv_path), exist_ok=True)
-        df.to_csv(csv_path, index=False)
+        from dartfx.qsv.cmd import ReadStat
+
+        ReadStat(output=csv_path, **kwargs).run(file_path)
 
     return str(csv_path)
 
@@ -1431,9 +1486,11 @@ def readstat_metadata_to_json(
     file_path: str | os.PathLike[str],
     json_path: str | os.PathLike[str] | None = None,
     overwrite: bool = False,
+    **kwargs,
 ) -> str:
     """
-    Extracts metadata from a SAS, Stata, or SPSS file and exports it to a JSON file.
+    Extracts metadata from a SAS, Stata, or SPSS file and exports it to a JSON file
+    using QSV's native readstat command.
 
     Args:
         file_path: Path to the input SAS, Stata, or SPSS file.
@@ -1453,10 +1510,45 @@ def readstat_metadata_to_json(
         json_path = os.path.abspath(json_path)
 
     if overwrite or _is_outdated(file_path, json_path):
-        meta_dict = readstat_metadata(file_path)
+        meta_dict = readstat_metadata(file_path, **kwargs)
 
         os.makedirs(os.path.dirname(json_path), exist_ok=True)
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(meta_dict, f, indent=2, ensure_ascii=False)
 
     return str(json_path)
+
+
+def writestat_from_csv(
+    csv_path: str | os.PathLike[str],
+    output_path: str | os.PathLike[str],
+    dictionary: str | os.PathLike[str] | None = None,
+    format: str | None = None,
+    overwrite: bool = False,
+    **kwargs,
+) -> str:
+    """
+    Converts a CSV file to a SAS, Stata, or SPSS file using QSV's native writestat command.
+
+    Args:
+        csv_path: Path to the source CSV file.
+        output_path: Path to the target statistical file (.sav, .dta, .por, .xpt).
+        dictionary: Optional path to a JSON Schema data dictionary containing variable metadata.
+        format: Optional format if not inferred from the output_path extension.
+        overwrite: If True, forces writing even if the target file exists and is newer.
+
+    Returns:
+        The path to the generated output file.
+    """
+    csv_path = os.path.abspath(csv_path)
+    output_path = os.path.abspath(output_path)
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"Source CSV not found: {csv_path}")
+
+    if overwrite or _is_outdated(csv_path, output_path):
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        from dartfx.qsv.cmd import WriteStat
+
+        WriteStat(output=output_path, dictionary=dictionary, format=format, **kwargs).run(csv_path)
+
+    return str(output_path)

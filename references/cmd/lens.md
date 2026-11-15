@@ -1,6 +1,6 @@
 # qsv lens
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Explore tabular data files interactively using the csvlens (https://github.com/YS-L/csvlens) engine.
@@ -13,6 +13,8 @@ If the polars feature is not enabled, lens can only browse CSV dialects (CSV, TS
 its snappy-compressed variants (CSV.sz, TSV.sz, Tab.sz & SSV.sz).
 
 Press 'q' to exit. Press '?' for help.
+
+See also https://github.com/dathere/qsv/wiki/Selection-and-Inspection#lens
 
 Usage:
     qsv lens [options] [<input>]

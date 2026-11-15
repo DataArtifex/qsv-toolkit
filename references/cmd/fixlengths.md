@@ -1,6 +1,6 @@
 # qsv fixlengths
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Transforms CSV data so that all records have the same length. The length is
@@ -13,6 +13,8 @@ given must be a file and not stdin.
 
 Alternatively, if --length is set, then all records are forced to that length.
 This requires a single pass and can be done with stdin.
+
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#fixlengths
 
 Usage:
     qsv fixlengths [options] [<input>]

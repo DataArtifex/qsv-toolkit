@@ -1,6 +1,6 @@
 # qsv searchset
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Filters CSV data by whether the given regex set matches a row.
@@ -31,6 +31,7 @@ the first match.
 When the CSV is indexed, a faster parallel search is used.
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_searchset.rs.
+See also https://github.com/dathere/qsv/wiki/Selection-and-Inspection#searchset
 
 Usage:
     qsv searchset [options] (<regexset-file>) [<input>]

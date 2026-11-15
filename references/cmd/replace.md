@@ -1,6 +1,6 @@
 # qsv replace
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Replace occurrences of a pattern across a CSV file.
@@ -42,6 +42,7 @@ with '<EMAIL>' in the file.csv file.
 
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_replace.rs.
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#replace
 
 Usage:
     qsv replace [options] <pattern> <replacement> [<input>]

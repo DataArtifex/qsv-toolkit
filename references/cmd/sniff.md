@@ -1,6 +1,6 @@
 # qsv sniff
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Quickly sniff the first n rows and infer CSV metadata (delimiter, header row, number of
@@ -47,6 +47,7 @@ Examples:
   qsv sniff --sample 0.20 data.ssv
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_sniff.rs.
+See also https://github.com/dathere/qsv/wiki/Selection-and-Inspection#sniff
 
 Usage:
     qsv sniff [options] [<input>]
@@ -80,6 +81,13 @@ sniff options:
                              When the input is a URL, the sample size dictates
                              how many lines to sample without having to
                              download the entire file. Ignored when --no-infer is enabled.
+                             When sniffing a local file that has a CSV index, the
+                             sample budget is instead drawn as a DISTRIBUTED sample
+                             (the first & last 5 rows, 5 rows each around the 25th,
+                             50th & 75th percentiles, and the rest random across the
+                             whole file) rather than just the first n rows. This
+                             improves type/date inference for values that only appear
+                             late in the file. Run `qsv index` to create an index.
                              [default: 1000]
     --prefer-dmy             Prefer to parse dates in dmy format. Otherwise, use mdy format.
                              Ignored when --no-infer is enabled.

@@ -1,11 +1,15 @@
 # qsv moarstats
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Add dozens of additional statistics, including extended outlier, robust & bivariate
 statistics to an existing stats CSV file. It also maps the field type to the most specific
 W3C XML Schema Definition (XSD) datatype (https://www.w3.org/TR/xmlschema-2/).
+
+IMPORTANT:
+  The `moarstats` command is designed to be run AFTER the `stats` command, as it relies
+  on the baseline statistics computed by `stats` to calculate "moar" statistics.
 
 The `moarstats` command extends an existing stats CSV file (created by the `stats` command)
 by computing "moar" (https://www.dictionary.com/culture/slang/moar) statistics that can be
@@ -16,9 +20,11 @@ does not exist, it will first run the `stats` command with configurable options 
 the baseline stats, to which it will add more stats columns.
 
 If the `.stats.csv` file is found, it will skip running stats and just append the additional
-stats columns.
+stats columns. However, if its `.stats.csv.json` metadata records a different qsv version,
+the baseline stats are recomputed and the additional stats columns are added afresh, so
+a stats file extended by an older qsv release never keeps its outdated values.
 
-Currently computes the following 25 additional univariate statistics:
+Currently computes the following 40 additional univariate statistics:
  1. Pearson's Second Skewness Coefficient: 3 * (mean - median) / stddev
     Measures asymmetry of the distribution.
     Positive values indicate right skew, negative values indicate left skew.
@@ -63,65 +69,126 @@ Currently computes the following 25 additional univariate statistics:
     Robust Coefficient of Variation using MAD and the magnitude of the median.
     Always non-negative. Resistant to outliers, useful for comparing variability.
     https://en.wikipedia.org/wiki/Robust_measures_of_scale
-14. Kurtosis: Measures the "tailedness" of the distribution (excess kurtosis).
+14. Normalized MAD: MAD / 0.6745 (≈ 1.4826 * MAD)
+    Robust estimate of the standard deviation, consistent with stddev for normal data.
+    https://en.wikipedia.org/wiki/Median_absolute_deviation
+15. Normalized IQR: IQR / 1.349
+    Robust estimate of the standard deviation, consistent with stddev for normal data.
+16. Robust Z-Score of Min: 0.6745 * (min - median) / MAD
+    Iglewicz-Hoaglin modified z-score of the minimum.
+    Values beyond ±3.5 are commonly flagged as potential outliers.
+17. Robust Z-Score of Max: 0.6745 * (max - median) / MAD
+    Iglewicz-Hoaglin modified z-score of the maximum.
+18. Kelly Skewness: (P90 + P10 - 2*median) / (P90 - P10)
+    Percentile-based skewness. Less sensitive to extreme tails than moment skewness,
+    and uses more of the distribution than quartile skewness.
+    Requires the 10th & 90th percentiles (included in the default percentile list).
+19. P90/P10 Ratio: P90 / P10
+    Common spread/inequality ratio. Only computed when P10 > 0.
+20. Zero Share: n_zero / (n_zero + n_positive + n_negative)
+    Share of non-null numeric values that are exactly zero (zero-inflation).
+21. Berger-Parker Dominance: mode_occurrences / row count
+    Share of rows taken by the most frequent value (NULL counts as a value, as in mode).
+    Works for all field types. Not meaningful on weighted stats.
+    https://en.wikipedia.org/wiki/Diversity_index#Berger%E2%80%93Parker_index
+22. Moment Skewness: adjusted Fisher-Pearson standardized moment coefficient (G1).
+    Moment-based counterpart to the quantile-based `skewness` from stats.
+    Positive values indicate right skew, negative values indicate left skew.
+    Requires --advanced flag.
+    https://en.wikipedia.org/wiki/Skewness#Sample_skewness
+23. Kurtosis: Measures the "tailedness" of the distribution (sample excess kurtosis, G2).
     Positive values indicate heavy tails, negative values indicate light tails.
     Values near 0 indicate a normal distribution.
     Requires --advanced flag.
     https://en.wikipedia.org/wiki/Kurtosis
-15. Bimodality Coefficient: Measures whether a distribution has two modes (peaks) or is unimodal.
-    BC < 0.555 indicates unimodal, BC >= 0.555 indicates bimodal/multimodal.
-    Computed as (skewness² + 1) / (kurtosis + 3).
-    Requires --advanced flag (needs skewness from base stats and kurtosis from --advanced flag).
+24. Bimodality Coefficient: Measures whether a distribution has two modes (peaks) or is unimodal.
+    BC > 0.555 (the value for a uniform distribution) suggests bimodal/multimodal.
+    Computed as (G1² + 1) / (G2 + 3(n-1)² / ((n-2)(n-3))), using moment skewness and kurtosis.
+    Heavily skewed unimodal data can also exceed 0.555.
+    Requires --advanced flag.
     https://en.wikipedia.org/wiki/Bimodality
-16. Jarque-Bera Test: (n/6) * (S² + K²/4)
-    Standard test for normality using skewness and kurtosis.
+25. Jarque-Bera Test: (n/6) * (S² + K²/4)
+    Standard test for normality, where S and K are the (biased) moment skewness and
+    excess kurtosis.
     Also computes jarque_bera_pvalue (from chi-squared distribution with 2 df).
     Low p-values (< 0.05) indicate the data is NOT normally distributed.
-    Requires --advanced flag (needs kurtosis).
+    Requires --advanced flag.
     https://en.wikipedia.org/wiki/Jarque%E2%80%93Bera_test
-17. Gini Coefficient: Measures inequality/dispersion in the distribution.
+26. Gini Coefficient: Measures inequality/dispersion in the distribution.
     Values range from 0 (perfect equality) to 1 (maximum inequality).
     Requires --advanced flag.
     https://en.wikipedia.org/wiki/Gini_coefficient
-18. Atkinson Index: Measures inequality in the distribution with a sensitivity parameter.
+27. Atkinson Index: Measures inequality in the distribution with a sensitivity parameter.
     Values range from 0 (perfect equality) to 1 (maximum inequality).
     The Atkinson Index is a more general form of the Gini coefficient that allows for
     different sensitivity to inequality. Sensitivity is configurable via --epsilon.
     Requires --advanced flag.
     https://en.wikipedia.org/wiki/Atkinson_index
-19. Theil Index: (1/n) * Σ((x_i / mean) * ln(x_i / mean))
+28. Theil Index: (1/n) * Σ((x_i / mean) * ln(x_i / mean))
     Measures inequality/concentration. Unlike Gini, it is decomposable into
     within-group and between-group components. Only computed for positive values.
     Requires --advanced flag.
     https://en.wikipedia.org/wiki/Theil_index
-20. Mean Absolute Deviation (from mean): (1/n) * Σ|x_i - mean|
+29. Mean Absolute Deviation (from mean): (1/n) * Σ|x_i - mean|
     Average absolute distance from the mean. Different from MAD (which uses median).
     Less robust but more statistically efficient than MAD.
     Requires --advanced flag.
-21. Shannon Entropy: Measures the information content/uncertainty in the distribution.
+30. Hoover Index: Σ|x_i - mean| / (2 * Σx_i)
+    Share of the total that would have to be redistributed to reach equality (0 to 1).
+    Only computed for non-negative numeric data. Requires --advanced flag.
+    https://en.wikipedia.org/wiki/Hoover_index
+31. L-CV: λ2 / λ1
+    Coefficient of L-variation - a robust, bounded analogue of the CV based on
+    L-moments (linear combinations of order statistics). Only computed for numeric data
+    with a positive mean; 0 for a constant column. Requires --advanced flag.
+    https://en.wikipedia.org/wiki/L-moment
+32. L-Skewness: τ3 = λ3 / λ2
+    Robust analogue of skewness, bounded in [-1, 1]; exists whenever the mean does.
+    Requires --advanced flag.
+33. L-Kurtosis: τ4 = λ4 / λ2
+    Robust analogue of kurtosis. About 0.1226 for a normal distribution. The population
+    value lies in [-1/4, 1], but the sample estimate can fall below -1/4 for small n
+    (e.g. 0,0,6,6 gives -1.5). Requires --advanced flag.
+34. Lag-1 Autocorrelation: Σ(x_t - mean)(x_{t+1} - mean) / Σ(x_t - mean)²
+    Correlation between consecutive non-null values in file order. Values near 1 indicate
+    a trend, drift or clustered/sorted data; near 0 no serial dependence; negative values
+    alternation. Requires --advanced flag.
+    https://en.wikipedia.org/wiki/Autocorrelation
+35. Benford MAD: mean absolute deviation between the first-significant-digit
+    proportions and Benford's law. Nigrini's thresholds: < 0.006 close conformity,
+    < 0.012 acceptable, < 0.015 marginal, otherwise nonconformity - a data quality or
+    fabrication signal. Only computed for numeric data with at least 100 non-zero values
+    spanning at least two orders of magnitude. Requires --advanced flag.
+    https://en.wikipedia.org/wiki/Benford%27s_law
+36. Shannon Entropy: Measures the information content/uncertainty in the distribution.
     Higher values indicate more diversity, lower values indicate more concentration.
     Values range from 0 (all values identical) to log2(n) where n is the number of unique values.
     Requires --advanced flag.
     https://en.wikipedia.org/wiki/Entropy_(information_theory)
-22. Normalized Entropy: Normalized version of Shannon Entropy scaled to [0, 1].
+37. Normalized Entropy: Normalized version of Shannon Entropy scaled to [0, 1].
     Values range from 0 (all values identical) to 1 (all values equally distributed).
     Computed as shannon_entropy / log2(cardinality).
     Requires shannon_entropy (from --advanced flag) and cardinality (from base stats).
-23. Simpson's Diversity Index: 1 - Σ(p_i²)
+38. Simpson's Diversity Index: 1 - Σ(p_i²)
     Probability that two randomly chosen values are different.
     Ranges from 0 (all identical) to 1 (all unique). More intuitive than entropy.
     Requires --advanced flag (computed alongside entropy from frequency data).
     https://en.wikipedia.org/wiki/Diversity_index#Simpson_index
-24. Winsorized Mean: Replaces values below/above thresholds with threshold values, then computes mean.
+39. Winsorized Mean: Replaces values below/above thresholds with threshold values, then computes mean.
     All values are included in the calculation, but extreme values are capped at thresholds.
     https://en.wikipedia.org/wiki/Winsorized_mean
-    Also computes: winsorized_stddev, winsorized_variance, winsorized_cv, winsorized_range,
-    and winsorized_stddev_ratio (winsorized_stddev / overall_stddev).
-25. Trimmed Mean: Excludes values outside thresholds, then computes mean.
+    Also computes (<PCT> is the threshold suffix of the mean column, e.g. 25pct or 5pct):
+    winsorized_stddev_<PCT>, winsorized_variance_<PCT>, winsorized_cv_<PCT>,
+    winsorized_range_<PCT>, and winsorized_<PCT>_stddev_ratio
+    (winsorized stddev / overall stddev). Note the ratio column interpolates <PCT>
+    before _stddev_ratio, unlike the others.
+40. Trimmed Mean: Excludes values outside thresholds, then computes mean.
     Only values within thresholds are included in the calculation.
     https://en.wikipedia.org/wiki/Truncated_mean
-    Also computes: trimmed_stddev, trimmed_variance, trimmed_cv, trimmed_range,
-    and trimmed_stddev_ratio (trimmed_stddev / overall_stddev).
+    Also computes (<PCT> is the threshold suffix of the mean column, e.g. 25pct or 5pct):
+    trimmed_stddev_<PCT>, trimmed_variance_<PCT>, trimmed_cv_<PCT>, trimmed_range_<PCT>,
+    and trimmed_<PCT>_stddev_ratio (trimmed stddev / overall stddev). Note the ratio
+    column interpolates <PCT> before _stddev_ratio, unlike the others.
     By default, uses Q1 and Q3 as thresholds (25% winsorization/trimming).
     With --use-percentiles, uses configurable percentiles (e.g., 5th/95th) as thresholds
     with --pct-thresholds.
@@ -174,12 +241,12 @@ where the required base univariate statistics (mean, median, stddev, etc.) are a
 Univariate outlier statistics additionally require that quartiles (and thus fences) were
 computed when generating the stats CSV.
 Winsorized/trimmed means require either Q1/Q3 or percentiles to be available.
-Kurtosis, Gini & Atkinson Index require reading the original CSV file to collect
-all values for computation.
+The --advanced statistics (Moment Skewness, Kurtosis, Gini, Atkinson, L-moments, etc.)
+require reading the original CSV file to collect all values for computation.
 
 BIVARIATE STATISTICS:
 
-The `moarstats` command also computes the following 6 bivariate statistics:
+The `moarstats` command also computes the following 9 bivariate statistics:
  1. Pearson's correlation
     Measures linear correlation between two numeric/date fields.
     Values range from -1 (perfect negative correlation) to +1 (perfect positive correlation).
@@ -208,10 +275,39 @@ The `moarstats` command also computes the following 6 bivariate statistics:
     Normalized version of mutual information, scaled by the geometric mean of individual entropies.
     Values range from 0 (independent) to 1 (perfectly dependent).
     https://en.wikipedia.org/wiki/Mutual_information#Normalized_variants
+ 7. Theil's U (uncertainty coefficient)
+    Directed measure of how much knowing one field reduces uncertainty about the other.
+    Asymmetric, so two columns are emitted: u_field2_given_field1 and u_field1_given_field2.
+    Values range from 0 (no reduction) to 1 (fully determined).
+    Selected with `u` in --bivariate-stats (or via "all").
+    https://en.wikipedia.org/wiki/Uncertainty_coefficient
+ 8. Cramér's V: sqrt(χ² / (n * (min(r, c) - 1)))
+    Chi-squared based association between two fields of any type, from the same
+    joint frequency table as mutual information. Ranges from 0 (independent) to 1.
+    Selected with `cramersv` in --bivariate-stats (or via "all").
+    https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V
+ 9. Linear Regression: ordinary least-squares fit of field2 on field1
+    Emits regression_slope, regression_intercept and r_squared (the coefficient of
+    determination; empty when field2 is constant) for numeric/date field pairs, from the
+    same streaming state as Pearson's correlation. Selected with `regression` in --bivariate-stats (or via "all").
+    https://en.wikipedia.org/wiki/Simple_linear_regression
 
 These bivariate statistics are computed when the `--bivariate` flag is used
 and require an indexed CSV file (index will be auto-created if missing).
 Bivariate statistics are output to a separate file: `<FILESTEM>.stats.bivariate.csv`.
+The file is always rewritten - with just a header row if no field pair produced a statistic -
+so it never holds stale results from an earlier run. A header name that repeats in the input is
+written as name, name_2, name_3, ... (the `safenames` convention), so each column's pairs stay
+distinguishable.
+
+The correlation statistics (pearson, spearman, kendall, covariance & regression) only use
+numeric, date and boolean fields. String fields only feed the frequency-based statistics
+(mi, nmi, u & cramersv).
+All-unique fields (cardinality >= row count, e.g. continuous measurements and IDs) keep
+their correlation statistics, but their frequency-based statistics are left empty, as
+mutual information against an all-unique field just saturates at log(n). Read ID column
+correlations with care: a sequential ID correlates with a creation date simply because
+IDs are issued in order.
 
 Bivariate statistics require reading the entire CSV file and are computationally VERY expensive.
 For large files (>= 10k records), parallel chunked processing is used when an index is available.
@@ -253,15 +349,18 @@ Examples:
   qsv moarstats data.csv --bivariate --join-inputs customers.csv,products.csv --join-keys cust_id,prod_id --join-type left
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_moarstats.rs.
+See also https://github.com/dathere/qsv/wiki/Aggregation-and-Statistics#moarstats
 
 Usage:
     qsv moarstats [options] [<input>]
     qsv moarstats --help
 
 moarstats options:
-    --advanced             Compute Kurtosis, Shannon Entropy, Bimodality Coefficient,
-                           Jarque-Bera, Gini Coefficient, Atkinson Index, Theil Index,
-                           Mean Absolute Deviation, and Simpson's Diversity Index.
+    --advanced             Compute Moment Skewness, Kurtosis, Shannon Entropy,
+                           Bimodality Coefficient, Jarque-Bera, Gini Coefficient,
+                           Atkinson Index, Theil Index, Mean Absolute Deviation,
+                           Hoover Index, L-moment ratios, Lag-1 Autocorrelation,
+                           Benford MAD and Simpson's Diversity Index.
                            These advanced statistics computations require reading the
                            original CSV file to collect all values
                            for computation and are computationally expensive.
@@ -278,7 +377,7 @@ moarstats options:
     --stats-options <arg>  Options to pass to the stats command if baseline stats need
                            to be generated. The options are passed as a single string
                            that will be split by whitespace.
-                           [default: --infer-dates --infer-boolean --mad --quartiles --percentiles --force --stats-jsonl]
+                           [default: --infer-dates --infer-boolean --cardinality --mode --mad --quartiles --percentiles --force --stats-jsonl]
     --round <n>            Round statistics to <n> decimal places. Rounding follows
                            Midpoint Nearest Even (Bankers Rounding) rule.
                            [default: 4]
@@ -286,7 +385,11 @@ moarstats options:
                            Requires percentiles to be computed in the stats CSV.
    --pct-thresholds <arg>  Comma-separated percentile pair (e.g., "10,90") to use
                            for winsorization/trimming when --use-percentiles is set.
-                           Both values must be between 0 and 100, and lower < upper.
+                           Both values must truncate to whole percentiles between
+                           1 and 100, and lower < upper. The thresholds are
+                           automatically merged into the --percentile-list of the
+                           stats run, and an existing stats CSV computed with a
+                           percentile list that lacks them is recomputed.
                            [default: 5,95]
  --xsd-gdate-scan <mode>   Gregorian XSD date type detection mode.
                            "quick": Fast detection using min/max values.
@@ -299,23 +402,40 @@ moarstats options:
                            BIVARIATE STATISTICS OPTIONS:
     -B, --bivariate        Enable bivariate statistics computation.
                            Requires indexed CSV file (index will be auto-created if missing).
-                           Computes pairwise correlations, covariances, mutual information, and
-                           normalized mutual information between columns. The bivariate statistics
-                           are saved to a separate file in the same directory as the input:
+                           Computes the pairwise statistics selected with --bivariate-stats
+                           between columns (pearson & covariance by default). The bivariate
+                           statistics are saved to a separate file in the same directory as the input:
                            <FILESTEM>.stats.bivariate.csv.
     -S, --bivariate-stats <stats>
                            Comma-separated list of bivariate statistics to compute.
                            Options: pearson, spearman, kendall, covariance, mi (mutual information),
-                           nmi (normalized mutual information)
+                           nmi (normalized mutual information), u (Theil's directed uncertainty
+                           coefficient; emits u_field2_given_field1 and u_field1_given_field2),
+                           cramersv (Cramér's V) and regression (slope, intercept & r_squared).
                            Use "all" to compute all statistics or "fast" to compute only
                            pearson & covariance, which is much faster as it doesn't require storing
                            all values and uses streaming algorithms.
                            [default: fast]
     -C, --cardinality-threshold <n>
-                           Skip mutual information computation for field pairs where either
-                           field has cardinality exceeding this threshold. Helps avoid
-                           expensive computations for high-cardinality fields.
-                           [default: 1000000]
+                           Skip mutual information (mi/nmi/u) and cramersv for field pairs
+                           where either field's cardinality exceeds this threshold. Such pairs
+                           also skip building their joint-frequency table, which is the
+                           dominant memory cost of --bivariate-stats all.
+                           Defaults to half the row count, floored at 1000, so it stays inert
+                           on small inputs and scales with large ones. Mutual information
+                           between near-unique columns saturates at log(n) and is noise
+                           regardless of how efficiently it is computed.
+                           All-unique fields always skip these statistics,
+                           regardless of this threshold.
+    --bivariate-batch <n>  Process at most <n> field pairs per pass over the input,
+                           bounding peak memory at the cost of extra passes.
+                           Peak memory is otherwise O(columns^2) regardless of row
+                           count - a 160-column, 100k-row (60 MB) input needs ~21 GiB
+                           with mi/nmi/u enabled. Extra passes are cheap, so prefer
+                           the largest <n> that fits.
+                           Only applies to indexed input with >= 10,000 rows.
+                           Set to 0 to process all pairs in one pass.
+                           [default: 0]
     -J, --join-inputs <files>
                            Additional datasets to join. Comma-separated list of CSV files to join
                            with the primary input.

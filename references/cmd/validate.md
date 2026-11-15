@@ -1,6 +1,6 @@
 # qsv validate
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Validates CSV data using two main modes:
@@ -90,6 +90,11 @@ The "dynamicEnum" value has the form:
 
 If colname is not specified, the first column of the CSV file is read and used for validation.
 
+Values are compared as text, so `dynamicEnum` works on integer and number columns too (`1` in
+the data matches `1` in the reference file). In a boolean column, a cell matches either spelling
+of its value (`true` or `1`, `false` or `0`). Empty cells are not looked up: whether they are
+allowed is up to the column's `type` (e.g. ["string", "null"]).
+
 uniqueCombinedWith
 ==================
 `uniqueCombinedWith` allows you to validate that combinations of values across specified columns
@@ -104,9 +109,16 @@ are unique. It can be used with either column names or column indices (0-based).
     // Validate that the combinations of named and indexed columns are unique
     uniqueCombinedWith = ["name", 2]
 
+Every listed column must exist: a name missing from the CSV header, or an index past its last
+column, stops validation with an error. So does an index whose header name a later column
+repeats, as the row then holds only the later column's value.
+
 When a duplicate combination is found, the validation will fail and the error message will indicate
 which columns had duplicate combinations (named columns first, then indexed columns). The invalid
 records will be written to the .invalid file, while valid records will be written to the .valid file.
+Rows are checked in file order, so the first row with a combination is valid and its later
+duplicates are invalid. To keep that order, a schema using `uniqueCombinedWith` is validated
+on a single thread.
 
 `uniqueCombinedWith` complements the standard `uniqueItems` keyword, which can only validate
 uniqueness across a single column.
@@ -151,6 +163,10 @@ JSON SCHEMA SCHEMA VALIDATION SUBMODE:
      `qsv validate schema myjsonschema.json`
      // ignore format validation
      `qsv validate schema --no-format-validation myjsonschema.json`
+     // check that its patterns compile with the fancy regex engine
+     `qsv validate schema --fancy-regex myjsonschema.json`
+The schema is compiled with the same options as JSON Schema validation mode, so qsv's custom
+"currency" format is recognized and the regex options apply.
 
 RFC 4180 VALIDATION MODE:
 ========================
@@ -168,6 +184,23 @@ Examples:
   # Validate a CSV file. Use this to check if a CSV file is readable by qsv.
   qsv validate data.csv
 
+  # Quarantine rows with the wrong number of columns instead of aborting.
+  # Well-formed rows go to data.csv.valid; ragged rows go to data.csv.invalid.
+  qsv validate --split-ragged data.csv
+
+  # Skip '#'-prefixed comment lines while quarantining ragged rows.
+  # validate has no parser-config options of its own, but it honors the global
+  # QSV_COMMENT_CHAR environment variable in BOTH validation modes. Commented lines
+  # (including a commented header) are skipped - they are NOT written to the .valid file.
+  QSV_COMMENT_CHAR='#' qsv validate --split-ragged data.tsv
+
+  # For CSV dialects validate cannot express (custom quote/escape characters,
+  # preamble/epilogue lines, non-UTF-8 encodings), normalize with `qsv input` FIRST,
+  # then validate the normalized output. Note that `qsv input` aborts on ragged rows,
+  # so this ordering only works on files that are not ragged.
+  qsv input --quote "'" --escape '\' --comment '#' data.tsv -o normalized.csv
+  qsv validate normalized.csv
+
   # Validate a TSV file against a JSON Schema
   qsv validate data.tsv schema.json
 
@@ -182,9 +215,10 @@ Examples:
 
 For more examples, see the tests included in this file (denoted by '#[test]') or see
 https://github.com/dathere/qsv/blob/master/tests/test_validate.rs.
+See also https://github.com/dathere/qsv/wiki/Validation-and-Schema#validate
 
 Usage:
-    qsv validate schema [--no-format-validation] [<json-schema>]
+    qsv validate schema [options] [<json-schema>]
     qsv validate [options] [<input>...]
     qsv validate [options] [<input>] <json-schema>
     qsv validate --help
@@ -206,9 +240,26 @@ Validate options:
                                "format" keywords (e.g. date,email, uri, currency, etc.). This is
                                useful when you want to validate the structure of the CSV file
                                w/o worrying about the data types and domain/range of the fields.
+                               Without this option, a "format" that qsv does not know (e.g. a
+                               typo like "emial") is not checked, and a warning names it.
     --fail-fast                Stops on first error.
     --valid <suffix>           Valid record output file suffix. [default: valid]
     --invalid <suffix>         Invalid record output file suffix. [default: invalid]
+    --split-ragged             Opt-in mode: instead of aborting on the first row with the wrong
+                               number of columns (a "ragged" row), write well-formed rows to the
+                               '<input>.<valid>' file and the ragged rows to the '<input>.<invalid>'
+                               file, with a report appended to '<input>.validation-errors.tsv'.
+                               Returns a non-zero exit code when any ragged row is found.
+                               Only column-count mismatches are diverted; malformed quoting and
+                               non-UTF-8 data still abort validation. Works in both RFC 4180 and
+                               JSON Schema validation modes. The split files are written next to
+                               each input file, so this is intended for on-disk file input(s).
+                               A compressed input keeps its full name (data.csv.sz.valid). In RFC
+                               4180 mode, which checks every entry in a zip archive, an entry is
+                               named for both (data.zip.data.csv.valid; data.zip.sub/x.csv.valid
+                               for an entry in a folder). Piped stdin's are 'stdin.csv.*' in the
+                               current directory. If any split file would be written twice, or
+                               would overwrite an input, nothing is written.
     --json                     When validating without a JSON Schema, return the RFC 4180 check
                                as a JSON file instead of a message.
     --pretty-json              Same as --json, but pretty printed.
@@ -245,6 +296,11 @@ Validate options:
                                used by the engine's lazy Discrete Finite Automata.
                                [default: 10]
 
+    --offline                  Do not resolve "$ref"s to schemas outside the JSON Schema file,
+                               whether they are URLs or local files; a schema that has them
+                               fails to compile. Use this with JSON Schemas you do not trust.
+                               The JSON Schema file itself and dynamicEnum lookups are still
+                               loaded as usual.
     --timeout <seconds>        Timeout for downloading json-schemas on URLs and for
                                'dynamicEnum' lookups on URLs. If 0, no timeout is used.
                                [default: 30]

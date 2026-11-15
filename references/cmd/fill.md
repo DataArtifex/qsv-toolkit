@@ -1,6 +1,6 @@
 # qsv fill
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Fill empty fields in selected columns of a CSV.
@@ -36,6 +36,7 @@ re-ordered during output due to the buffering of rows
 collected before the first valid value.
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_fill.rs.
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#fill
 
 Usage:
     qsv fill [options] [--] <selection> [<input>]

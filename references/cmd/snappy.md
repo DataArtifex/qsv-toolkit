@@ -1,6 +1,6 @@
 # qsv snappy
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Does streaming compression/decompression of the input using the Snappy framing format.
@@ -26,6 +26,7 @@ single-threaded compression.
 Also, this command is not specific to CSV data, it can compress/decompress ANY file.
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_snappy.rs.
+See also https://github.com/dathere/qsv/wiki/Conversion-and-IO#snappy
 
 Usage:
     qsv snappy compress [options] [<input>]

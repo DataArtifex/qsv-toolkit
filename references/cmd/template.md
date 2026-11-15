@@ -1,6 +1,6 @@
 # qsv template
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Renders a template using CSV data with the MiniJinja template engine.
@@ -60,8 +60,29 @@ Status: {% if active|to_bool %}Active{% else %}Inactive{% endif %}
 >  filters for math operations and when a MiniJinja filter/function requires it.
 > qsv's custom filters (substr, format_float, human_count, human_float_count, round_banker &
 > str_to_bool) do not require casting for convenience.
+> Booleans render as `True`/`False` and none (e.g. a JSON null reached via `fromjson`)
+>  renders as `None`, matching Jinja2. Use `{{ v or "" }}` for an empty string instead —
+>  a bare `{{ v|default("") }}` does NOT substitute for none, only for undefined.
+
+Additional qsv-specific data-wrangling filters/functions (available in all binary variants):
+```
+regex_replace(pattern, replacement)  Replace ALL regex matches ($1/${name} capture refs).
+regex_match(pattern)                 True if the regex matches anywhere, e.g. in {% if %}.
+regex_find(pattern)                  First whole regex match, or "" if none.
+floor / ceil                         Round down / up. Integer inputs stay exact; fractional
+                                     inputs return a float (pipe |int, e.g. v|floor|int).
+datefmt(fmt[, prefer_dmy])           Parse a messy date string (19+ formats) & reformat with
+                                     a chrono format string, e.g. d|datefmt("%Y-%m-%d").
+zfill(width)                         Left-pad with zeros (keeps leading sign), "42"|zfill(5)="00042".
+lpad(width[, fill]) / rpad(...)      Left/right pad to width with fill char (default space).
+slugify                              URL/DB/CKAN-safe slug, "NYC 311 Data!"|slugify="nyc-311-data".
+blake3                               BLAKE3 hex digest of the value (stable surrogate/content keys).
+fromjson / parse_json                Parse a JSON string into an indexable value, (j|fromjson).key.
+coalesce(a, b, ...)                  First argument that is not undefined/none/empty string.
+```
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_template.rs.
+See also https://github.com/dathere/qsv/wiki/Scripting-Luau-Python#template
 For a relatively complex MiniJinja template, see https://github.com/dathere/qsv/blob/master/scripts/template.tpl
 
 Usage:
@@ -123,6 +144,6 @@ Common options:
     -n, --no-headers            When set, the first row will not be interpreted
                                 as headers. Templates must use numeric 1-based indices
                                 with the "_c" prefix. (e.g. col1: {{_c1}} col2: {{_c2}})
-    --delimiter <sep>           Field separator for reading CSV [default: ,]
+    --delimiter <sep>           Field separator for reading CSV (default: ,)
     -p, --progressbar           Show progress bars. Not valid for stdin.
 ```

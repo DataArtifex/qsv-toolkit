@@ -1,78 +1,86 @@
 # QSV Command Reference
 
-Generated for QSV version 19.1.0-jemalloc-apply;fetch;foreach;geocode;Luau.
+Generated for QSV version qsv 28.0.0-jemalloc-apply;fetch;foreach;geocode;Luau 0.740;magika;prompt;to;viz;viz_static;polars-0.55.1:py-2.1.0;self_update-16-16;38.40 GiB-1.33 GiB-15.92 GiB-48.00 GiB (aarch64-apple-darwin compiled with Rust 1.99;macOS 26.5.2 Tahoe-Darwin 25.5.0;Apple M4 Max-16) compiled.
 
 ## Available Commands
 
-- [apply](apply.md)
-- [behead](behead.md)
-- [blake3](blake3.md)
-- [cat](cat.md)
-- [clipboard](clipboard.md)
-- [color](color.md)
-- [count](count.md)
-- [datefmt](datefmt.md)
-- [dedup](dedup.md)
-- [describegpt](describegpt.md)
-- [diff](diff.md)
-- [edit](edit.md)
-- [enum](enum.md)
-- [excel](excel.md)
-- [exclude](exclude.md)
-- [explode](explode.md)
-- [extdedup](extdedup.md)
-- [extsort](extsort.md)
-- [fetch](fetch.md)
-- [fetchpost](fetchpost.md)
-- [fill](fill.md)
-- [fixlengths](fixlengths.md)
-- [flatten](flatten.md)
-- [fmt](fmt.md)
-- [foreach](foreach.md)
-- [frequency](frequency.md)
-- [geocode](geocode.md)
-- [geoconvert](geoconvert.md)
-- [headers](headers.md)
-- [help](help.md)
-- [implode](implode.md)
-- [index](index.md)
-- [input](input.md)
-- [join](join.md)
-- [joinp](joinp.md)
-- [json](json.md)
-- [jsonl](jsonl.md)
-- [lens](lens.md)
-- [log](log.md)
-- [luau](luau.md)
-- [moarstats](moarstats.md)
-- [partition](partition.md)
-- [pivotp](pivotp.md)
-- [pragmastat](pragmastat.md)
-- [pro](pro.md)
-- [prompt](prompt.md)
-- [pseudo](pseudo.md)
-- [py](py.md)
-- [rename](rename.md)
-- [replace](replace.md)
-- [reverse](reverse.md)
-- [safenames](safenames.md)
-- [sample](sample.md)
-- [schema](schema.md)
-- [scoresql](scoresql.md)
-- [search](search.md)
-- [searchset](searchset.md)
-- [select](select.md)
-- [slice](slice.md)
-- [snappy](snappy.md)
-- [sniff](sniff.md)
-- [sort](sort.md)
-- [sortcheck](sortcheck.md)
-- [split](split.md)
-- [sqlp](sqlp.md)
-- [stats](stats.md)
-- [table](table.md)
-- [template](template.md)
-- [to](to.md)
-- [tojsonl](tojsonl.md)
-- [transpose](transpose.md)
-- [validate](validate.md)
+- [apply](apply.md) - Apply series of transformations to a column
+- [behead](behead.md) - Drop header from CSV file
+- [blake3](blake3.md) - Compute BLAKE3 cryptographic hashes of files
+- [cat](cat.md) - Concatenate by row or column
+- [clean](clean.md) - Remove qsv-generated cache files
+- [clipboard](clipboard.md) - Provide input from clipboard or output to clipboard
+- [color](color.md) - Print a pretty, colorized table
+- [count](count.md) - Count records
+- [datefmt](datefmt.md) - Format date/datetime strings
+- [dedup](dedup.md) - Remove redundant rows
+- [denull](denull.md) - Detect null sentinels ("NULL", "N/A") in data
+- [describegpt](describegpt.md) - Infer extended metadata or chat with your data using a LLM
+- [diff](diff.md) - Find the difference between two CSVs
+- [edit](edit.md) - Replace a cell's value specified by row and column
+- [enum](enum.md) - Add a new column enumerating CSV lines
+- [excel](excel.md) - Exports an Excel sheet to a CSV
+- [exclude](exclude.md) - Excludes the records in one CSV from another
+- [explode](explode.md) - Explode rows based on some column separator
+- [extdedup](extdedup.md) - Remove duplicates rows from an arbitrarily large text file
+- [extsort](extsort.md) - Sort arbitrarily large text file
+- [fetch](fetch.md) - Fetches data from web services for every row using HTTP Get.
+- [fetchpost](fetchpost.md) - Fetches data from web services for every row using HTTP Post.
+- [fill](fill.md) - Fill empty values
+- [fixedwidth](fixedwidth.md) - Convert fixed-width text to CSV
+- [fixlengths](fixlengths.md) - Makes all records have same length
+- [flatten](flatten.md) - Show one field per line
+- [fmt](fmt.md) - Format CSV output (change field delimiter)
+- [foreach](foreach.md) - Loop over a CSV file to execute bash commands
+- [frequency](frequency.md) - Show frequency tables
+- [geocode](geocode.md) - Geocodes a location against the Geonames cities database.
+- [geoconvert](geoconvert.md) - Convert between spatial formats & CSV, including GeoJSON, SHP & more
+- [get](get.md) - Get tabular data from various sources into a disk cache
+- [headers](headers.md) - Show header names
+- [help](help.md) - Show this usage message
+- [implode](implode.md) - Implode rows by grouping on key(s) and joining a value column
+- [index](index.md) - Create CSV index for faster access
+- [input](input.md) - Read CSVs w/ special quoting, skipping, trimming & transcoding rules
+- [join](join.md) - Join CSV files
+- [joinp](joinp.md) - Join CSV files using the Pola.rs engine
+- [json](json.md) - Convert JSON to CSV
+- [jsonl](jsonl.md) - Convert newline-delimited JSON files to CSV
+- [lens](lens.md) - View a CSV file interactively
+- [log](log.md) - Log MCP tool invocations to qsvmcp.log
+- [luau](luau.md) - Execute Luau script on CSV data
+- [moarstats](moarstats.md) - Add "moar" statistics to existing stats CSV
+- [partition](partition.md) - Partition CSV data based on a column value
+- [pivotp](pivotp.md) - Pivots CSV files using the Pola.rs engine
+- [pragmastat](pragmastat.md) - Pragmatic statistical toolkit
+- [pro](pro.md) - Interact with the qsv pro API
+- [profile](profile.md) - Extract and infer DCAT-3/Croissant metadata using a scheming spec
+- [prompt](prompt.md) - Open a file dialog to pick a file
+- [pseudo](pseudo.md) - Pseudonymise the values of a column
+- [readstat](readstat.md) - Convert SAS, Stata & SPSS files to CSV
+- [rename](rename.md) - Rename the columns of CSV data efficiently
+- [replace](replace.md) - Replace patterns in CSV data
+- [reverse](reverse.md) - Reverse rows of CSV data
+- [safenames](safenames.md) - Modify a CSV's header names to db-safe names
+- [sample](sample.md) - Randomly sample CSV data
+- [schema](schema.md) - Generate JSON Schema from CSV data
+- [scoresql](scoresql.md) - Score a SQL query against CSV caches for performance analysis
+- [search](search.md) - Search CSV data with a regex
+- [searchset](searchset.md) - Search CSV data with a regex set
+- [select](select.md) - Select, re-order, duplicate or drop columns
+- [slice](slice.md) - Slice records from CSV
+- [snappy](snappy.md) - Compress/decompress data using the Snappy algorithm
+- [sniff](sniff.md) - Quickly sniff CSV metadata
+- [sort](sort.md) - Sort CSV data in alphabetical, numerical, reverse or random order
+- [sortcheck](sortcheck.md) - Check if a CSV is sorted
+- [split](split.md) - Split CSV data into many files
+- [sqlp](sqlp.md) - Run a SQL query against several CSVs using the Pola.rs engine
+- [stats](stats.md) - Infer data types and compute summary statistics
+- [synthesize](synthesize.md) - Generate a statistically-faithful synthetic CSV from a source CSV
+- [table](table.md) - Align CSV data into columns
+- [template](template.md) - Render templates using CSV data
+- [to](to.md) - Convert CSVs to Parquet/PostgreSQL/XLSX/SQLite/Data Package
+- [tojsonl](tojsonl.md) - Convert CSV to newline-delimited JSON
+- [transpose](transpose.md) - Transpose rows/columns of CSV data
+- [validate](validate.md) - Validate CSV data for RFC4180-compliance or with JSON Schema
+- [viz](viz.md) - Generate charts & dashboards from CSV data using plotly
+- [writestat](writestat.md) - Write CSV as SPSS, Stata or SAS transport files

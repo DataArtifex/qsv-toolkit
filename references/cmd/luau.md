@@ -1,10 +1,10 @@
 # qsv luau
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Create multiple new computed columns, filter rows or compute aggregations by
-executing a Luau 0.720 script for every row (SEQUENTIAL MODE) or for
+executing a Luau 0.740 script for every row (SEQUENTIAL MODE) or for
 specified rows (RANDOM ACCESS MODE) of a CSV file.
 
 Luau is not just another qsv command. It is qsv's Domain-Specific Language (DSL)
@@ -170,6 +170,7 @@ Detailed descriptions of these helpers can be found in the "setup_helpers" secti
 the bottom of this file and on the Wiki (https://github.com/dathere/qsv/wiki)
 
 For more detailed examples, see https://github.com/dathere/qsv/blob/master/tests/test_luau.rs.
+See also https://github.com/dathere/qsv/wiki/Scripting-Luau-Python#luau
 
 Usage:
     qsv luau map [options] -n <main-script> [<input>]

@@ -1,6 +1,6 @@
 # qsv slice
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Returns the rows in the range specified (starting at 0, half-open interval).
@@ -53,6 +53,7 @@ Examples:
   qsv slice --start 9 --len 10 --invert --json data.csv
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_slice.rs.
+See also https://github.com/dathere/qsv/wiki/Selection-and-Inspection#slice
 
 Usage:
     qsv slice [options] [<input>]

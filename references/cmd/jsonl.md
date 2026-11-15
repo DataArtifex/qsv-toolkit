@@ -1,6 +1,6 @@
 # qsv jsonl
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Convert newline-delimited JSON (JSONL/NDJSON) to CSV.
@@ -13,6 +13,7 @@ Also, it will fail if the JSON documents are not consistent with one another,
 as the first JSON line will be used to infer the headers of the CSV output.
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_jsonl.rs.
+See also https://github.com/dathere/qsv/wiki/Conversion-and-IO#jsonl
 
 Usage:
     qsv jsonl [options] [<input>]
@@ -31,5 +32,5 @@ Common options:
     -h, --help             Display this message
     -o, --output <file>    Write output to <file> instead of stdout.
     -d, --delimiter <arg>  The delimiter to use when writing CSV data.
-                           Must be a single character. [default: ,]
+                           Must be a single character. (default: ,)
 ```

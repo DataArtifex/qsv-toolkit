@@ -1,6 +1,6 @@
 # qsv count
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Returns a count of the number of records in the CSV data.
@@ -42,6 +42,7 @@ Examples:
   qsv count --width --json data.csv
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_count.rs.
+See also https://github.com/dathere/qsv/wiki/Selection-and-Inspection#count
 
 Usage:
     qsv count [options] [<input>]
@@ -74,9 +75,6 @@ WHEN THE POLARS FEATURE IS ENABLED:
                            Use this when you encounter memory issues when counting with the
                            Polars CSV reader. The streaming reader is slower but can read
                            any valid CSV file of any size.
-    --low-memory           Use the Polars CSV Reader's low-memory mode. This mode
-                           is slower but uses less memory. If counting still fails,
-                           use --no-polars instead to use the streaming CSV reader.
 
 
 Common options:
@@ -86,6 +84,6 @@ Common options:
                            without an index.
     -n, --no-headers       When set, the first row will be included in
                            the count.
-    -d, --delimiter <arg>  The delimiter to use when reading CSV data.
-                           Must be a single character. [default: ,]
+    -d, --delimiter <arg>  The field delimiter for reading CSV data.
+                           Must be a single character. (default: ,)
 ```

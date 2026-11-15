@@ -1,19 +1,19 @@
 # qsv stats
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Compute summary statistics & infers data types for each column in a CSV.
 
-> IMPORTANT: `stats` is heavily optimized for speed. It ASSUMES the CSV is well-formed & UTF-8 encoded.
-> This allows it to employ numerous performance optimizations (skip repetitive UTF-8 validation, skip
-> bounds checks, cache results, etc.) that may result in undefined behavior if the CSV is not well-formed.
-> All these optimizations are GUARANTEED to work with well-formed CSVs.
-> If you encounter problems generating stats, use `qsv validate` FIRST to confirm the CSV is valid.
+IMPORTANT: `stats` is heavily optimized for speed. It ASSUMES the CSV is well-formed & UTF-8 encoded.
+This allows it to employ numerous performance optimizations (skip repetitive UTF-8 validation, skip
+bounds checks, cache results, etc.) that may result in undefined behavior if the CSV is not well-formed.
+All these optimizations are GUARANTEED to work with well-formed CSVs.
+If you encounter problems generating stats, use `qsv validate` FIRST to confirm the CSV is valid.
 
-> For MAXIMUM PERFORMANCE, create an index for the CSV first with 'qsv index' to enable multithreading,
-> or set --cache-threshold option or set the QSV_AUTOINDEX_SIZE environment variable to automatically
-> create an index when the file size is greater than the specified size (in bytes).
+NOTE: For MAXIMUM PERFORMANCE, create an index for the CSV first with 'qsv index' to enable multithreading,
+or set --cache-threshold option or set the QSV_AUTOINDEX_SIZE environment variable to automatically
+create an index when the file size is greater than the specified size (in bytes).
 
 Summary stats include sum, min/max/range, sort order/sortiness, min/max/sum/avg/stddev/variance/cv length,
 mean, standard error of the mean (SEM), geometric mean, harmonic mean, stddev, variance, coefficient of
@@ -47,7 +47,8 @@ You can override this behavior by setting the QSV_STATS_CHUNK_MEMORY_MB environm
 or -1 for CPU-based chunking (1 chunk = records/number of CPUs)).
 
 "Antimode" is the least frequently occurring non-zero value and is the opposite of mode.
-It returns "*ALL" if all the values are unique, and only returns a preview of the first
+It returns "*ALL" if all the values are unique (with --weight, if all the values are unique
+AND have the same weight), and only returns a preview of the first
 10 antimodes, truncating after 100 characters (configurable with QSV_ANTIMODES_LEN).
 
 If you need all the antimode values of a column, run the `frequency` command with --limit set
@@ -75,9 +76,10 @@ first with 'qsv index' to enable multithreading. With an index, the file is spli
 and each chunk is processed in parallel.
 
 As stats is a central command in qsv, and can be expensive to compute, `stats` caches results
-in <FILESTEM>.stats.csv & if the --stats-json option is used, <FILESTEM>.stats.csv.data.jsonl
-(e.g., qsv stats nyc311.csv will create nyc311.stats.csv & nyc311.stats.csv.data.jsonl).
-The arguments used to generate the cached stats are saved in <FILESTEM>.stats.csv.jsonl.
+in <FILESTEM>.stats.csv & if the --stats-jsonl option is used, <FILESTEM>.stats.csv.data.jsonl
+(e.g., qsv stats nyc311.csv will create nyc311.stats.csv; adding --stats-jsonl also creates
+nyc311.stats.csv.data.jsonl).
+The arguments used to generate the cached stats are saved in <FILESTEM>.stats.csv.json.
 
 If stats have already been computed for the input file with similar arguments and the file
 hasn't changed, the stats will be loaded from the cache instead of recomputing it.
@@ -129,6 +131,7 @@ Examples:
   qsv stats -E --cache-threshold -5000005 nyc311.csv
 
 For more examples, see https://github.com/dathere/qsv/tree/master/resources/test
+See also https://github.com/dathere/qsv/wiki/Aggregation-and-Statistics#stats
 
 If the polars feature is enabled, support additional tabular file formats and
 compression formats:
@@ -152,6 +155,8 @@ stats options:
                               This is provided here because piping 'qsv select'
                               into 'qsv stats' will prevent the use of indexing.
     -E, --everything          Compute all statistics available.
+                              On large files, mode & cardinality tracking dominates
+                              memory use. See --mode-cardinality-cap for how to bound it.
     --typesonly               Infer data types only and do not compute statistics.
                               Note that if you want to infer dates and boolean types, you'll
                               still need to use the --infer-dates & --infer-boolean options.
@@ -179,6 +184,18 @@ stats options:
                               This is automatically enabled if --infer-boolean is enabled.
                               https://en.wikipedia.org/wiki/Cardinality_(SQL_statements)
                               Uses memory proportional to the number of unique values in each column.
+    --zero-padded-numeric     Add a "zero_padded_numeric" column that is "true" when a column's
+                              leading/padding zeros would be lost if it were cast to a number.
+                              Qualifies when the inferred type is String AND every non-null value is
+                              numeric (an all-digit integer or a zero-padded decimal code), with at
+                              least one carrying a leading zero — e.g. US zip codes, barcodes,
+                              zero-padded IDs, and zero-padded decimal codes like 007.1, 05.10 (as in
+                              ICD-9, Dewey Decimal & Harmonized System classification codes).
+                              qsv keeps all of these as text to preserve their leading zeros, so they
+                              are not mistakenly loaded/cast as integer/float. Note that ordinary
+                              fractions (0.5) and pure trailing-zero codes (7.10) are not flagged.
+                              The cell is empty when the column is not zero-padded numeric.
+                              Automatically enabled with --everything.
 
                               NUMERIC & DATE/DATETIME STATS THAT REQUIRE IN-MEMORY SORTING:
                               The following statistics are only computed for numeric & date/datetime
@@ -225,7 +242,7 @@ stats options:
                                              this choice is rejected.
                               [default: exact]
     --cardinality-method <m>  Algorithm used to compute the --cardinality column. Choices:
-                                exact  - track every unique value in a HashMap/Unsorted
+                                exact  - track every unique value in a frequency map
                                          (current behavior). O(cardinality) memory per
                                          column. Subject to --mode-cardinality-cap, which
                                          emits the ">=<n>" sentinel on overflow.
@@ -242,24 +259,34 @@ stats options:
                                            * --infer-boolean forces exact (boolean
                                              inference needs cardinality == 2 exactness);
                                              a one-time warning is emitted.
-                                           * Reproducible across --jobs values: the
-                                             HLL union used at merge time is associative
-                                             and order-invariant, so chunk completion
-                                             order does not affect the final estimate.
+                                           * When modes are computed (with --mode or
+                                             with --everything) and no mode cardinality
+                                             cap is set, the exact mode tracker counts every
+                                             unique value, so that exact count is reported
+                                             and no sketch is built. With a cap, the
+                                             estimate is used only for columns whose
+                                             tracker was dropped.
+                                           * The estimate never exceeds the row count.
+                                           * Reproducible across PARALLEL --jobs values:
+                                             the HLL union used at merge time is
+                                             associative and order-invariant, so chunk
+                                             completion order does not affect the final
+                                             estimate. --jobs 1 never reaches that union
+                                             and so can report a different estimate than
+                                             a parallel run - pin --jobs when comparing
+                                             cardinality across runs.
                                            * Requires a little-endian target. Apache
                                              DataSketches does not support big-endian
                                              platforms (e.g., s390x); on those builds,
                                              this choice is rejected.
                               [default: exact]
     --mode-cardinality-cap <n>  Bound mode-tracking memory on high-cardinality columns.
-                              When > 0, if a column's mode tracker grows past <n>, qsv
-                              drops it and emits sentinel values instead of exact modes
-                              and cardinality. The cap measures:
-                                * unweighted: total samples added (~ row count, since
-                                  every cell is pushed onto the underlying Vec).
-                                * weighted (--weight): number of unique values seen (the
-                                  HashMap's len(), == true cardinality).
-                              Both are direct memory bounds on their respective tracker.
+                              When > 0, if a column's mode tracker grows past <n> UNIQUE
+                              values (true cardinality, for both unweighted and weighted
+                              runs), qsv drops it and emits sentinel values instead of
+                              exact modes and cardinality. The cap is a direct memory
+                              bound on the tracker, which stores one entry per unique
+                              value.
                               Sentinel output:
                                 * mode columns: "*HIGH_CARDINALITY"
                                 * cardinality column: ">=<n>" (the ">=" prefix DOES break
@@ -271,6 +298,12 @@ stats options:
                               are gated.
                               Useful on wide tables with many ID/UUID/timestamp columns
                               where tracking exact cardinality is wasted work.
+                              For large files, a cap of 10000 combined with
+                              "--cardinality-method approx" keeps an approximate
+                              cardinality for capped columns. On a 1M-row, 44-column
+                              file this cut --everything's peak memory by ~65% and
+                              its runtime by half. Parallel runs warn when mode &
+                              cardinality tracking may not fit in available memory.
                               [default: 0]
 
     --round <decimal_places>  Round statistics to <decimal_places>. Rounding is done following
@@ -339,6 +372,14 @@ stats options:
                               to load cached stats to make them work smarter & faster.
                               You can preemptively create the stats-jsonl file by using this option
                               BEFORE running "smart" commands and they will automatically use it.
+    --jsonl                   Emit the stats to stdout as JSON Lines (NDJSON) - one JSON object
+                              per column - instead of CSV. This is the same per-column shape
+                              the --stats-jsonl sidecar file uses, but streamed to stdout.
+                              Respects --output (the NDJSON is written to the file instead).
+                              Cannot be combined with --stats-jsonl or --pretty-json.
+    --pretty-json             Like --jsonl, but emit a single pretty-printed JSON array of the
+                              per-column objects instead of newline-delimited objects.
+                              Cannot be combined with --stats-jsonl or --jsonl.
  -c, --cache-threshold <arg>  Controls the creation of stats cache files.
                                 * when greater than 1, the threshold in milliseconds before caching
                                   stats results. If a stats run takes longer than this threshold,
@@ -352,7 +393,7 @@ stats options:
                                   the index file and the cache files are kept.
                               [default: 5000]
     --vis-whitespace          Visualize whitespace characters in the output.
-                              See https://github.com/dathere/qsv/wiki/Supplemental#whitespace-markers
+                              See https://github.com/dathere/qsv/wiki/Aggregation-and-Statistics#whitespace-markers
                               for the list of whitespace markers.
 
 Common options:
@@ -363,6 +404,16 @@ Common options:
                            in statistics.
     -d, --delimiter <arg>  The field delimiter for READING CSV data.
                            Must be a single character. (default: ,)
+    --flexible             Allow records with a varying number of fields.
+                           Without this, a "ragged" record (one with more or
+                           fewer fields than the header) is an error. With it,
+                           extra fields are ignored and a SHORT record
+                           contributes no value at all for its missing
+                           columns (not even a null), so those columns are computed
+                           over fewer observations. Note that field selection
+                           stops at the first missing column, so an
+                           out-of-order selection (e.g. `3,1`) makes a short
+                           record skip columns that ARE present.
     --memcheck             Use CONSERVATIVE heuristics for the in-memory load
                            check (file size vs. available + free_swap × platform
                            factor − headroom), instead of the default NORMAL
@@ -383,4 +434,10 @@ Common options:
                            still trips (e.g., when jobs is pinned to 1 on a
                            pre-indexed file). A wwarn is emitted listing the
                            auto-enabled estimators.
+                           When modes are computed (with --mode or with the
+                           everything option) and no mode cardinality cap is
+                           set, approx cardinality is NOT auto-enabled: the exact
+                           mode table is kept either way, so it would save
+                           nothing. A wwarn suggests --mode-cardinality-cap,
+                           which is what bounds that table.
 ```

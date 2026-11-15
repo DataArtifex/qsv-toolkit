@@ -1,6 +1,6 @@
 # qsv cat
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Concatenate CSV files by row or by column.
@@ -44,6 +44,7 @@ Examples:
   qsv cat rows path/to/files_to_combine.infile-list -o combined.csv
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_cat.rs.
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#cat
 
 Usage:
     qsv cat rows    [options] [<input>...]
@@ -76,6 +77,19 @@ cat options:
                              which will be used as the first column in the output. This is useful
                              when you want to know which file a row came from. Valid values are
                              'fullpath', 'parentdirfname', 'parentdirfstem', 'fname', 'fstem' and 'none'.
+                             For a file at /data/2024/jan/sales.csv, 'fullpath' gives
+                             '/data/2024/jan/sales.csv', 'parentdirfname' gives 'jan/sales.csv',
+                             'parentdirfstem' gives 'jan/sales', 'fname' gives 'sales.csv' and
+                             'fstem' gives 'sales'.
+                             'fullpath' and the parentdir kinds use the file's real location
+                             (symlinks and relative paths resolved), so the result does not
+                             depend on how the path was typed. Use a parentdir kind to tell
+                             apart same-named files in different directories.
+                             For a compressed input, 'fullpath' names the real file
+                             (/data/jan/sales.csv.sz, or /data/jan/2024.zip/sales.csv for an entry
+                             sales.csv in a zip archive). The other kinds treat it as if unpacked
+                             in place, so 'parentdirfname' gives jan/sales.csv and 2024/sales.csv.
+                             Piped stdin is named 'stdin.csv' ('<stdin>' for 'fullpath').
                              A new column will be added to the beginning of each row using --group-name.
                              If 'none' is specified, no grouping column will be added.
                              [default: none]

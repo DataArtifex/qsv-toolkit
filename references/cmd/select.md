@@ -1,6 +1,6 @@
 # qsv select
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Select columns from CSV data efficiently.
@@ -68,6 +68,7 @@ Examples:
   qsv select '\"Date - Opening\",\"Date - Actual Closing\"'
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_select.rs.
+See also https://github.com/dathere/qsv/wiki/Selection-and-Inspection#select
 
 Usage:
     qsv select [options] [--] <selection> [<input>]

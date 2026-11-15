@@ -1,6 +1,6 @@
 # qsv schema
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Generate JSON Schema or Polars Schema (with the `--polars` option) from CSV data.
@@ -51,7 +51,13 @@ skip schema inferencing which may fail when the inferencing sample is too low, i
 Polars to optimize the query and gives the user the option to tailor the schema to their specific
 query needs (e.g. using a Decimal type with explicit precision and scale instead of a Float type).
 
+Date and datetime columns are only given a Polars Date/Datetime type if Polars can read their
+values as qsv does. Columns in formats Polars can't parse (e.g. "04/18/2019 09:55:45 PM") are
+typed String instead, so the schema doesn't make later reads fail. So are day-first dates when
+neither --prefer-dmy nor QSV_PREFER_DMY is set, as Polars reads "04/05/2019" as 4 May.
+
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_schema.rs.
+See also https://github.com/dathere/qsv/wiki/Validation-and-Schema#schema
 
 Usage:
     qsv schema [options] [<input>]
@@ -62,8 +68,14 @@ Schema options:
                                Enum constraints are compiled for String & Integer types.
                                [default: 50]
     -i, --ignore-case          Ignore case when compiling unique values for enum constraints.
-                               Do note however that the `validate` command is case-sensitive
-                               when validating against enum constraints.
+                               String columns are then checked against the enum threshold
+                               by their case-insensitive cardinality.
+                               As the `validate` command is case-sensitive, the
+                               enum & const constraints of String columns are written
+                               as equivalent case-insensitive regex patterns instead
+                               (e.g. "^(?i:false|true)$"). These use the inline `(?i:...)`
+                               modifier, which other JSON Schema validators may not
+                               support, e.g. on older JavaScript engines.
     --strict-dates             Enforce Internet Datetime format (RFC-3339) for
                                detected date/datetime columns. Otherwise, even if
                                columns are inferred as date/datetime, they are set
@@ -74,7 +86,9 @@ Schema options:
                                When enabled, String fields are checked against
                                email, hostname, IPv4, and IPv6 formats. Format
                                constraints are only added if ALL unique values
-                               in the field match the detected format.
+                               in the field match the detected format. Hostnames
+                               must contain a dot (e.g. "example.com"), so columns
+                               of single words are not mistaken for hostnames.
     --pattern-columns <args>   Select columns to derive regex pattern constraints.
                                That is, this will create a regular expression
                                that matches all values for each specified column.
@@ -104,6 +118,8 @@ Schema options:
                                This option is only available if the `polars` feature is enabled.
                                The generated Polars schema will be written to a file with the
                                `.pschema.json` suffix appended to the input filename.
+                               Requires an input file (stdin is not supported), and
+                               cannot be combined with the --stdout option.
 
 Common options:
     -h, --help                 Display this message

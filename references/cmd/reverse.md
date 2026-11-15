@@ -1,6 +1,6 @@
 # qsv reverse
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Reverses rows of CSV data.
@@ -10,6 +10,8 @@ or when keys are not unique and order of rows with the same key needs to be pres
 
 Note that if the CSV is not indexed, this operation will require reading all of the
 CSV data into memory
+
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#reverse
 
 Usage:
     qsv reverse [options] [<input>]

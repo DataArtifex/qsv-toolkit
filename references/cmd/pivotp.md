@@ -1,6 +1,6 @@
 # qsv pivotp
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Pivots or groups CSV data using the Polars engine.
@@ -20,6 +20,7 @@ GROUP-BY MODE (without <on-cols>):
   If --values is omitted, a single "count" column is produced.
 
 For examples, see https://github.com/dathere/qsv/blob/master/tests/test_pivotp.rs.
+See also https://github.com/dathere/qsv/wiki/SQL-and-Polars#pivotp
 
 Usage:
     qsv pivotp [options] <on-cols> <input>
@@ -33,7 +34,11 @@ pivotp arguments:
                   If the file has a pschema.json file, it will be used to
                   inform the pivot operation unless --infer-len is explicitly
                   set to a value other than the default of 10,000 rows.
-                  Stdin is not supported.
+                  Stdin is not supported. A snappy-compressed (.sz) input is
+                  decompressed first, and an --output ending in .sz is
+                  snappy-compressed. Lines starting with QSV_COMMENT_CHAR are
+                  skipped. QSV_POLARS_FLOAT_PRECISION and QSV_OUTPUT_BOM apply
+                  to the output, as in sqlp and joinp.
 
 pivotp options:
     -i, --index <cols>      The column(s) to use as the index (row labels).
@@ -65,24 +70,45 @@ pivotp options:
                                       Always uses type, cardinality, sparsity, CV, sign
                                       distribution (n_negative/n_positive), and sort_order
                                       from streaming stats.
+                                      High variability means a CV above 100% (stddev > mean).
                                       When the stats cache includes non-streaming stats (from a
-                                      prior `stats --everything` or `stats --mode --quartiles`),
-                                      also uses skewness and mode_count.
-                                      When moarstats has been run, also leverages outlier profile,
-                                      Pearson skewness, MAD/stddev ratio, median/mean ratio, and
-                                      quartile coefficient of dispersion for smarter selection.
-                                      With moarstats --advanced, also uses kurtosis, bimodality,
-                                      entropy and Gini coefficient.
+                                      prior `stats --everything` or `stats --mode`), also uses
+                                      mode_count.
+                                      With a single --values column, smart first runs
+                                      moarstats --advanced to enrich the input's stats cache
+                                      (writing <stem>.stats.csv, .stats.csv.json and
+                                      .stats.csv.data.jsonl beside it) unless the cache already
+                                      has those stats. This one-time pass reads the whole file;
+                                      skip it with --no-moarstats. It is also skipped with an
+                                      explicit --delimiter, stdin and special formats.
+                                      The moarstats stats used are outlier profile, Pearson
+                                      skewness, MAD/stddev ratio, median/mean ratio and quartile
+                                      coefficient of dispersion (the two ratios only for
+                                      positive data), moment skewness (|G1| >= 1 picks median;
+                                      Pearson skewness is the fallback), kurtosis, bimodality
+                                      (bimodality coefficient >= 0.60 with negative excess
+                                      kurtosis), entropy and Gini coefficient.
+                                      A single-value column uses first.
+                                      The choice depends on the data, so pass an explicit --agg
+                                      to pin a result across qsv versions.
                                       For Date/DateTime values, checks sparsity and sort order.
                                       Will only work if there is one value column, otherwise
                                       it falls back to `first`
                             [default: smart]
     --sort-columns          Sort the transposed columns by name. (pivot mode only)
-    --maintain-order        Maintain output order: preserve input column order in pivot mode,
-                            and preserve group/row order in group-by mode.
+    --maintain-order        Accepted for compatibility. Output is always in first-appearance
+                            order: rows follow their index values' first appearance and
+                            pivoted columns their <on-cols> values' first appearance.
     --col-separator <arg>   The separator in generated column names in case of multiple --values columns.
                             (pivot mode only; ignored in group-by mode) [default: _]
-    --validate              Validate a pivot by checking the pivot column(s)' cardinality. (pivot mode only)
+    --validate              Report the pivot column(s)' cardinality before pivoting. Informational
+                            only - it does not refuse a pivot; --max-columns does that.
+                            (pivot mode only)
+    --max-columns <n>       Maximum number of columns the pivot may create before it is refused.
+                            Guards against pivoting on a high-cardinality column, which can
+                            exhaust memory. Unlike --validate, this ALWAYS runs.
+                            Set to 0 for no limit, for a deliberately wide pivot.
+                            (pivot mode only; ignored in group-by mode) [default: 100000]
     --try-parsedates        When set, will attempt to parse columns as dates.
     --infer-len <arg>       Number of rows to scan when inferring schema.
                             Set to 0 to scan entire file. [default: 10000]
@@ -95,11 +121,17 @@ pivotp options:
                             The second index column will contain the total label.
                             Requires 2+ index columns. (pivot mode only)
     --total-label <arg>     Custom label for total rows. [default: Total]
+    --no-moarstats          For smart aggregation, do not run moarstats --advanced to
+                            enrich the stats cache. Smart aggregation then uses whatever
+                            stats are already cached (or basic `stats --cardinality` stats).
 
 Common options:
     -h, --help              Display this message
     -o, --output <file>     Write output to <file> instead of stdout.
     -d, --delimiter <arg>   The field delimiter for reading/writing CSV data.
-                            Must be a single character. (default: ,)
+                            Must be a single character. If not set, QSV_DEFAULT_DELIMITER
+                            is used, else ','. A .tsv/.tab (tab) or .ssv (semicolon)
+                            extension on the input or --output file sets that file's
+                            delimiter. (default: ,)
     -q, --quiet             Do not return smart aggregation chosen nor pivot result shape to stderr.
 ```

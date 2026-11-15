@@ -1,6 +1,6 @@
 # qsv synthesize
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Generates a synthetic CSV that is statistically faithful to a source CSV.
@@ -77,6 +77,7 @@ Examples:
   $ qsv synthesize data.csv --dictionary dict.json -n 1000 > synthetic.csv
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_synthesize.rs.
+See also https://github.com/dathere/qsv/wiki/AI-and-Documentation#synthesize
 
 Usage:
     qsv synthesize [options] <input>

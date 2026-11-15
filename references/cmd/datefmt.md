@@ -1,6 +1,6 @@
 # qsv datefmt
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Formats recognized date fields (19 formats recognized) to a specified date format
@@ -38,6 +38,7 @@ Examples:
   qsv datefmt OpenDate,CloseDate --formatstr '%u' --rename Open_weekday,Close_weekday file.csv
 
 For more extensive examples, see https://github.com/dathere/qsv/blob/master/tests/test_datefmt.rs.
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#datefmt
 
 Usage:
 qsv datefmt [--formatstr=<string>] [options] <column> [<input>]
@@ -49,7 +50,7 @@ datefmt arguments:
                                 See 'qsv select --help' for the format details.
 
     --formatstr=<string>        The date format to use for the datefmt operation.
-                                The date format to use. For formats, see
+                                For formats, see
                                 https://docs.rs/chrono/latest/chrono/format/strftime/
                                 Default to ISO 8601 / RFC 3339 date & time format -
                                 "%Y-%m-%dT%H:%M:%S%z" - e.g. 2001-07-08T00:34:60.026490+09:30

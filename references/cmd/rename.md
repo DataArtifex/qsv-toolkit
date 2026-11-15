@@ -1,6 +1,6 @@
 # qsv rename
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Rename the columns of a CSV efficiently. It has two modes of operation:
@@ -31,6 +31,7 @@ Examples:
   $ qsv rename '"Date - Opening","Date - Actual Closing"'
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_rename.rs.
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#rename
 
 Usage:
     qsv rename [options] [--] <headers> [<input>]

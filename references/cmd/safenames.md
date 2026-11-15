@@ -1,6 +1,6 @@
 # qsv safenames
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Modify headers of a CSV to only have "safe" names - guaranteed "database-ready" names
@@ -54,6 +54,22 @@ Given data.csv:
   4 unsafe header/s: ["12_col", "Col with Embedded Spaces", "", "Column!@Invalid+Chars"]
   1 safe header/s: ["c1"]
 
+  "Safer" (s) mode - like always, but collapses runs of non-alphanumeric
+  characters into a single _ (note "column_invalid_chars", not "column__invalid_chars"):
+  $ qsv safenames --mode s data.csv
+  c1,unsafe_12_col,col_with_embedded_spaces,unsafe_,column_invalid_chars,c1_2
+  1,a2,a3,a4,a5,a6
+  stderr: 5
+
+  "Safer" with unicode (S) mode - same as s, but preserves unicode letters & numbers.
+  Given a header "Café #5", "--mode S" yields "café_5", whereas the ASCII
+  "--mode s" strips the accent, yielding "caf_5":
+  $ qsv safenames --mode S data.csv
+
+  The --collapse & --unicode flags can be combined with ANY mode, including the
+  verify & JSON modes, so the report reflects the "safer" rewrite:
+  $ qsv safenames --mode j --collapse --unicode data.csv
+
 Note that even if "Col with Embedded Spaces" is technically safe, it is generally discouraged.
 Though it can be created as a "quoted identifier" in PostgreSQL, it is still marked "unsafe"
 by default, unless mode is set to "conditional."
@@ -62,6 +78,7 @@ It is discouraged because the embedded spaces can cause problems later on.
 (see https://lerner.co.il/2013/11/30/quoting-postgresql/ for more info).
 
 For more examples, see https://github.com/dathere/qsv/blob/master/tests/test_safenames.rs.
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#safenames
 
 Usage:
     qsv safenames [options] [<input>]
@@ -70,14 +87,22 @@ Usage:
 safenames options:
     --mode <mode>          Rename header names to "safe" names — guaranteed
                            "database-ready" names. Mode is selected by the FIRST
-                           character: c/C conditional, a/A always, v verify,
-                           V Verbose, j JSON, J pretty JSON (case matters for
-                           v vs V and j vs J; --mode verbose maps to 'v', NOT V).
+                           character: c/C conditional, a/A always, s safer,
+                           S Safer (unicode), v verify, V Verbose, j JSON,
+                           J pretty JSON (case matters for s vs S, v vs V and
+                           j vs J; --mode verbose maps to 'v', NOT V).
                            Mode details:
                              c, C  - conditional. Check first before renaming;
                                      preserves "quoted identifiers" (mixed case
                                      with embedded spaces).
                              a, A  - always. Rename every header, even safe ones.
+                             s     - safer. Like always, but collapses runs of
+                                     non-alphanumeric characters into a single _
+                                     (ASCII-only). Same as always + collapse.
+                             S     - Safer (unicode). Like s, but preserves
+                                     unicode letters & numbers instead of
+                                     stripping to ASCII. Same as always +
+                                     collapse + unicode.
                              v     - verify. Count unsafe headers; result to stderr.
                              V     - Verbose. Like verify, but also lists header
                                      count, duplicates, unsafe & safe headers.
@@ -94,6 +119,12 @@ safenames options:
     --prefix <string>      Certain systems do not allow header names to start with "_" (e.g. CKAN Datastore).
                            This option allows the specification of the unsafe prefix to use when a header
                            starts with "_". [default: unsafe_]
+    --collapse             Collapse consecutive runs of non-alphanumeric characters into a
+                           single _. Composes with ALL modes (including verify & JSON modes).
+                           Implied by --mode s and --mode S.
+    --unicode              Preserve unicode letters & numbers instead of stripping to ASCII.
+                           Composes with ALL modes (including verify & JSON modes).
+                           Implied by --mode S.
 
 Common options:
     -h, --help             Display this message

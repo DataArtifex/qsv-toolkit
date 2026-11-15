@@ -1,6 +1,6 @@
 # qsv transpose
 
-<small>v20.1.0</small>
+<small>v28.0.0</small>
 
 ```text
 Transpose the rows/columns of CSV data.
@@ -32,6 +32,7 @@ Examples:
     $ qsv transpose --long /^name/ data.csv
 
 See https://github.com/dathere/qsv/blob/master/tests/test_transpose.rs for more examples.
+See also https://github.com/dathere/qsv/wiki/Transform-and-Reshape#transpose
 
 transpose options:
     -m, --multipass        Process the transpose by making multiple passes
