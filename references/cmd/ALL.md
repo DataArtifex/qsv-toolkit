@@ -378,6 +378,7 @@ Common options:
                                 Must be a single character. (default: ,)
     -p, --progressbar           Show progress bars. Not valid for stdin.
 ```
+
 ## qsv behead
 
 ```text
@@ -395,6 +396,7 @@ Common options:
                            fields per record, increasing performance.
     -o, --output <file>    Write output to <file> instead of stdout.
 ```
+
 ## qsv blake3
 
 ```text
@@ -435,6 +437,7 @@ Common options:
     -q, --quiet          Skip printing OK for each checked file.
                          Must be used with --check.
 ```
+
 ## qsv cat
 
 ```text
@@ -540,6 +543,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv clean
 
 ```text
@@ -607,6 +611,7 @@ Common options:
     -h, --help         Display this message
     -q, --quiet        Do not print the per-file / summary report.
 ```
+
 ## qsv clipboard
 
 ```text
@@ -636,6 +641,7 @@ clip options:
 Common options:
     -h, --help             Display this message
 ```
+
 ## qsv color
 
 ```text
@@ -676,6 +682,7 @@ Common options:
     --memcheck             Check if there is enough memory to load the entire
                            CSV into memory using CONSERVATIVE heuristics.
 ```
+
 ## qsv count
 
 ```text
@@ -763,6 +770,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv datefmt
 
 ```text
@@ -867,6 +875,7 @@ Common options:
                                 Must be a single character. (default: ,)
     -p, --progressbar           Show progress bars. Not valid for stdin.
 ```
+
 ## qsv dedup
 
 ```text
@@ -944,6 +953,7 @@ Common options:
                                Has no effect when --sorted is set, as that path
                                streams the input and never loads it into memory.
 ```
+
 ## qsv denull
 
 ```text
@@ -1077,6 +1087,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv describegpt
 
 ```text
@@ -1727,6 +1738,7 @@ Common options:
                            {filestem}.{kind}.tsv (e.g., output.dictionary.tsv, output.tags.tsv).
     -q, --quiet            Do not print status messages to stderr.
 ```
+
 ## qsv diff
 
 ```text
@@ -1847,6 +1859,7 @@ Common options:
                                 Overrides --delimiter-right, --delimiter-left
                                 and --delimiter-output.
 ```
+
 ## qsv edit
 
 ```text
@@ -1904,6 +1917,7 @@ Common options:
     -o, --output <file>    Write output to <file> instead of stdout.
     -n, --no-headers       Start row indices from the header row as 0 (allows editing the header row).
 ```
+
 ## qsv enum
 
 ```text
@@ -2036,6 +2050,7 @@ Common options:
     -d, --delimiter <arg>    The field delimiter for reading CSV data.
                              Must be a single character. (default: ,)
 ```
+
 ## qsv excel
 
 ```text
@@ -2200,6 +2215,7 @@ Common options:
                                Must be a single character. (default: ,)
     -q, --quiet                Do not display export summary message.
 ```
+
 ## qsv exclude
 
 ```text
@@ -2285,6 +2301,7 @@ Common options:
     --memcheck             Check if there is enough memory to load <input2>
                            into memory using CONSERVATIVE heuristics.
 ```
+
 ## qsv explode
 
 ```text
@@ -2326,6 +2343,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv extdedup
 
 ```text
@@ -2390,6 +2408,7 @@ Common options:
     -h, --help                 Display this message
     -q, --quiet                Do not print duplicate count to stderr.
 ```
+
 ## qsv extsort
 
 ```text
@@ -2449,6 +2468,7 @@ Common options:
                            of the rows. Otherwise, the first row will always
                            appear as the header row in the output.
 ```
+
 ## qsv fetch
 
 ```text
@@ -2711,6 +2731,7 @@ Common options:
     -p, --progressbar          Show progress bars. Will also show the cache hit rate upon completion.
                                Not valid for stdin.
 ```
+
 ## qsv fetchpost
 
 ```text
@@ -2987,6 +3008,7 @@ Common options:
     -p, --progressbar          Show progress bars. Will also show the cache hit rate upon completion.
                                Not valid for stdin.
 ```
+
 ## qsv fill
 
 ```text
@@ -3044,6 +3066,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv fixedwidth
 
 ```text
@@ -3090,6 +3113,7 @@ Common options:
     -h, --help             Display this message
     -o, --output <file>    Write output to <file> instead of stdout.
 ```
+
 ## qsv fixlengths
 
 ```text
@@ -3132,6 +3156,7 @@ Common options:
                            Must be a single character. (default: ,)
     -q, --quiet            Don't print removed column information.
 ```
+
 ## qsv flatten
 
 ```text
@@ -3170,6 +3195,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv fmt
 
 ```text
@@ -3213,6 +3239,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv foreach
 
 ```text
@@ -3293,6 +3320,7 @@ Common options:
                            Must be a single character. (default: ,)
     -p, --progressbar      Show progress bars. Not valid for stdin.
 ```
+
 ## qsv frequency
 
 ```text
@@ -3610,6 +3638,7 @@ Common options:
                            is pinned to 1 on a pre-indexed file). A wwarn is
                            emitted when the sketch fallback engages.
 ```
+
 ## qsv get
 
 ```text
@@ -3768,6 +3797,7 @@ Common options:
                            (decompressed) data to <file> (use `-` for stdout).
     -q, --quiet            Do not print progress/summary messages to stderr.
 ```
+
 ## qsv geocode
 
 ```text
@@ -4644,6 +4674,7 @@ Common options:
     -p, --progressbar           Show progress bars. Will also show the cache hit rate upon completion.
                                 Not valid for stdin.
 ```
+
 ## qsv geoconvert
 
 ```text
@@ -4729,6 +4760,7 @@ Common options:
     -d, --delimiter <arg>        The field delimiter for reading CSV input.
                                  Must be a single character. (default: ,)
 ```
+
 ## qsv headers
 
 ```text
@@ -4771,10 +4803,10 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv help
 
 ```text
-
 Usage:
     qsv <command> [<args>...]
     qsv [options]
@@ -4797,8 +4829,8 @@ Options:
 
 sponsored by datHere - Data Infrastructure Engineering (https://qsv.datHere.com)
 Need a UI & more advanced data-wrangling? Upgrade to qsv pro (https://qsvpro.datHere.com)
-
 ```
+
 ## qsv implode
 
 ```text
@@ -4868,6 +4900,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv index
 
 ```text
@@ -4899,6 +4932,7 @@ index options:
 Common options:
     -h, --help             Display this message
 ```
+
 ## qsv input
 
 ```text
@@ -4971,6 +5005,7 @@ Common options:
     -d, --delimiter <arg>    The field delimiter for reading CSV data.
                              Must be a single character. (default: ,)
 ```
+
 ## qsv join
 
 ```text
@@ -5065,6 +5100,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv joinp
 
 ```text
@@ -5340,6 +5376,7 @@ Common options:
                            Must be a single character. (default: ,)
     -q, --quiet            Do not return join shape to stderr.
 ```
+
 ## qsv json
 
 ```text
@@ -5490,6 +5527,7 @@ Common options:
     -h, --help             Display this message
     -o, --output <file>    Write output to <file> instead of stdout.
 ```
+
 ## qsv jsonl
 
 ```text
@@ -5524,6 +5562,7 @@ Common options:
     -d, --delimiter <arg>  The delimiter to use when writing CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv lens
 
 ```text
@@ -5640,6 +5679,7 @@ lens options:
 Common options:
     -h, --help      Display this message
 ```
+
 ## qsv luau
 
 ```text
@@ -5906,6 +5946,7 @@ Common options:
                            Output from the END script is printed after the
                            progress bar finishes.
 ```
+
 ## qsv log
 
 ```text
@@ -5928,6 +5969,7 @@ Usage:
 Common options:
     -h, --help     Display this message
 ```
+
 ## qsv moarstats
 
 ```text
@@ -6389,6 +6431,7 @@ Common options:
     -h, --help             Display this message
     -o, --output <file>    Write output to <file> instead of overwriting the stats CSV file.
 ```
+
 ## qsv partition
 
 ```text
@@ -6462,6 +6505,7 @@ Common options:
     -d, --delimiter <arg>    The field delimiter for reading CSV data.
                              Must be a single character. (default: ,)
 ```
+
 ## qsv pivotp
 
 ```text
@@ -6597,6 +6641,7 @@ Common options:
                             delimiter. (default: ,)
     -q, --quiet             Do not return smart aggregation chosen nor pivot result shape to stderr.
 ```
+
 ## qsv pragmastat
 
 ```text
@@ -6781,6 +6826,7 @@ Common options:
     --memcheck             Check if there is enough memory to load the entire
                            CSV into memory using CONSERVATIVE heuristics. Not valid for stdin.
 ```
+
 ## qsv pro
 
 ```text
@@ -6808,6 +6854,7 @@ pro arguments:
 Common options:
     -h, --help            Display this message
 ```
+
 ## qsv profile
 
 ```text
@@ -7115,6 +7162,7 @@ Common options:
     --memcheck                Check if there is enough memory to load the entire
                               CSV into memory using CONSERVATIVE heuristics.
 ```
+
 ## qsv prompt
 
 ```text
@@ -7167,6 +7215,7 @@ Common options:
                            Mutually exclusive with --fd-output.
     -q, --quiet            Do not print --fd-output message to stderr.
 ```
+
 ## qsv pseudo
 
 ```text
@@ -7242,6 +7291,7 @@ Common options:
     -d, --delimiter <arg>   The field delimiter for reading CSV data.
                             Must be a single character. (default: ,)
 ```
+
 ## qsv readstat
 
 ```text
@@ -7436,6 +7486,7 @@ Common options:
     -d, --delimiter <arg>  The delimiter to use when writing CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv rename
 
 ```text
@@ -7490,6 +7541,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv replace
 
 ```text
@@ -7581,6 +7633,7 @@ Common options:
     -p, --progressbar      Show progress bars. Not valid for stdin.
     -q, --quiet            Do not print number of replacements to stderr.
 ```
+
 ## qsv reverse
 
 ```text
@@ -7610,6 +7663,7 @@ Common options:
     --memcheck             Check if there is enough memory to load the entire
                            CSV into memory using CONSERVATIVE heuristics.
 ```
+
 ## qsv safenames
 
 ```text
@@ -7744,6 +7798,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv sample
 
 ```text
@@ -8038,6 +8093,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading/writing CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv schema
 
 ```text
@@ -8170,6 +8226,7 @@ Common options:
     --memcheck                 Check if there is enough memory to load the entire
                                CSV into memory using CONSERVATIVE heuristics.
 ```
+
 ## qsv search
 
 ```text
@@ -8304,6 +8361,7 @@ Common options:
     -q, --quiet            Do not write the match count (--count) or the
                            first match row number reported by --quick to stderr.
 ```
+
 ## qsv searchset
 
 ```text
@@ -8408,6 +8466,7 @@ Common options:
                                first match row number reported by --quick to stderr.
                                Does not suppress the --json summary.
 ```
+
 ## qsv select
 
 ```text
@@ -8508,6 +8567,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv slice
 
 ```text
@@ -8591,6 +8651,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv snappy
 
 ```text
@@ -8647,6 +8708,7 @@ Common options:
     -q, --quiet           Suppress status messages to stderr.
     -p, --progressbar     Show download progress bars. Only valid for URL input.
 ```
+
 ## qsv sniff
 
 ```text
@@ -8776,6 +8838,7 @@ Common options:
     -h, --help               Display this message
     -p, --progressbar        Show progress bars. Only valid for URL input.
 ```
+
 ## qsv sort
 
 ```text
@@ -8858,6 +8921,7 @@ Common options:
                             CSV into memory using CONSERVATIVE heuristics.
                             Ignored if --random or --faster is set.
 ```
+
 ## qsv sortcheck
 
 ```text
@@ -8945,6 +9009,7 @@ Common options:
                             Must be a single character. (default: ,)
     -p, --progressbar       Show progress bars. Not valid for stdin.
 ```
+
 ## qsv split
 
 ```text
@@ -9076,6 +9141,7 @@ Common options:
                            Must be a single character. (default: ,)
     -q, --quiet            Do not display an output summary to stderr.
 ```
+
 ## qsv scoresql
 
 ```text
@@ -9156,6 +9222,7 @@ Common options:
                               Must be a single character. (default: ,)
     -q, --quiet               Do not print informational messages to stderr.
 ```
+
 ## qsv sqlp
 
 ```text
@@ -9476,6 +9543,7 @@ Common options:
                            Must be a single character. (default: ,)
     -q, --quiet            Do not return result shape to stderr.
 ```
+
 ## qsv stats
 
 ```text
@@ -9917,6 +9985,7 @@ Common options:
                            nothing. A wwarn suggests --mode-cardinality-cap,
                            which is what bounds that table.
 ```
+
 ## qsv synthesize
 
 ```text
@@ -10063,6 +10132,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading the input CSV.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv table
 
 ```text
@@ -10116,6 +10186,7 @@ Common options:
     --memcheck             Check if there is enough memory to load the entire
                            CSV into memory using CONSERVATIVE heuristics.
 ```
+
 ## qsv template
 
 ```text
@@ -10267,6 +10338,7 @@ Common options:
     --delimiter <sep>           Field separator for reading CSV (default: ,)
     -p, --progressbar           Show progress bars. Not valid for stdin.
 ```
+
 ## qsv tojsonl
 
 ```text
@@ -10315,6 +10387,7 @@ Common options:
                            CSV into memory using CONSERVATIVE heuristics.
     -q, --quiet            Do not display enum/const list inferencing messages.
 ```
+
 ## qsv to
 
 ```text
@@ -10597,6 +10670,7 @@ Common options:
     -d, --delimiter <arg>  The field delimiter for reading CSV data.
                            Must be a single character. (default: ,)
 ```
+
 ## qsv transpose
 
 ```text
@@ -10667,6 +10741,7 @@ Common options:
                            CSV into memory using CONSERVATIVE heuristics.
                            Ignored when --multipass or --long option is enabled.
 ```
+
 ## qsv validate
 
 ```text
@@ -11035,6 +11110,7 @@ Common options:
     -p, --progressbar          Show progress bars. Not valid for stdin.
     -q, --quiet                Do not display validation summary message.
 ```
+
 ## qsv viz
 
 ```text
@@ -11875,6 +11951,7 @@ Common options:
     -n, --no-headers       When set, the first row will not be interpreted
                            as headers. Columns can then only be selected by index.
 ```
+
 ## qsv writestat
 
 ```text

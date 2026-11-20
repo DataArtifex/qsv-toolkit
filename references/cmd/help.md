@@ -3,7 +3,6 @@
 <small>v29.0.0</small>
 
 ```text
-
 Usage:
     qsv <command> [<args>...]
     qsv [options]
@@ -26,5 +25,4 @@ Options:
 
 sponsored by datHere - Data Infrastructure Engineering (https://qsv.datHere.com)
 Need a UI & more advanced data-wrangling? Upgrade to qsv pro (https://qsvpro.datHere.com)
-
 ```

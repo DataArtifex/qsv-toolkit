@@ -1,6 +1,6 @@
 # QSV Command Reference
 
-Generated for QSV version qsv 29.0.0-jemalloc-apply;fetch;foreach;geocode;Luau 0.745;magika;prompt;to;viz;viz_static;polars-0.55.1:py-2.1.0:2d9938d;self_update-16-16;38.40 GiB-1.23 GiB-29.62 GiB-48.00 GiB (aarch64-apple-darwin compiled with Rust 1.100;macOS 26.5.2 Tahoe-Darwin 25.5.0;Apple M4 Max-16) compiled.
+Generated for QSV version qsv 29.0.0-jemalloc-apply;fetch;foreach;geocode;Luau 0.745;magika;prompt;to;viz;viz_static;polars-0.55.1:py-2.1.0:2d9938d;self_update-16-16;38.40 GiB-1.36 GiB-29.30 GiB-48.00 GiB (aarch64-apple-darwin compiled with Rust 1.100;macOS 26.5.2 Tahoe-Darwin 25.5.0;Apple M4 Max-16) compiled.
 
 ## Available Commands
 

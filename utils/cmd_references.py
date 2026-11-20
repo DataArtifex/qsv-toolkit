@@ -28,6 +28,14 @@ import os
 from dartfx.qsv.cmd import QSV
 
 
+def clean_markdown(text: str) -> str:
+    """Strips trailing whitespace from every line and ensures a single trailing newline."""
+    lines = [line.rstrip() for line in text.splitlines()]
+    while lines and not lines[-1]:
+        lines.pop()
+    return "\n".join(lines) + "\n"
+
+
 def main(args: argparse.Namespace) -> None:
 
     # Version
@@ -50,10 +58,10 @@ def main(args: argparse.Namespace) -> None:
         md = f"# qsv {cmd_name}\n\n"
         md += f"<small>v{qsv_version}</small>\n\n"
         md += "```text\n"
-        md += help_txt
+        md += help_txt.strip("\r\n") + "\n"
         md += "```\n"
-        with open(cmd_filename, "w") as f:
-            f.write(md)
+        with open(cmd_filename, "w", encoding="utf-8") as f:
+            f.write(clean_markdown(md))
 
     # write all help outputs to a single file
     print(f"Writing all help outputs to a single file: {os.path.join(args.output, 'ALL.md')}")
@@ -62,10 +70,10 @@ def main(args: argparse.Namespace) -> None:
     for cmd_name, help_txt in cmd_help.items():
         all_in_one_md += f"## qsv {cmd_name}\n\n"
         all_in_one_md += "```text\n"
-        all_in_one_md += help_txt
-        all_in_one_md += "```\n"
-    with open(os.path.join(args.output, "ALL.md"), "w") as f:
-        f.write(all_in_one_md)
+        all_in_one_md += help_txt.strip("\r\n") + "\n"
+        all_in_one_md += "```\n\n"
+    with open(os.path.join(args.output, "ALL.md"), "w", encoding="utf-8") as f:
+        f.write(clean_markdown(all_in_one_md))
 
     # write index README.md
     print(f"Writing index README.md: {os.path.join(args.output, 'README.md')}")
@@ -77,8 +85,8 @@ def main(args: argparse.Namespace) -> None:
         name = cmd_info["name"]
         desc = cmd_info["description"]
         readme_md += f"- [{name}]({name}.md) - {desc}\n"
-    with open(os.path.join(args.output, "README.md"), "w") as f:
-        f.write(readme_md)
+    with open(os.path.join(args.output, "README.md"), "w", encoding="utf-8") as f:
+        f.write(clean_markdown(readme_md))
 
 
 if __name__ == "__main__":
