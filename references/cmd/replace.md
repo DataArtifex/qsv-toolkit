@@ -1,6 +1,6 @@
 # qsv replace
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Replace occurrences of a pattern across a CSV file.

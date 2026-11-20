@@ -1,6 +1,6 @@
 # qsv prompt
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Open a file dialog to pick a file as input or save to an output file.

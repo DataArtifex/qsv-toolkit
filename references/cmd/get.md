@@ -1,6 +1,6 @@
 # qsv get
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Get tabular data from various sources into a managed, queryable disk cache.

@@ -1,6 +1,6 @@
 # qsv enum
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Add a new column enumerating the lines of a CSV file. This can be useful to keep

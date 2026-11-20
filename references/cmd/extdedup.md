@@ -1,6 +1,6 @@
 # qsv extdedup
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Remove duplicate rows from an arbitrarily large CSV/text file using a memory-mapped,

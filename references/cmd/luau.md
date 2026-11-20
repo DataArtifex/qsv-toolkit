@@ -1,10 +1,10 @@
 # qsv luau
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Create multiple new computed columns, filter rows or compute aggregations by
-executing a Luau 0.740 script for every row (SEQUENTIAL MODE) or for
+executing a Luau 0.745 script for every row (SEQUENTIAL MODE) or for
 specified rows (RANDOM ACCESS MODE) of a CSV file.
 
 Luau is not just another qsv command. It is qsv's Domain-Specific Language (DSL)
@@ -100,8 +100,8 @@ With "luau map", if the MAIN script is invalid for a row, "<ERROR>" followed by 
 detailed error message is returned for that row.
 With "luau filter", if the MAIN script is invalid for a row, that row is not filtered.
 
-If any row has an invalid result, an exitcode of 1 is returned and an error count
-is logged.
+If any row has an invalid result, or the END script fails, an exitcode of 1 is
+returned and an error count is logged.
 
 SPECIAL VARIABLES:
   "_IDX" - a READ-only variable that is zero during the BEGIN script and
@@ -140,6 +140,9 @@ For security and safety reasons as a purpose-built embeddable interpreter,
 Luau's standard library is relatively minimal (https://luau-lang.org/library).
 That's why qsv bundles & preloads LuaDate v2.2.1 as date manipulation is a common task.
 See https://tieske.github.io/date/ on how to use the LuaDate library.
+To use it, add 'date = require "./date"' to a script. qsv writes the library to
+date.lua in the current directory for the run, and deletes it afterwards.
+If a date.lua already exists there, it is used instead and left untouched.
 
 Additional libraries can be loaded using Luau's "require" function.
 See https://github.com/LewisJEllis/awesome-lua for a list of other libraries.
@@ -260,6 +263,6 @@ Common options:
                            number of rows processed.
                            In RANDOM ACCESS MODE, the progress bar will show
                            the position of the current row being processed.
-                           Enabling this option will also suppress stderr output
-                           from the END script.
+                           Output from the END script is printed after the
+                           progress bar finishes.
 ```

@@ -1,6 +1,6 @@
 # qsv edit
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Replace the value of a cell specified by its row and column.

@@ -1,6 +1,6 @@
 # qsv color
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Outputs tabular data as a pretty, colorized table that always fits into the

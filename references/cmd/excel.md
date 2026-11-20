@@ -1,6 +1,6 @@
 # qsv excel
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Exports a specified Excel/ODS sheet to a CSV file.

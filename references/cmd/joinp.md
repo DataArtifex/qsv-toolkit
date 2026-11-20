@@ -1,6 +1,6 @@
 # qsv joinp
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Joins two sets of CSV data on the specified columns using the Polars engine.
@@ -149,7 +149,7 @@ joinp options:
                                 * If no schema or stats cache: infer schema using --infer-len
                                   and cache the result
                                 Schema files use the same name as input with .pschema.json extension
-                                (e.g., data.csv -> data.pschema.json).
+                                (e.g., data.csv -> data.csv.pschema.json).
                            ‎NOTE: If the input files have pschema.json files that are newer or created
                            at the same time as the input files, they will be used to inform the join
                            operation regardless of the value of --cache-schema unless --infer-len is 0.

@@ -1,6 +1,6 @@
 # qsv denull
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Detect null sentinels - literal text like "NULL" or "N/A" standing in for a missing

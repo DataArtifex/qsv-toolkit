@@ -1,6 +1,6 @@
 # qsv clean
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Removes qsv-generated cache files to reduce clutter and simplify data packaging.

@@ -33,9 +33,10 @@ Welcome, Agent. This document provides essential context and instructions for wo
 
 ### 📦 Package Management with `uv`
 Always use `uv` for managing dependencies and environments.
-- **Sync environment**: `uv pip install -e .`
-- **Run scripts**: `uv run python verify_wrappers.py`
-- **Run Hatch**: `uv run hatch run test`
+- **Sync environment**: `uv sync`
+- **Verify QSV alignment**: `uv run python verify_wrappers.py` or `uv run python utils/sync_qsv.py --check`
+- **Synchronize QSV updates**: `uv run python utils/sync_qsv.py --all`
+- **Run Hatch scripts**: `uv run hatch run test` or `uv run hatch run sync`
 
 ### 🧪 Testing & Verification
 - **Automated Tests**: Run `pytest` or `hatch run test`.

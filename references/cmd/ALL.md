@@ -1,6 +1,6 @@
 # QSV Commands
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ## qsv apply
 
@@ -5214,7 +5214,7 @@ joinp options:
                                 * If no schema or stats cache: infer schema using --infer-len
                                   and cache the result
                                 Schema files use the same name as input with .pschema.json extension
-                                (e.g., data.csv -> data.pschema.json).
+                                (e.g., data.csv -> data.csv.pschema.json).
                            ‎NOTE: If the input files have pschema.json files that are newer or created
                            at the same time as the input files, they will be used to inform the join
                            operation regardless of the value of --cache-schema unless --infer-len is 0.
@@ -5644,7 +5644,7 @@ Common options:
 
 ```text
 Create multiple new computed columns, filter rows or compute aggregations by
-executing a Luau 0.740 script for every row (SEQUENTIAL MODE) or for
+executing a Luau 0.745 script for every row (SEQUENTIAL MODE) or for
 specified rows (RANDOM ACCESS MODE) of a CSV file.
 
 Luau is not just another qsv command. It is qsv's Domain-Specific Language (DSL)
@@ -5740,8 +5740,8 @@ With "luau map", if the MAIN script is invalid for a row, "<ERROR>" followed by 
 detailed error message is returned for that row.
 With "luau filter", if the MAIN script is invalid for a row, that row is not filtered.
 
-If any row has an invalid result, an exitcode of 1 is returned and an error count
-is logged.
+If any row has an invalid result, or the END script fails, an exitcode of 1 is
+returned and an error count is logged.
 
 SPECIAL VARIABLES:
   "_IDX" - a READ-only variable that is zero during the BEGIN script and
@@ -5780,6 +5780,9 @@ For security and safety reasons as a purpose-built embeddable interpreter,
 Luau's standard library is relatively minimal (https://luau-lang.org/library).
 That's why qsv bundles & preloads LuaDate v2.2.1 as date manipulation is a common task.
 See https://tieske.github.io/date/ on how to use the LuaDate library.
+To use it, add 'date = require "./date"' to a script. qsv writes the library to
+date.lua in the current directory for the run, and deletes it afterwards.
+If a date.lua already exists there, it is used instead and left untouched.
 
 Additional libraries can be loaded using Luau's "require" function.
 See https://github.com/LewisJEllis/awesome-lua for a list of other libraries.
@@ -5900,8 +5903,8 @@ Common options:
                            number of rows processed.
                            In RANDOM ACCESS MODE, the progress bar will show
                            the position of the current row being processed.
-                           Enabling this option will also suppress stderr output
-                           from the END script.
+                           Output from the END script is printed after the
+                           progress bar finishes.
 ```
 ## qsv log
 
@@ -6934,6 +6937,18 @@ profile options:
                               `/projection/title`, beating inference and
                               discovery). Forced values for slots the profile
                               does not surface are silently dropped (no-op).
+                              `dataset_info` keys are JSON Pointers into the
+                              output (e.g. `/projection/title`): the value
+                              replaces what is there, and missing objects
+                              are created. Inside an array, use an existing
+                              index, or a final `-` to append (e.g.
+                              `/projection/hasQualityMeasurement/-` adds a
+                              measurement after the computed ones). An
+                              override that cannot be applied (not a
+                              pointer, an index out of range, `-` with no
+                              array to append to) is reported in
+                              projection_warnings (or, with --no-projection,
+                              on stderr) and fails --strict.
                               See tests/resources/profile/dcat-init-context.README.md
                               for a fully-populated example.
     --no-projection           Skip the metadata projection block (dcat/croissant/
@@ -6973,6 +6988,9 @@ profile options:
                                            row's state (TIGERweb county
                                            names). A name several counties
                                            share is noted, not guessed.
+                                           A state column lists states only
+                                           when at least 90% of its values
+                                           are US states.
                                 both     - geonames and census.
                               Also adds the coordinates' centroid. A lookup
                               that cannot run is noted in projection_warnings;
@@ -7025,11 +7043,18 @@ profile options:
                               input (CSV structure + UTF-8), so a passing
                               file is declared UTF-8 encoded and its
                               syntactic validity is recorded as a
-                              quality measurement.
-    --strict                  With --validate, fail the command on
-                              Required-severity schema violations, or on
-                              non-Info external-validator findings,
-                              instead of just warning. Severity comes
+                              quality measurement. A file that fails it
+                              (or a pass that cannot run) also gets a
+                              Required `syntacticValidity` warning.
+                              Ignored, with a warning on stderr, when
+                              combined with --no-projection.
+    --strict                  Fail the command, instead of just warning,
+                              when an --initial-context override cannot
+                              be applied, and, with --validate, when the
+                              input fails `qsv validate`, on
+                              Required-severity schema violations or on
+                              non-Info external-validator findings.
+                              Severity comes
                               from the DCAT-US v3 schema's own
                               requirementLevel annotations, so a missing
                               mandatory property aborts while a
@@ -7825,8 +7850,11 @@ to a temporary file before sampling begins for all sampling methods except Berno
 streams the file as it samples it, stopping when the desired sample size is reached or the
 end of the file is reached.
 
-Sampling from stdin is also supported for all sampling methods, copying stdin to a in-memory
-buffer first before sampling begins.
+Sampling from stdin is supported for all methods that read CSV, i.e. all but sketch-in.
+Bernoulli, stratified, timeseries, and integer-size default, varopt and mergeable-reservoir
+sampling stream stdin. The others (cluster, weighted, systematic and fractional sample
+sizes) read the input twice, so stdin is first copied to a temporary file, which needs
+disk space for the whole input.
 
 If a stats cache is available, it will be used to do extra checks on systematic,
 weighted and cluster sampling, and to speed up sampling in general.
@@ -8052,7 +8080,7 @@ Polars Schema:
 ==============
 When the "polars" feature is enabled, the `--polars` option will generate a Polars schema
 instead of a JSON Schema. The generated Polars schema will be written to a file with the
-`.pschema.json` suffix appended to the input file stem.
+`.pschema.json` suffix appended to the full input file name (data.csv -> data.csv.pschema.json).
 
 The Polars schema is a JSON object that describes the schema of a CSV file. When present,
 the `sqlp`, `joinp`, and `pivotp` commands will use the Polars schema to read the CSV file
@@ -9057,9 +9085,10 @@ performance score with actionable optimization suggestions BEFORE running the qu
 Accepts the same input/SQL arguments as sqlp. Outputs a human-readable performance report
 (default) or JSON (--json). Supports Polars mode (default) and DuckDB mode (--duckdb).
 
+The report shows the query plan (EXPLAIN output from Polars or DuckDB) next to the score.
+
 Scoring factors include:
-  * Query plan analysis (EXPLAIN output from Polars or DuckDB)
-  * Type optimization (column types vs. usage in query)
+  * Type optimization (String columns compared with numbers)
   * Join key cardinality and data distribution
   * Filter selectivity from frequency cache
   * Query anti-pattern detection (SELECT *, missing LIMIT, cartesian joins, etc.)
@@ -9214,9 +9243,8 @@ Examples:
   $ qsv sqlp data.csv "select CASE WHEN col1 > 10 THEN 'foo' WHEN col1 > 5 THEN 'bar' ELSE 'baz' END from data"
   $ qsv sqlp data.csv "select CASE col*5 WHEN 10 THEN 'foo' WHEN 5 THEN 'bar' ELSE 'baz' END from _t_1"
 
-  # spaceship operator: "<=>" (three-way comparison operator)
-  #  returns -1 if left < right, 0 if left == right, 1 if left > right
-  # https://en.wikipedia.org/wiki/Three-way_comparison#Spaceship_operator
+  # NULL-safe equality operator: "<=>" (same as IS NOT DISTINCT FROM)
+  #  returns true if both sides are equal or both are NULL, false otherwise (never NULL)
   $ qsv sqlp data.csv data2.csv "select data.c2 <=> data2.c2 from data join data2 on data.c1 = data2.c1"
 
   # support ^@ ("starts with"), and ~~ (like) ,~~* (ilike),!~~ (not like),!~~* (not ilike) operators
@@ -9335,7 +9363,13 @@ sqlp arguments:
 
 sqlp options:
     --format <arg>            The output format to use. Valid values are:
-                                csv, json, jsonl, parquet, arrow, avro
+                                csv, json, jsonl, parquet, arrow, avro.
+                              Avro has fewer types than Polars, so avro output converts the
+                              rest: small and unsigned integers become int or long (a value
+                              above 2^63-1 is an error), zoned timestamps become UTC
+                              timestamps, nanosecond timestamps become microseconds, and TIME
+                              and durations become strings (durations in ISO 8601, e.g.
+                              P1DT2H3M4.5S).
                               [default: csv]
 
                               POLARS CSV INPUT PARSING OPTIONS:
@@ -9357,9 +9391,9 @@ sqlp options:
                               using --infer-len and save the inferred schemas.
                               Date columns in formats Polars can't parse are saved as String,
                               as are day-first dates unless QSV_PREFER_DMY is set.
-                              Each schema file will have the same file stem as the corresponding
-                              input file, with the extension ".pschema.json"
-                              (data.csv's Polars schema file will be data.pschema.json)
+                              Each schema file is named after the full input file name, with
+                              ".pschema.json" appended
+                              (data.csv's Polars schema file will be data.csv.pschema.json)
                               NOTE: You can edit the generated schema files to change the Polars schema
                               and cast columns to the desired data type. Float columns are saved
                               as Float64. For example, to save memory you can narrow a Float64
@@ -10145,6 +10179,10 @@ Status: {% if active|to_bool %}Active{% else %}Inactive{% endif %}
 > Booleans render as `True`/`False` and none (e.g. a JSON null reached via `fromjson`)
 >  renders as `None`, matching Jinja2. Use `{{ v or "" }}` for an empty string instead —
 >  a bare `{{ v|default("") }}` does NOT substitute for none, only for undefined.
+> Time zones (e.g. `datetimeformat(tz=...)`) are looked up in the OS time zone database,
+>  falling back to qsv's bundled copy for names the OS lacks, so legacy aliases like "EST"
+>  or "US/Eastern" work even on systems without them (e.g. Ubuntu 26.04 without the
+>  tzdata-legacy package). Canonical IANA names such as "America/New_York" are preferred.
 
 Additional qsv-specific data-wrangling filters/functions (available in all binary variants):
 ```
@@ -10842,6 +10880,14 @@ Examples:
   # Validate CSV files listed in a '.infile-list' file against a JSON Schema
   qsv validate files.infile-list schema.json
 
+  # Also write the errors as a SARIF log, for code scanning tools like GitHub code scanning.
+  # --split-ragged reports ragged rows instead of stopping before the SARIF log is written.
+  qsv validate --split-ragged data.csv schema.json --sarif validate.sarif
+
+  # For a sample CSV, its schema, the SARIF log qsv writes for them and a GitHub Actions
+  # workflow that uploads it to code scanning, see
+  # https://github.com/dathere/qsv/tree/master/resources/examples/validate-sarif
+
 For more examples, see the tests included in this file (denoted by '#[test]') or see
 https://github.com/dathere/qsv/blob/master/tests/test_validate.rs.
 See also https://github.com/dathere/qsv/wiki/Validation-and-Schema#validate
@@ -10897,6 +10943,20 @@ Validate options:
                                Setting this will override the default behavior of creating
                                a valid file only when there are invalid records.
                                To send valid records to stdout, use `-` as the filename.
+    --sarif <file>             Also write the validation errors to <file> as a SARIF 2.1.0 log,
+                               the standard format for static analysis results. Code scanning
+                               tools (e.g. GitHub code scanning) and other SARIF viewers can read
+                               it, so it also works as a general data validation report.
+                               Each invalid field is a result, pointing at the line where its row
+                               starts. Unlike the other output files, it is written even when all
+                               rows are valid (with no results), so a CI run clears earlier
+                               findings. Only for JSON Schema validation mode with a file input
+                               (not stdin). See https://www.oasis-open.org/standard/sarif-v2-1-0/
+    --sarif-max-results <n>    The most results that --sarif writes; past it, the log notes that
+                               results were cut. The default is GitHub code scanning's limit per
+                               run, which rejects a log with more. Other tools may accept more.
+                               Set to 0 for no limit.
+                               [default: 25000]
     -j, --jobs <arg>           The number of jobs to run in parallel.
                                When not set, the number of jobs is set to the
                                number of CPUs detected.
@@ -11101,6 +11161,9 @@ Examples:
   # Aggregate (sum) sales by region into a titled bar chart, opened in the browser
   qsv viz bar sales.csv --x region --y amount --agg sum --title "Sales by region" --open
 
+  # Chart piped CSV: pass - as the input (every chart type except smart)
+  qsv search -s region West sales.csv | qsv viz histogram --x amount - -o west.html
+
   # Scatter plot with a separate series (trace) per category
   qsv viz scatter data.csv --x age --y income --series gender -o scatter.html
 
@@ -11227,6 +11290,14 @@ Usage:
     qsv viz parcoords   [options] <input>
     qsv viz --help
 
+
+viz arguments:
+    <input>                The CSV/TSV file to chart, or - to read CSV from
+                           stdin. Every chart type accepts stdin except smart,
+                           which needs a file because it builds its panels from
+                           the file's cached statistics. When the GeoJSON is
+                           auto or census, stdin is first copied to a temp file
+                           (disk space equal to the input).
 
 viz options:
     -x, --x <col>          Column for the x-axis / category / bin / group.

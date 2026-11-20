@@ -1,6 +1,6 @@
 # qsv input
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Read CSV data with special commenting, quoting, trimming, line-skipping &

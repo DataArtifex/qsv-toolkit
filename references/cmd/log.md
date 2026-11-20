@@ -1,6 +1,6 @@
 # qsv log
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Logs an MCP tool invocation entry to qsvmcp.log. Only intended for internal use by the

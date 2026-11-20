@@ -1,6 +1,6 @@
 # qsv profile
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Profile a CSV (local path or URL) and emit a `.metadata.json` file carrying
@@ -129,6 +129,18 @@ profile options:
                               `/projection/title`, beating inference and
                               discovery). Forced values for slots the profile
                               does not surface are silently dropped (no-op).
+                              `dataset_info` keys are JSON Pointers into the
+                              output (e.g. `/projection/title`): the value
+                              replaces what is there, and missing objects
+                              are created. Inside an array, use an existing
+                              index, or a final `-` to append (e.g.
+                              `/projection/hasQualityMeasurement/-` adds a
+                              measurement after the computed ones). An
+                              override that cannot be applied (not a
+                              pointer, an index out of range, `-` with no
+                              array to append to) is reported in
+                              projection_warnings (or, with --no-projection,
+                              on stderr) and fails --strict.
                               See tests/resources/profile/dcat-init-context.README.md
                               for a fully-populated example.
     --no-projection           Skip the metadata projection block (dcat/croissant/
@@ -168,6 +180,9 @@ profile options:
                                            row's state (TIGERweb county
                                            names). A name several counties
                                            share is noted, not guessed.
+                                           A state column lists states only
+                                           when at least 90% of its values
+                                           are US states.
                                 both     - geonames and census.
                               Also adds the coordinates' centroid. A lookup
                               that cannot run is noted in projection_warnings;
@@ -220,11 +235,18 @@ profile options:
                               input (CSV structure + UTF-8), so a passing
                               file is declared UTF-8 encoded and its
                               syntactic validity is recorded as a
-                              quality measurement.
-    --strict                  With --validate, fail the command on
-                              Required-severity schema violations, or on
-                              non-Info external-validator findings,
-                              instead of just warning. Severity comes
+                              quality measurement. A file that fails it
+                              (or a pass that cannot run) also gets a
+                              Required `syntacticValidity` warning.
+                              Ignored, with a warning on stderr, when
+                              combined with --no-projection.
+    --strict                  Fail the command, instead of just warning,
+                              when an --initial-context override cannot
+                              be applied, and, with --validate, when the
+                              input fails `qsv validate`, on
+                              Required-severity schema violations or on
+                              non-Info external-validator findings.
+                              Severity comes
                               from the DCAT-US v3 schema's own
                               requirementLevel annotations, so a missing
                               mandatory property aborts while a

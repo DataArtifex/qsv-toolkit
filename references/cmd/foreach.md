@@ -1,6 +1,6 @@
 # qsv foreach
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Execute a shell command once per record in a given CSV file.

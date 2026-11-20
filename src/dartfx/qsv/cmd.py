@@ -88,7 +88,7 @@ class QSV(QSVCommand):
         super().__init__("", **kwargs)
 
     @staticmethod
-    def commands() -> list[type[QSVCommand]]:
+    def commands() -> list[builtins.type[QSVCommand]]:
         """Returns a list of all available command classes."""
         cmds = [cls for cls in QSVCommand.__subclasses__() if cls is not QSV]
         return sorted(cmds, key=lambda x: x.__name__)

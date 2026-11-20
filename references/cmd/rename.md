@@ -1,6 +1,6 @@
 # qsv rename
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Rename the columns of a CSV efficiently. It has two modes of operation:

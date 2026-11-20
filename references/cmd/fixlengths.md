@@ -1,6 +1,6 @@
 # qsv fixlengths
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Transforms CSV data so that all records have the same length. The length is

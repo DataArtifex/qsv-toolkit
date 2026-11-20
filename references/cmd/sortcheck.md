@@ -1,6 +1,6 @@
 # qsv sortcheck
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Check if a CSV is sorted. The check is done on a streaming basis (i.e. constant memory).

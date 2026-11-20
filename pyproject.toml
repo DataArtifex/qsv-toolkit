@@ -49,6 +49,8 @@ test = "pytest {args:tests}"
 test-cov = "coverage run -m pytest {args:tests}"
 cov-report = ["- coverage combine", "coverage report"]
 cov = ["test-cov", "cov-report"]
+sync = "python utils/sync_qsv.py --all"
+check = "python utils/sync_qsv.py --check"
 
 [[tool.hatch.envs.all.matrix]]
 python = ["3.12", "3.13"]

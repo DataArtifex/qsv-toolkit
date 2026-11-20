@@ -1,6 +1,6 @@
 # qsv datefmt
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Formats recognized date fields (19 formats recognized) to a specified date format

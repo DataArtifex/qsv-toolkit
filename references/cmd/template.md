@@ -1,6 +1,6 @@
 # qsv template
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Renders a template using CSV data with the MiniJinja template engine.
@@ -63,6 +63,10 @@ Status: {% if active|to_bool %}Active{% else %}Inactive{% endif %}
 > Booleans render as `True`/`False` and none (e.g. a JSON null reached via `fromjson`)
 >  renders as `None`, matching Jinja2. Use `{{ v or "" }}` for an empty string instead —
 >  a bare `{{ v|default("") }}` does NOT substitute for none, only for undefined.
+> Time zones (e.g. `datetimeformat(tz=...)`) are looked up in the OS time zone database,
+>  falling back to qsv's bundled copy for names the OS lacks, so legacy aliases like "EST"
+>  or "US/Eastern" work even on systems without them (e.g. Ubuntu 26.04 without the
+>  tzdata-legacy package). Canonical IANA names such as "America/New_York" are preferred.
 
 Additional qsv-specific data-wrangling filters/functions (available in all binary variants):
 ```

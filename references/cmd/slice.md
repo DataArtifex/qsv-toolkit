@@ -1,6 +1,6 @@
 # qsv slice
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Returns the rows in the range specified (starting at 0, half-open interval).

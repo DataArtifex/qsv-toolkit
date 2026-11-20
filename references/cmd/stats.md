@@ -1,6 +1,6 @@
 # qsv stats
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Compute summary statistics & infers data types for each column in a CSV.

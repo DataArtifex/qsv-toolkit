@@ -1,6 +1,6 @@
 # qsv sqlp
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Run blazing-fast Polars SQL queries against several CSVs - replete with joins, aggregations,
@@ -87,9 +87,8 @@ Examples:
   $ qsv sqlp data.csv "select CASE WHEN col1 > 10 THEN 'foo' WHEN col1 > 5 THEN 'bar' ELSE 'baz' END from data"
   $ qsv sqlp data.csv "select CASE col*5 WHEN 10 THEN 'foo' WHEN 5 THEN 'bar' ELSE 'baz' END from _t_1"
 
-  # spaceship operator: "<=>" (three-way comparison operator)
-  #  returns -1 if left < right, 0 if left == right, 1 if left > right
-  # https://en.wikipedia.org/wiki/Three-way_comparison#Spaceship_operator
+  # NULL-safe equality operator: "<=>" (same as IS NOT DISTINCT FROM)
+  #  returns true if both sides are equal or both are NULL, false otherwise (never NULL)
   $ qsv sqlp data.csv data2.csv "select data.c2 <=> data2.c2 from data join data2 on data.c1 = data2.c1"
 
   # support ^@ ("starts with"), and ~~ (like) ,~~* (ilike),!~~ (not like),!~~* (not ilike) operators
@@ -208,7 +207,13 @@ sqlp arguments:
 
 sqlp options:
     --format <arg>            The output format to use. Valid values are:
-                                csv, json, jsonl, parquet, arrow, avro
+                                csv, json, jsonl, parquet, arrow, avro.
+                              Avro has fewer types than Polars, so avro output converts the
+                              rest: small and unsigned integers become int or long (a value
+                              above 2^63-1 is an error), zoned timestamps become UTC
+                              timestamps, nanosecond timestamps become microseconds, and TIME
+                              and durations become strings (durations in ISO 8601, e.g.
+                              P1DT2H3M4.5S).
                               [default: csv]
 
                               POLARS CSV INPUT PARSING OPTIONS:
@@ -230,9 +235,9 @@ sqlp options:
                               using --infer-len and save the inferred schemas.
                               Date columns in formats Polars can't parse are saved as String,
                               as are day-first dates unless QSV_PREFER_DMY is set.
-                              Each schema file will have the same file stem as the corresponding
-                              input file, with the extension ".pschema.json"
-                              (data.csv's Polars schema file will be data.pschema.json)
+                              Each schema file is named after the full input file name, with
+                              ".pschema.json" appended
+                              (data.csv's Polars schema file will be data.csv.pschema.json)
                               NOTE: You can edit the generated schema files to change the Polars schema
                               and cast columns to the desired data type. Float columns are saved
                               as Float64. For example, to save memory you can narrow a Float64

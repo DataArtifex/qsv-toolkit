@@ -1,6 +1,6 @@
 # qsv fetch
 
-<small>v28.0.0</small>
+<small>v29.0.0</small>
 
 ```text
 Send/Fetch data to/from web services for every row using HTTP Get.
