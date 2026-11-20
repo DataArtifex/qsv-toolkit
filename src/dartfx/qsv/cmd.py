@@ -63,7 +63,7 @@ class QSVCommand:
         # Build full CLI arguments: [flags] + [init_args] + [inputs]
         args = self._get_args()
         args.extend(self.init_args)
-        args.extend(str(i) for i in inputs if i is not None)
+        args.extend(i for i in inputs if i is not None)
         return _run_qsv_command(self.command, args)
 
     @classmethod
@@ -88,7 +88,7 @@ class QSV(QSVCommand):
         super().__init__("", **kwargs)
 
     @staticmethod
-    def commands() -> list[builtins.type[QSVCommand]]:
+    def commands() -> builtins.list[builtins.type[QSVCommand]]:
         """Returns a list of all available command classes."""
         cmds = [cls for cls in QSVCommand.__subclasses__() if cls is not QSV]
         return sorted(cmds, key=lambda x: x.__name__)

@@ -664,6 +664,7 @@ def test_generate_sql_dynamic(tmp_path):
     assert 'CREATE TABLE "tbl_sdc_test"' in content
 
 
+@requires_qsv
 def test_stat_file_conversion_and_metadata(tmp_path):
     import json
     import os

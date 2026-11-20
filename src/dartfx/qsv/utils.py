@@ -316,7 +316,7 @@ def generate_ddi_codebook(
         col_type = get_field_type(col) or (prop.type if prop else ["String"])
         if isinstance(col_type, list):
             col_type = col_type[0] if col_type else "String"
-        col_type_str = str(col_type)
+        col_type_str = col_type
 
         if has_enum:
             detected_categorical.append(col)
@@ -346,12 +346,15 @@ def generate_ddi_codebook(
 
         if frequency_data is None:
             if csv_path and detected_categorical:
-                from dartfx.qsv.cmd import Frequency
+                try:
+                    from dartfx.qsv.cmd import Frequency
 
-                freq_json = Frequency(select=",".join(detected_categorical), limit=0, unq_limit=1, json=True).run(
-                    str(csv_path)
-                )
-                _populate_frequency_file(freq_file, json.loads(freq_json))
+                    freq_json = Frequency(select=",".join(detected_categorical), limit=0, unq_limit=1, json=True).run(
+                        str(csv_path)
+                    )
+                    _populate_frequency_file(freq_file, json.loads(freq_json))
+                except Exception:
+                    _populate_frequency_file(freq_file, {"fields": []})
             else:
                 _populate_frequency_file(freq_file, {"fields": []})
         else:
@@ -511,7 +514,7 @@ def generate_ddi_codebook(
             qsv_type = prop.type if prop else ["String"]
         if isinstance(qsv_type, list):
             qsv_type = qsv_type[0] if qsv_type else "String"
-        qsv_type_str = str(qsv_type).lower()
+        qsv_type_str = qsv_type.lower()
 
         is_numeric = qsv_type_str in ("integer", "float", "number")
         is_contin_type = qsv_type_str in ("float", "number")
@@ -539,7 +542,7 @@ def generate_ddi_codebook(
         max_prec = stats_row.max_precision if stats_row else None
         if max_prec is not None and max_prec != "":
             try:
-                var_attrs["dcml"] = str(int(max_prec))
+                var_attrs["dcml"] = str(max_prec)
             except (ValueError, TypeError):
                 pass
 
@@ -569,8 +572,7 @@ def generate_ddi_codebook(
             if nullcount is not None:
                 add_sum_stat("invd", nullcount)
                 if rowcount is not None:
-                    if isinstance(rowcount, (int, str, float)):
-                        add_sum_stat("vald", max(0, int(rowcount) - nullcount))
+                    add_sum_stat("vald", max(0, rowcount - nullcount))
 
             add_sum_stat("other", stats_row.sum, "sum")
             add_sum_stat("other", stats_row.range, "range")
@@ -592,10 +594,10 @@ def generate_ddi_codebook(
                 catgry = ET.SubElement(var_elem, f"{{{ns}}}catgry")
 
                 catValu = ET.SubElement(catgry, f"{{{ns}}}catValu")
-                catValu.text = str(cat_val)
+                catValu.text = cat_val
 
                 labl = ET.SubElement(catgry, f"{{{ns}}}labl")
-                labl.text = str(cat_val)
+                labl.text = cat_val
 
                 count = f_item.count
                 if count is not None:
@@ -1019,7 +1021,7 @@ def generate_sql(
 
         stats_row = stats_dict.get(col)
         stats_type = stats_row.type if stats_row else None
-        stats_type_str = str(stats_type).lower() if stats_type else ""
+        stats_type_str = stats_type.lower() if stats_type else ""
 
         col_type = "TEXT"  # fallback
 
@@ -1220,7 +1222,7 @@ def generate_sql(
 
     # Generate load instructions in comments
     csv_filename = os.path.basename(csv_path)
-    escaped_csv_filename = str(csv_filename).replace("'", "''")
+    escaped_csv_filename = csv_filename.replace("'", "''")
 
     quoted_cols = [quote(col) for col in properties.keys()]
     cols_str = ", ".join(quoted_cols)
@@ -1479,7 +1481,7 @@ def readstat_to_csv(
 
         ReadStat(output=csv_path, **kwargs).run(file_path)
 
-    return str(csv_path)
+    return csv_path
 
 
 def readstat_metadata_to_json(
@@ -1516,7 +1518,7 @@ def readstat_metadata_to_json(
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(meta_dict, f, indent=2, ensure_ascii=False)
 
-    return str(json_path)
+    return json_path
 
 
 def writestat_from_csv(
@@ -1551,4 +1553,4 @@ def writestat_from_csv(
 
         WriteStat(output=output_path, dictionary=dictionary, format=format, **kwargs).run(csv_path)
 
-    return str(output_path)
+    return output_path
